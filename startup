@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo "prueba print"
+source $(pipenv --venv)/bin/activate
+
+cd src
+echo "sed"
+python ./app.py
