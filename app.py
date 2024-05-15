@@ -1,7 +1,12 @@
 from flask import Flask, jsonify
 import numpy as np
 
-app = Flask(__name__)
+app = Flask("adsolab")
+
+
+@app.route('/health-check', methods=['GET'])
+def health_check():
+    return jsonify({"status": "ok"})
 
 
 def apply_langmuir(ce):
