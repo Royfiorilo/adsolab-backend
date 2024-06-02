@@ -5,6 +5,8 @@ requests = "*"
 pandas = "*"
 numpy = "*"
 gunicorn = "*"
+sqlachemy = "*"
+python-dotenv = "*"
 
 [dev-packages]
 pytest = "==6.2.2"
