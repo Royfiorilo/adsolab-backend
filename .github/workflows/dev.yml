@@ -1,7 +1,9 @@
 name: Release (dev)
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
     
 jobs:
   build:
@@ -12,4 +14,4 @@ jobs:
 
     - run: sudo curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
     - run: sudo chmod +x /usr/local/bin/dbmate
-    - run: dbmate -u 'postgresql://${{secrets.DB_USERNAME_DEV}}:${{secrets.DB_PASSWORD_DEV}}@${{secrets.DB_URL_DEV}}/adsolab?sslmode=require' status
+    - run: dbmate -u 'postgresql://${{secrets.DB_USERNAME_DEV}}:${{secrets.DB_PASSWORD_DEV}}@${{secrets.DB_URL_DEV}}/adsolab?sslmode=require' up
