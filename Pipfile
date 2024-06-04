@@ -5,7 +5,8 @@ requests = "*"
 pandas = "*"
 numpy = "*"
 gunicorn = "*"
-sqlalchemy = "*"
+flask-sqlalchemy = "*"
+psycopg2 = "*"
 python-dotenv = "*"
 
 [dev-packages]

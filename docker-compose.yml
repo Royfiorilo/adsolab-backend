@@ -1,35 +1,37 @@
 services:
-  dbmate:
-    image: "ghcr.io/amacneil/dbmate:1"
-    container_name: db_migrations
-    volumes:
-      - "./db:/db"
-    environment:
-      - DATABASE_URL=postgres://username:postgres@database:5432/adsolab?sslmode=disable
-    depends_on:
-      - "postgres"
-    command: "--wait up"
-  postgres:
-    image: postgres:alpine
-    ports:
-      - "5432:5432"
+  database:
+    image: postgres:13
+    restart: always
+    container_name: adsolab_postgre_db
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=adsolab
-#    volumes:
-#      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
-
-  pgadmin:
-    container_name: pgadmin
-    image: dpage/pgadmin4
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@mail.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
     ports:
-      - "9999:80"
+      - '5432:5432'
+    volumes:
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+  dbmate:
+    image: "ghcr.io/amacneil/dbmate:1"
+    container_name: db_migrations_adsolab
+    volumes:
+      - "./db:/db"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@database:5432/adsolab?sslmode=disable
     depends_on:
-      - postgres
+      - "database"
+    command: "--wait up"
+
+#  pgadmin:
+#    container_name: pgadmin
+#    image: dpage/pgadmin4
+#    environment:
+#      - PGADMIN_DEFAULT_EMAIL=admin@mail.com
+#      - PGADMIN_DEFAULT_PASSWORD=admin
+#    ports:
+#      - "9999:80"
+#    depends_on:
+#      - postgres
 
 #  pedidos_rapidos:
 #    image: pedidos_rapidos

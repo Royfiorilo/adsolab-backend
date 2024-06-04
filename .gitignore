@@ -422,4 +422,6 @@ fabric.properties
 
 .idea
 
+db/schema.sql
+
 # End of https://www.toptal.com/developers/gitignore/api/python,flask,macos,linux
