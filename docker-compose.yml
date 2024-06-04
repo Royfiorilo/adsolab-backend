@@ -1,4 +1,3 @@
-version: "1"
 services:
   dbmate:
     image: "ghcr.io/amacneil/dbmate:1"
