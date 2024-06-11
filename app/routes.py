@@ -4,6 +4,7 @@ from app.entities.model import Model
 
 app = Blueprint('app', __name__)
 
+
 @app.route('/health-check', methods=['GET'])
 def health_check():
     return jsonify({"status": "ok"})
@@ -11,6 +12,7 @@ def health_check():
 
 def apply_langmuir(ce):
     return 0.198 * (0.189 * ce) / (1 + 0.189 * ce)
+
 
 @app.route('/run-model/<model_name>', methods=['POST'])
 def run_model(model_name):
@@ -33,6 +35,7 @@ def run_model(model_name):
 
     return jsonify(response), 200
 
+
 @app.route('/models', methods=['GET'])
 def get_models():
     models = Model.query.all()
@@ -43,9 +46,12 @@ def get_models():
         model_json = {'id': model.id, 'name': model.name, 'formula': model.formula}
         output.append(model_json)
     response = {'models': output}
-    return jsonify(response),200
+    return jsonify(response), 200
+
 
 @app.after_request
 def add_header(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = '*'
     return response
