@@ -1,8 +1,12 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+
+from controler import model_controller, healt_check_controller
+from .config import Config
 from .config import Config
 
 db = SQLAlchemy()
+
 
 def create_app():
     app = Flask("adsolab")
@@ -10,6 +14,6 @@ def create_app():
     db.init_app(app)
 
     with app.app_context():
-        from . import routes  # Importar el Blueprint aquí
-        app.register_blueprint(routes.app)
+        app.register_blueprint(model_controller.blueprint)
+        app.register_blueprint(healt_check_controller.blueprint)
     return app

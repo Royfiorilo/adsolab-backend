@@ -17,7 +17,7 @@ services:
     volumes:
       - "./db:/db"
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@database:5432/adsolab?sslmode=disable
+      - DATABASE_URL=postgresql://postgres:postgres@database:5432/adsolab?sslmode=disable
     depends_on:
       - "database"
     command: "--wait up"
