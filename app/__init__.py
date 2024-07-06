@@ -1,8 +1,7 @@
+import os
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-
-from controler import model_controller, healt_check_controller
-from .config import Config
 from .config import Config
 
 db = SQLAlchemy()
@@ -12,8 +11,12 @@ def create_app():
     app = Flask("adsolab")
     app.config.from_object(Config)
     db.init_app(app)
-
+    env  = os.getenv('env')
     with app.app_context():
+        from controler import model_controller, healt_check_controller, investigation_controller
         app.register_blueprint(model_controller.blueprint)
         app.register_blueprint(healt_check_controller.blueprint)
+        app.register_blueprint(investigation_controller.blueprint)
+        if env == 'development':
+            db.create_all()
     return app

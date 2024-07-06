@@ -1,6 +1,7 @@
 from flask import jsonify, request, Blueprint
 import numpy as np
-from app.entities.model import Model
+
+from app.database import Model
 
 blueprint = Blueprint('model', __name__)
 

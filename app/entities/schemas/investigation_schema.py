@@ -1,15 +1,19 @@
-from marshmallow import fields, post_load
+from marshmallow import fields, post_load, Schema
+
+from app.entities.investigation import InvestigationEntity
+from app.entities.schemas.fitted_model_schema import FittedModelSchema
 
 
-class InvestigationSchema():
-    _id = fields.Str()
-    sample = fields.Nested("SampleSchema")
+class InvestigationSchema(Schema):
+    investigation_id = fields.Integer(dump_only=True)
+    sample_id = fields.Integer()
+    #fitted_models = fields.Nested("FittedModelSchema")
 
     @post_load
-    def make_investigation(self, data, **kwargs):
-        return Investigation(**data)
+    def make_investigation(self, data):
+        return InvestigationEntity(**data)
 
 
-EVALUATION_SCHEMA = InvestigationSchema()
+INVESTIGATION_SCHEMA = InvestigationSchema()
 
-
+__all__ = ["FittedModelSchema"]
