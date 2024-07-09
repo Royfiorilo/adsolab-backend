@@ -6,16 +6,16 @@ class Model:
             formula,
             description,
             parameters,
-            linealizations=None
+            linearizations=None
     ):
-        if linealizations is None:
-            linealizations = []
+        if linearizations is None:
+            linearizations = []
         self._id = _id
         self.name = name
         self.formula = formula
         self.description = description
         self.parameters = parameters
-        self.linealizations = linealizations
+        self.linearizations = linearizations
 
     @property
     def id(self):

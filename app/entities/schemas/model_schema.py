@@ -1,4 +1,4 @@
-from marshmallow import fields, post_load, Schema, validate
+from marshmallow import fields, post_load, Schema
 
 from app.entities.model import Model
 from app.entities.schemas.linearization_schema import LinearizationSchema
@@ -9,7 +9,7 @@ class ModelSchema(Schema):
     formula = fields.Str(required=True)
     description = fields.Str(required=True)
     parameters = fields.Dict(allow_none=False)
-    linealizations = fields.List(fields.Nested(LinearizationSchema), missing=None)
+    linearizations = fields.List(fields.Nested(LinearizationSchema), missing=None)
 
     @post_load
     def make_model(self, data):
