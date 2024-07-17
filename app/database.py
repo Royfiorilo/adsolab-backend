@@ -1,5 +1,5 @@
 from . import db
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSON
 
 
 class Model(db.Model):
@@ -8,7 +8,9 @@ class Model(db.Model):
     _id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), nullable=False)
     formula = db.Column(db.String(255), nullable=False)
-
+    description = db.Column(db.String(500), nullable=False)
+    parameters = db.Column(JSON, nullable=False)
+    linearizations = db.relationship('Linearization', backref='model', lazy=True)
 
 class FittedModel(db.Model):
     __tablename__ = 'fitted_model'
@@ -16,7 +18,7 @@ class FittedModel(db.Model):
     _id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     x = db.Column(ARRAY(db.Integer), nullable=False)
     y = db.Column(ARRAY(db.Integer), nullable=False)
-    investigation_id = db.Column(db.Integer, db.ForeignKey('investigation._id'), nullable=False)
+    investigation_id = db.Column(db.Integer, db.ForeignKey('investigation.investigation_id'), nullable=False)
 
 
 class Sample(db.Model):
@@ -33,3 +35,13 @@ class Investigation(db.Model):
     investigation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     sample_id = db.Column(db.Integer, db.ForeignKey('sample.sample_id'), nullable=False)
     #fitted_model = db.relationship('FittedModel', backref='investigation', lazy=True)
+
+
+class Linearization(db.Model):
+    __tablename__ = 'linearization'
+    linearization_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False)
+    formula = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.String(500), nullable=False)
+    parameters = db.Column(JSON, nullable=False)
+    model_id = db.Column(db.Integer, db.ForeignKey('model._id'), nullable=False)
