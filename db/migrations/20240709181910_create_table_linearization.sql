@@ -8,7 +8,7 @@ create table linearization
     description      varchar(500) not null,
     parameters       json         not null,
     model_id         integer      not null
-        references model
+        references model(_id)
 );
 
 -- migrate:down
