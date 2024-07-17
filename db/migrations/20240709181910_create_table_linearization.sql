@@ -6,7 +6,7 @@ create table linearization
     formula          varchar(255) not null,
     description      varchar(500) not null,
     parameters       json         not null,
-    model_id         INTEGER REFERENCES model(id) ON DELETE CASCADE
+    model_id         INTEGER REFERENCES model(pk_model) ON DELETE CASCADE
 );
 
 -- migrate:down
