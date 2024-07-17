@@ -20,7 +20,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@database:5432/adsolab?sslmode=disable
     depends_on:
       - "database"
-    command: sh -c "dbmate wait && dbmate down && dbmate up"
+    command: "--wait up"
 
 
 #  pgadmin:
