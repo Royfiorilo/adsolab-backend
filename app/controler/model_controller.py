@@ -1,20 +1,16 @@
 from flask import jsonify, request, Blueprint
 import numpy as np
-from app.entities.model import Model
 
-app = Blueprint('app', __name__)
+from app.database import Model
 
-
-@app.route('/health-check', methods=['GET'])
-def health_check():
-    return jsonify({"status": "ok"})
+blueprint = Blueprint('model', __name__)
 
 
 def apply_langmuir(ce):
     return 0.198 * (0.189 * ce) / (1 + 0.189 * ce)
 
 
-@app.route('/run-model/<model_name>', methods=['POST'])
+@blueprint.route('/run-model/<model_name>', methods=['POST'])
 def run_model(model_name):
     data = request.get_json()
     dot_x = data['x']
@@ -36,7 +32,7 @@ def run_model(model_name):
     return jsonify(response), 200
 
 
-@app.route('/models', methods=['GET'])
+@blueprint.route('/models', methods=['GET'])
 def get_models():
     models = Model.query.all()
     if not models:
@@ -48,10 +44,3 @@ def get_models():
     response = {'models': output}
     return jsonify(response), 200
 
-
-@app.after_request
-def add_header(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = '*'
-    return response
