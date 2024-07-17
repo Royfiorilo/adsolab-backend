@@ -1,10 +1,9 @@
 -- migrate:up
 
 CREATE TABLE model (
-    id uuid NOT NULL,
+    id serial primary key,
     name varchar(100) NOT NULL,
-    formula varchar(255) NOT NULL,
-    CONSTRAINT pk_model PRIMARY KEY (id)
+    formula varchar(255) NOT NULL
 )
 
 -- migrate:down
