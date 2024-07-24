@@ -1,7 +1,7 @@
 from marshmallow import fields, post_load, Schema
-
-from app.entities.model import Model
+from app.entities.no_linear_model import NoLinearModel
 from app.entities.schemas.linearization_schema import LinearizationSchema
+
 
 class ModelSchema(Schema):
     _id = fields.Integer(dump_only=True)
@@ -13,7 +13,7 @@ class ModelSchema(Schema):
 
     @post_load
     def make_model(self, data):
-        return Model(**data)
+        return NoLinearModel(**data)
 
 
 MODEL_SCHEMA = ModelSchema()

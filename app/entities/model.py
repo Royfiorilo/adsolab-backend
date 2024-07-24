@@ -1,4 +1,9 @@
-class Model:
+from formula import Formula
+from abc import ABC
+
+
+class Model(ABC):
+
     def __init__(
             self,
             _id,
@@ -12,7 +17,7 @@ class Model:
             linearizations = []
         self._id = _id
         self.name = name
-        self.formula = formula
+        self.formula = Formula(formula)
         self.description = description
         self.parameters = parameters
         self.linearizations = linearizations
@@ -20,3 +25,7 @@ class Model:
     @property
     def id(self):
         return self._id
+
+    def run(self, *args):
+        return self.formula.apply(*args)
+

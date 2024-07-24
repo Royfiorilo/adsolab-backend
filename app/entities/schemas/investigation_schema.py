@@ -1,5 +1,4 @@
 from marshmallow import fields, post_load, Schema
-
 from app.entities.investigation import InvestigationEntity
 from app.entities.schemas.fitted_model_schema import FittedModelSchema
 

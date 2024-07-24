@@ -1,5 +1,4 @@
-from marshmallow import fields, post_load, Schema, validate
-
+from marshmallow import fields, post_load, Schema
 from app.entities.linearization import Linearization
 
 
@@ -12,7 +11,7 @@ class LinearizationSchema(Schema):
     model_id = fields.Integer()
 
     @post_load
-    def make_Linearization(self, data):
+    def make_linearization(self, data):
         return Linearization(**data)
 
 
