@@ -5,6 +5,8 @@ class Formula:
 
     def __init__(self, formula_str):
         self.formula_str = formula_str
+        if '=' in formula_str:
+            formula_str = formula_str.split('=')[1].strip()
         self.formula = sympify(formula_str)
         self.variables = sorted(self.formula.free_symbols, key=lambda s: s.name)
         self.function = lambdify(self.variables, self.formula)

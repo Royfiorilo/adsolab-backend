@@ -3,7 +3,7 @@ import unittest
 from marshmallow import ValidationError
 
 from app.entities.sample import SampleEntity  # Importa la entidad si es necesaria para las pruebas
-from entities.schemas.sample_schema import SAMPLE_SCHEMA
+from app.entities.schemas.sample_schema import SAMPLE_SCHEMA
 
 
 class SchemaSchemaTest(unittest.TestCase):
@@ -46,7 +46,7 @@ class SchemaSchemaTest(unittest.TestCase):
         }
 
         sample = SAMPLE_SCHEMA.load(invalid_data)
-        self.assertEquals(sample.ce[1], 0)
+        self.assertEqual(sample.ce[1], 0)
 
     def test_ce_qe_length_mismatch(self):
         data = {
@@ -72,7 +72,7 @@ class SchemaSchemaTest(unittest.TestCase):
 
     def test_without_investigations(self):
         result = SAMPLE_SCHEMA.load(self.valid_sample_data)
-        self.assertEquals(result.investigations, [])
+        self.assertEqual(result.investigations, [])
 
     def test_sample_id_dump_only(self):
         load_data = {
@@ -87,3 +87,6 @@ class SchemaSchemaTest(unittest.TestCase):
 
         self.assertIn('sample_id', dumped)
         self.assertEqual(dumped['sample_id'], 123)
+
+if __name__ == '__main__':
+    unittest.main()
