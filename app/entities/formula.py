@@ -1,4 +1,4 @@
-from sympy import symbols, sympify, lambdify
+from sympy import sympify, lambdify
 
 
 class Formula:

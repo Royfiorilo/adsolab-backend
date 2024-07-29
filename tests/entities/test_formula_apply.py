@@ -1,7 +1,7 @@
 import unittest
 from app.entities.formula import Formula
 import math
-class FormulaTest(unittest.TestCase):
+class FormulaApplyTest(unittest.TestCase):
 
     def setUp(self):
         self.sum_formula = Formula("a + b")
