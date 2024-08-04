@@ -1,8 +1,9 @@
 from marshmallow import fields, post_load, Schema
 from app.entities.linearization import Linearization
+from entities.schemas.dump_mixin import DumpMixin
 
 
-class LinearizationSchema(Schema):
+class LinearizationSchema(Schema, DumpMixin):
     linearization_id = fields.Integer(dump_only=True)
     name = fields.Str(required=True)
     formula = fields.Str(required=True)

@@ -1,9 +1,9 @@
 from marshmallow import fields, post_load, Schema
 from app.entities.investigation import InvestigationEntity
 from app.entities.schemas.fitted_model_schema import FittedModelSchema
+from entities.schemas.dump_mixin import DumpMixin
 
-
-class InvestigationSchema(Schema):
+class InvestigationSchema(Schema, DumpMixin):
     investigation_id = fields.Integer(dump_only=True)
     sample_id = fields.Integer()
     #fitted_models = fields.Nested("FittedModelSchema")

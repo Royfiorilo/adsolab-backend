@@ -5,9 +5,10 @@ from flask import Blueprint, request, jsonify
 from marshmallow.exceptions import ValidationError
 
 from app import db
-from app.database import Sample, Investigation
-from app.entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
+from app.database import Sample, Investigation, Linearization
+from app.entities.schemas.investigation_schema import INVESTIGATION_SCHEMA, InvestigationSchema
 from app.entities.schemas.sample_schema import SAMPLE_SCHEMA
+from entities.schemas.linearization_schema import LINEARIZATION_SCHEMA
 
 blueprint = Blueprint('investigation', __name__)
 
@@ -34,3 +35,15 @@ def create_investigation():
         logging.error(msg, exc_info=me)
         db.session.rollback()
         return {"message": msg}, HTTPStatus.BAD_REQUEST
+
+
+@blueprint.route('/investigation/run-linearization', methods=['POST'])
+def run_investigation_model():
+    request_json = request.get_json()
+
+    investigation = Investigation.whith_screma(INVESTIGATION_SCHEMA).filer_by(investigation_id=request_json['investigation_id']).first()
+    sample = Sample.whith_screma(SAMPLE_SCHEMA).filer_by(sample_id=investigation.sample_id).first()
+    for model_name in request_json.get('linearizations', []):
+
+        linearization = Linearization.with_schema(LINEARIZATION_SCHEMA).filter_by(name=model_name).first()
+        linearization.run(sample)

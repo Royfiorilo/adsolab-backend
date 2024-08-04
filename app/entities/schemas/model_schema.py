@@ -1,9 +1,10 @@
 from marshmallow import fields, post_load, Schema
 from app.entities.no_linear_model import NoLinearModel
 from app.entities.schemas.linearization_schema import LinearizationSchema
+from entities.schemas.dump_mixin import DumpMixin
 
 
-class ModelSchema(Schema):
+class ModelSchema(Schema, DumpMixin):
     _id = fields.Integer(dump_only=True)
     name = fields.Str(required=True)
     formula = fields.Str(required=True)

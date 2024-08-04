@@ -1,5 +1,7 @@
-from sympy import sympify, lambdify
+from typing import List
 
+from sympy import sympify, lambdify
+import sympy as sp
 
 class Formula:
 
@@ -14,5 +16,9 @@ class Formula:
     def to_function(self):
         return self.function
 
-    def apply(self, *args):
+    def apply(self, **kargs):
+        args = []
+        for variable in self.variables:
+            if variable.name in kargs:
+                args.append(kargs[variable.name])
         return self.function(*args)
