@@ -15,7 +15,7 @@ jobs:
     - run: sudo curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
     - run: sudo chmod +x /usr/local/bin/dbmate
     - run: |
-        PGPASSWORD=${{secrets.DB_PASSWORD_DEV}} psql -h ${{secrets.DB_URL_DEV}} -U ${{secrets.DB_USERNAME_DEV}} -d adsolab -c "
+        PGPASSWORD=${{secrets.DB_PASSWORD_DEV}} psql -h ${{secrets.DB_URL_DEV}} -U ${{secrets.DB_USERNAME_DEV}} -d ${{secrets.DB_NAME}} -c "
         DO \$\$
         DECLARE
           r RECORD;
@@ -24,4 +24,4 @@ jobs:
             EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
           END LOOP;
         END \$\$;"
-    - run: dbmate -u 'postgresql://${{secrets.DB_USERNAME_DEV}}:${{secrets.DB_PASSWORD_DEV}}@${{secrets.DB_URL_DEV}}/adsolab?sslmode=require' up
+    - run: dbmate -u 'postgresql://${{secrets.DB_USERNAME_DEV}}:${{secrets.DB_PASSWORD_DEV}}@${{secrets.DB_URL_DEV}}/${{secrets.DB_NAME}}?sslmode=require' up
