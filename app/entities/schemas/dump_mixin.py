@@ -1,15 +1,25 @@
 from sqlalchemy.orm import Query
+import app
 
 
 class DumpMixin:
     @classmethod
     def with_schema(cls, schema):
         class SchemaQuery(Query):
+            def __init__(self, entities, session=None, schema=None):
+                super().__init__(entities, session=session)
+                self._schema = schema
+
             def __iter__(self):
-                return iter(schema.dump(list(super().__iter__()), many=True))
+                results = list(super().__iter__())
+                if self._schema:
+                    return iter(self._schema.dump(results, many=True))
+                return iter(results)
 
             def first(self):
                 result = super().first()
-                return schema.dump(result) if result else None
+                if self._schema and result:
+                    return self._schema.dump(result)
+                return result
 
-        return SchemaQuery(cls)
+        return SchemaQuery(cls, session=app.db.session)

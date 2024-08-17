@@ -1,7 +1,7 @@
 from marshmallow import fields, post_load, validate, Schema, ValidationError, pre_load, validates_schema
 from app.entities.sample import SampleEntity
 from app.entities.schemas.investigation_schema import InvestigationSchema
-from entities.schemas.dump_mixin import DumpMixin
+from .dump_mixin import DumpMixin
 
 
 class SampleSchema(Schema, DumpMixin):

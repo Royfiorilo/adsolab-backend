@@ -1,4 +1,4 @@
-from formula import Formula
+from .formula import Formula
 from abc import ABC
 
 

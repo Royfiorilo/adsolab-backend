@@ -1,7 +1,7 @@
 from marshmallow import fields, post_load, Schema
 from app.entities.investigation import InvestigationEntity
 from app.entities.schemas.fitted_model_schema import FittedModelSchema
-from entities.schemas.dump_mixin import DumpMixin
+from .dump_mixin import DumpMixin
 
 class InvestigationSchema(Schema, DumpMixin):
     investigation_id = fields.Integer(dump_only=True)
@@ -14,5 +14,3 @@ class InvestigationSchema(Schema, DumpMixin):
 
 
 INVESTIGATION_SCHEMA = InvestigationSchema()
-
-__all__ = ["FittedModelSchema"]
