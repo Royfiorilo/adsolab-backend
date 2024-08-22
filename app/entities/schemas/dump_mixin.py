@@ -22,4 +22,10 @@ class DumpMixin:
                     return self._schema.dump(result)
                 return result
 
+            def all(self):
+                results = super().all()
+                if self._schema:
+                    return self._schema.dump(results, many=True)
+                return results
+
         return SchemaQuery(cls, session=app.db.session)
