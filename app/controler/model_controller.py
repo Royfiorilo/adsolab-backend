@@ -3,9 +3,8 @@ import numpy as np
 from http import HTTPStatus
 from app.models.models import *
 from app.entities.model import Model as ModelEntity
-from app.entities.linearization import Linearization as LinearizationEntity
 from app.entities.schemas.model_schema import MODEL_SCHEMA
-from app.database import Model, Linearization
+from app.database import Model
 
 
 blueprint = Blueprint('model', __name__)
@@ -74,16 +73,14 @@ def run_model(model_name):
 
 @blueprint.route('/models', methods=['GET'])
 def get_models():
-    models = Model.query.all()
+    models = Model.with_schema(MODEL_SCHEMA).all()
 
     if not models:
         return jsonify({"status": "error", "message": "No models found"}), HTTPStatus.NOT_FOUND
 
     output = []
 
-    for modeldb in models:
-        model = ModelEntity(modeldb._id, modeldb.name, modeldb.formula, modeldb.description, modeldb.parameters,
-                            modeldb.linearizations)
+    for model in models:
         model_json = MODEL_SCHEMA.dump(model)
         output.append(model_json)
 
