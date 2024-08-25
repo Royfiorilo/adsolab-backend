@@ -1,4 +1,4 @@
-from . import db
+from app import db
 from sqlalchemy.dialects.postgresql import ARRAY, JSON
 from entities.schemas.dump_mixin import DumpMixin
 
