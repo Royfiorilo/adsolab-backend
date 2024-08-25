@@ -17,8 +17,8 @@ class FittedModel(DumpMixin, db.Model):
     __tablename__ = 'fitted_model'
 
     _id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    x = db.Column(ARRAY(db.Integer), nullable=False)
-    y = db.Column(ARRAY(db.Integer), nullable=False)
+    x = db.Column(ARRAY(db.Float), nullable=False)
+    y = db.Column(ARRAY(db.Float), nullable=False)
     investigation_id = db.Column(db.Integer, db.ForeignKey('investigation.investigation_id'), nullable=False)
 
 
@@ -26,8 +26,8 @@ class Sample(DumpMixin, db.Model):
     __tablename__ = 'sample'
 
     sample_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    ce = db.Column(ARRAY(db.Integer), nullable=False)
-    qe = db.Column(ARRAY(db.Integer), nullable=False)
+    ce = db.Column(ARRAY(db.Float), nullable=False)
+    qe = db.Column(ARRAY(db.Float), nullable=False)
     investigations = db.relationship('Investigation', backref='sample', lazy=True)
 
 

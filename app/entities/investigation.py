@@ -1,12 +1,12 @@
 class InvestigationEntity:
     def __init__(
             self,
-            sample,
+            sample_id,
             investigation_id=None,
             fitted_models=None
     ):
         self.investigation_id = investigation_id
-        self.sample = sample
+        self.sample_id = sample_id
         self.fitted_models = fitted_models
 
     @property

@@ -5,7 +5,7 @@ from .dump_mixin import DumpMixin
 
 
 class SampleSchema(Schema, DumpMixin):
-    sample_id = fields.Integer(dump_only=True)
+    sample_id = fields.Integer(missing=None)
     ce = fields.List(
         fields.Float(), required=True, validate=validate.Length(min=1)
     )

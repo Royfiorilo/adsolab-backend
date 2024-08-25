@@ -1,3 +1,5 @@
+import json
+
 from sqlalchemy.orm import Query
 import app
 
@@ -13,19 +15,20 @@ class DumpMixin:
             def __iter__(self):
                 results = list(super().__iter__())
                 if self._schema:
-                    return iter(self._schema.dump(results, many=True))
+                    return iter(self._schema.load(self._schema.dump(results, many=True), many=True))
                 return iter(results)
 
             def first(self):
                 result = super().first()
                 if self._schema and result:
-                    return self._schema.dump(result)
+                    dump = self._schema.dump(result)
+                    return self._schema.load(dump)
                 return result
 
             def all(self):
                 results = super().all()
                 if self._schema:
-                    return self._schema.dump(results, many=True)
+                    return self._schema.load(self._schema.dump(results, many=True), many=True)
                 return results
 
-        return SchemaQuery(cls, session=app.db.session)
+        return SchemaQuery(cls, session=app.db.session, schema=schema)

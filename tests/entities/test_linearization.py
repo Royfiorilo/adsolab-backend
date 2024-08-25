@@ -4,6 +4,7 @@ import numpy as np
 from scipy.stats import linregress
 
 from entities.sample import SampleEntity
+
 from entities.linearization import Linearization
 
 

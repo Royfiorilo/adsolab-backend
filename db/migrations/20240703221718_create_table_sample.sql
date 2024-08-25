@@ -3,8 +3,8 @@
 create table  sample
 (
     sample_id              serial primary key,
-    ce               integer[] not null,
-    qe               integer[] not null
+    ce               real[] not null,
+    qe               real[] not null
 );
 
 -- migrate:down
