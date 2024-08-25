@@ -1,10 +1,10 @@
 from flask import jsonify, request, Blueprint
 import numpy as np
 from http import HTTPStatus
-from app.models.models import *
-from app.entities.model import Model as ModelEntity
-from app.entities.schemas.model_schema import MODEL_SCHEMA
-from app.database import Model
+from models.models import *
+from entities.model import Model as ModelEntity
+from entities.schemas.model_schema import MODEL_SCHEMA
+from database import Model
 
 
 blueprint = Blueprint('model', __name__)

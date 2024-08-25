@@ -1,5 +1,5 @@
 import unittest
-from app.entities.formula import Formula
+from entities.formula import Formula
 
 
 def caller(func, *args):

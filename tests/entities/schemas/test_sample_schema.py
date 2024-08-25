@@ -2,8 +2,8 @@ import unittest
 
 from marshmallow import ValidationError
 
-from app.entities.sample import SampleEntity  # Importa la entidad si es necesaria para las pruebas
-from app.entities.schemas.sample_schema import SAMPLE_SCHEMA
+from entities.sample import SampleEntity  # Importa la entidad si es necesaria para las pruebas
+from entities.schemas.sample_schema import SAMPLE_SCHEMA
 
 
 class SchemaSchemaTest(unittest.TestCase):

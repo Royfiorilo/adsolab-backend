@@ -3,8 +3,8 @@ import unittest
 import numpy as np
 from scipy.stats import linregress
 
-from app.entities.sample import SampleEntity
-from app.entities.linearization import Linearization
+from entities.sample import SampleEntity
+from entities.linearization import Linearization
 
 
 class LinearizationTest(unittest.TestCase):

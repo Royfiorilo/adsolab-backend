@@ -1,5 +1,5 @@
 from marshmallow import fields, post_load, Schema
-from app.entities.linearization import Linearization
+from entities.linearization import Linearization
 from .dump_mixin import DumpMixin
 
 

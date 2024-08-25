@@ -1,6 +1,6 @@
 from . import db
 from sqlalchemy.dialects.postgresql import ARRAY, JSON
-from app.entities.schemas.dump_mixin import DumpMixin
+from entities.schemas.dump_mixin import DumpMixin
 
 
 class Model(DumpMixin, db.Model):

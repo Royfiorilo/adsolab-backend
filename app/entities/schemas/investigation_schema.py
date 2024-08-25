@@ -1,6 +1,6 @@
 from marshmallow import fields, post_load, Schema
-from app.entities.investigation import InvestigationEntity
-from app.entities.schemas.fitted_model_schema import FittedModelSchema
+from entities.investigation import InvestigationEntity
+from entities.schemas.fitted_model_schema import FittedModelSchema
 from .dump_mixin import DumpMixin
 
 class InvestigationSchema(Schema, DumpMixin):

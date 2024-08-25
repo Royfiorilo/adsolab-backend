@@ -1,5 +1,5 @@
 from marshmallow import fields, post_load, Schema, validate
-from app.entities.fitted_model import FittedModel
+from entities.fitted_model import FittedModel
 from .dump_mixin import DumpMixin
 
 

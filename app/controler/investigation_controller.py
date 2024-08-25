@@ -5,11 +5,11 @@ from flask import Blueprint, request, jsonify
 from marshmallow.exceptions import ValidationError
 
 from app import db
-from app.database import Sample, Investigation
-from app.database import Linearization as LinearizationDB
-from app.entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
-from app.entities.schemas.sample_schema import SAMPLE_SCHEMA
-from app.entities.linearization import Linearization
+from database import Sample, Investigation
+from database import Linearization as LinearizationDB
+from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
+from entities.schemas.sample_schema import SAMPLE_SCHEMA
+from entities.linearization import Linearization
 
 
 blueprint = Blueprint('investigation', __name__)

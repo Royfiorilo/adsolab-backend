@@ -1,5 +1,5 @@
 import unittest
-from app.entities.formula import Formula
+from entities.formula import Formula
 import math
 class FormulaApplyTest(unittest.TestCase):
 

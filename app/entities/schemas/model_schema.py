@@ -1,6 +1,6 @@
 from marshmallow import fields, post_load, Schema
-from app.entities.no_linear_model import NoLinearModel
-from app.entities.schemas.linearization_schema import LinearizationSchema
+from entities.no_linear_model import NoLinearModel
+from entities.schemas.linearization_schema import LinearizationSchema
 from entities.schemas.dump_mixin import DumpMixin
 
 
