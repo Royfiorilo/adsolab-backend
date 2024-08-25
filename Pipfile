@@ -9,6 +9,7 @@ psycopg2-binary = "*"
 python-dotenv = "*"
 marshmallow = "*"
 sympy = "*"
+scipy = "*"
 
 [dev-packages]
 pytest = "==6.2.2"
