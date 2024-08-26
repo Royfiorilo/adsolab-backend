@@ -1,10 +1,10 @@
-from marshmallow import fields, post_load, Schema, validate
+from marshmallow import fields, post_load, Schema
+from entities.linearization import Linearization
+from .dump_mixin import DumpMixin
 
-from app.entities.linearization import Linearization
 
-
-class LinearizationSchema(Schema):
-    linearization_id = fields.Integer(dump_only=True)
+class LinearizationSchema(Schema, DumpMixin):
+    linearization_id = fields.Integer(missing=None)
     name = fields.Str(required=True)
     formula = fields.Str(required=True)
     description = fields.Str(required=True)
@@ -12,7 +12,7 @@ class LinearizationSchema(Schema):
     model_id = fields.Integer()
 
     @post_load
-    def make_Linearization(self, data):
+    def make_linearization(self, data, **kwargs):
         return Linearization(**data)
 
 

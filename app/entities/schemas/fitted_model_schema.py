@@ -1,9 +1,9 @@
 from marshmallow import fields, post_load, Schema, validate
+from entities.fitted_model import FittedModel
+from .dump_mixin import DumpMixin
 
-from app.entities.fitted_model import FittedModel
 
-
-class FittedModelSchema(Schema):
+class FittedModelSchema(Schema, DumpMixin):
     _id = fields.Integer(dump_only=True)
     params = fields.Dict(allow_none=False)
     statistics = fields.Dict(allow_none=False)

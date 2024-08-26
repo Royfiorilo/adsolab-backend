@@ -9,4 +9,4 @@ CREATE TABLE model (
 
 
 -- migrate:down
-DROP TABLE model
+DROP TABLE model;

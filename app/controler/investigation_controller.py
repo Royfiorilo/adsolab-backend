@@ -5,9 +5,10 @@ from flask import Blueprint, request, jsonify
 from marshmallow.exceptions import ValidationError
 
 from app import db
-from app.database import Sample, Investigation
-from app.entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
-from app.entities.schemas.sample_schema import SAMPLE_SCHEMA
+from database import Sample, Investigation
+from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
+from entities.schemas.sample_schema import SAMPLE_SCHEMA
+from services.investigation_service import excecute_linearizations
 
 blueprint = Blueprint('investigation', __name__)
 
@@ -20,7 +21,7 @@ def create_investigation():
 
         sample = Sample(ce=sample_data.ce, qe=sample_data.qe)
         db.session.add(sample)
-        db.session.commit() #necesito este commit para que me cree el sample_id
+        db.session.commit()  # necesito este commit para que me cree el sample_id
 
         investigation = Investigation(sample_id=sample.sample_id)
         db.session.add(investigation)
@@ -34,3 +35,15 @@ def create_investigation():
         logging.error(msg, exc_info=me)
         db.session.rollback()
         return {"message": msg}, HTTPStatus.BAD_REQUEST
+
+
+@blueprint.route('/investigation/run-linearization', methods=['POST'])
+def run_investigation_model():
+    response = {"investigation_id": request.json['investigation_id'], "results": []}
+    request_json = request.get_json()
+    for model in request_json["models"]:
+        model_result = excecute_linearizations(request_json['investigation_id'], model.get('linearizations', []),
+                                               model["model"])
+        response["results"].append(model_result)
+
+    return jsonify(response), HTTPStatus.OK

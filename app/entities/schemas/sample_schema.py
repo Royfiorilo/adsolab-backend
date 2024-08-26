@@ -1,10 +1,11 @@
 from marshmallow import fields, post_load, validate, Schema, ValidationError, pre_load, validates_schema
-from app.entities.sample import SampleEntity
-from app.entities.schemas.investigation_schema import InvestigationSchema
+from entities.sample import SampleEntity
+from entities.schemas.investigation_schema import InvestigationSchema
+from .dump_mixin import DumpMixin
 
 
-class SampleSchema(Schema):
-    sample_id = fields.Integer(dump_only=True)
+class SampleSchema(Schema, DumpMixin):
+    sample_id = fields.Integer(missing=None)
     ce = fields.List(
         fields.Float(), required=True, validate=validate.Length(min=1)
     )
