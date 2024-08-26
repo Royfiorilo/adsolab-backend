@@ -23,9 +23,15 @@ class Linearization(Model):
         for ce, qe in zip(sample.ce, sample.qe):
             data = {"ce": ce, "qe": qe}
             x_funcion = Formula(self.parameters["x"])
-            x_dots.append(x_funcion.apply(**data))
+            if data["ce"] != 0:
+                x_dots.append(x_funcion.apply(**data))
+            else:
+                x_dots.append(data["ce"])
             y_funcion = Formula(self.parameters["y"])
-            y_dots.append(y_funcion.apply(**data))
+            if data["qe"] != 0:
+                y_dots.append(y_funcion.apply(**data))
+            else:
+                y_dots.append(data["qe"])
         return x_dots, y_dots
 
 
