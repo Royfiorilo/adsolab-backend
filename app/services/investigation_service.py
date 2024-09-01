@@ -18,16 +18,13 @@ def compare_r2_linearizations(linearization1, linearization2):
         return linearization2
 
 
-
 def excecute_linearizations(investigation_id, linearizations, model):
-
     result = {"model": model, "best_result": ""}
     best_result = result["best_result"]
 
     investigation = Investigation.with_schema(None).filter_by(
         investigation_id=investigation_id).first()
     sample = Sample.with_schema(SAMPLE_SCHEMA).filter_by(sample_id=investigation.sample_id).first()
-
 
     linearization_results = []
     for model_name in linearizations:
@@ -38,4 +35,3 @@ def excecute_linearizations(investigation_id, linearizations, model):
         result["best_result"] = best_result["name"]
     result["linearizations"] = linearization_results
     return result
-

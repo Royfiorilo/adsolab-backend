@@ -1,5 +1,5 @@
 from scipy.stats import linregress
-from sympy import Eq, solve, sympify
+from sympy import Eq, solve, sympify, symbols
 
 from .formula import Formula
 from .model import Model
@@ -43,14 +43,14 @@ class Linearization(Model):
         solutions_dict = [{var.name: float(sol) for var, sol in zip(unknown, sol_tuple)} for sol_tuple in solutions]
         return solutions_dict
 
-    def _format_solution(self, x_dots, y_dots, slope, intercept, r_value, std_err, solutions_dict, variables):
+    def _format_solution(self, x_dots, y_dots, slope, intercept, r_value, std_err, solutions_dict, vars):
         return {
             "name": self.name,
             "transformed": {"x": x_dots, "y": y_dots},
             "slope": slope,
             "intercept": intercept,
             "statistics": {"r": r_value, "std_err": std_err},
-            "parameters": [{"name": var, "value": solutions_dict[0][var]} for var in variables]
+            "parameters": [{"name": var, "value": solutions_dict[0][var]} for var in vars]
         }
 
     def run(self, *args):
@@ -66,7 +66,8 @@ class Linearization(Model):
             raise KeyError("The equations to solve the slope and/or y-intercept are not defined in the linearization.")
 
         variables = self.formula.get_variables()
-        unknown = [x.name for x in variables if x.name not in ['ce', 'qe']]
-        solutions_dict = self._solve_equations(equations, unknown, slope, intercept)
+        vars = [x.name for x in variables if x.name not in ['ce', 'qe']]
+        unkown = symbols(vars)
+        solutions_dict = self._solve_equations(equations, unkown, slope, intercept)
 
         return self._format_solution(x_dots, y_dots, slope, intercept, r_value, std_err, solutions_dict, vars)
