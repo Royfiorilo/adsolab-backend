@@ -10,7 +10,7 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
   dbmate:
     image: "ghcr.io/amacneil/dbmate:1"
     container_name: db_migrations_adsolab
