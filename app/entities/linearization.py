@@ -1,5 +1,5 @@
 from scipy.stats import linregress
-from sympy import symbols, Eq, solve, sympify
+from sympy import Eq, solve, sympify
 
 from .formula import Formula
 from .model import Model
@@ -18,53 +18,55 @@ class Linearization(Model):
         super().__init__(linearization_id, name, formula, description, parameters)
         self.model_id = model_id
 
-    def calculate_dots(self, sample):
+    def _calculate_dots(self, sample):
         x_dots, y_dots = [], []
         for ce, qe in zip(sample.ce, sample.qe):
             data = {"ce": ce, "qe": qe}
-            x_funcion = Formula(self.parameters["x"])
+            x_function = Formula(self.parameters["x"])
+
+            # Si algún punto tiene algún valor en 0, no se hace la transformación.
             if data["ce"] != 0:
-                x_dots.append(x_funcion.apply(**data))
+                x_dots.append(x_function.apply(**data))
             else:
                 x_dots.append(data["ce"])
-            y_funcion = Formula(self.parameters["y"])
+            y_function = Formula(self.parameters["y"])
             if data["qe"] != 0:
-                y_dots.append(y_funcion.apply(**data))
+                y_dots.append(y_function.apply(**data))
             else:
                 y_dots.append(data["qe"])
         return x_dots, y_dots
 
-
-    def solve_equations(self, equations, unknown, slope, intercept):
+    def _solve_equations(self, equations, unknown, slope, intercept):
         eq_m = Eq(sympify(equations['m']), slope)
         eq_b = Eq(sympify(equations['b']), intercept)
         solutions = solve((eq_m, eq_b), tuple(unknown))
         solutions_dict = [{var.name: float(sol) for var, sol in zip(unknown, sol_tuple)} for sol_tuple in solutions]
         return solutions_dict
 
-    def format_solution(self, x_dots, y_dots, slope, intercept, r_value, std_err, solutions_dict, vars):
+    def _format_solution(self, x_dots, y_dots, slope, intercept, r_value, std_err, solutions_dict, variables):
         return {
             "name": self.name,
             "transformed": {"x": x_dots, "y": y_dots},
             "slope": slope,
             "intercept": intercept,
             "statistics": {"r": r_value, "std_err": std_err},
-            "parameters": [{"name": var, "value": solutions_dict[0][var]} for var in vars]
+            "parameters": [{"name": var, "value": solutions_dict[0][var]} for var in variables]
         }
 
     def run(self, *args):
         sample = args[0]
-        x_dots, y_dots = self.calculate_dots(sample)
+        # Transformamos los puntos para realizar la regresión lineal sobre esos puntos.
+        x_dots, y_dots = self._calculate_dots(sample)
         slope, intercept, r_value, p_value, std_err = linregress(x_dots, y_dots)
 
+        # Obtenemos las ecuaciones que van a ser utilizadas para resolver el esquema de ecuaciones para despejar los
+        # parámetros
         equations = {key: value for key, value in self.parameters.items() if key not in ['x', 'y']}
+        if 'm' not in equations or 'b' not in equations:
+            raise KeyError("The equations to solve the slope and/or y-intercept are not defined in the linearization.")
+
         variables = self.formula.get_variables()
-        vars = [x.name for x in variables if x.name not in ['ce', 'qe']]
-        unknown = symbols(vars)
+        unknown = [x.name for x in variables if x.name not in ['ce', 'qe']]
+        solutions_dict = self._solve_equations(equations, unknown, slope, intercept)
 
-        solutions_dict = self.solve_equations(equations, unknown,slope,intercept)
-        return self.format_solution(x_dots, y_dots, slope, intercept, r_value, std_err, solutions_dict, vars)
-
-
-
-
+        return self._format_solution(x_dots, y_dots, slope, intercept, r_value, std_err, solutions_dict, vars)

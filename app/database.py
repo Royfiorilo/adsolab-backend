@@ -33,6 +33,7 @@ class Sample(DumpMixin, db.Model):
 
 class Investigation(DumpMixin, db.Model):
     __tablename__ = 'investigation'
+
     investigation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     sample_id = db.Column(db.Integer, db.ForeignKey('sample.sample_id'), nullable=False)
     #fitted_model = db.relationship('FittedModel', backref='investigation', lazy=True)
@@ -40,6 +41,7 @@ class Investigation(DumpMixin, db.Model):
 
 class Linearization(DumpMixin, db.Model):
     __tablename__ = 'linearization'
+
     linearization_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), nullable=False)
     formula = db.Column(db.String(255), nullable=False)
