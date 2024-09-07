@@ -39,11 +39,16 @@ def create_investigation():
 
 @blueprint.route('/investigation/run-linearization', methods=['POST'])
 def run_investigation_model():
-    response = {"investigation_id": request.json['investigation_id'], "results": []}
-    request_json = request.get_json()
-    for model in request_json["models"]:
-        model_result = excecute_linearizations(request_json['investigation_id'], model.get('linearizations', []),
+    try:
+        response = {"investigation_id": request.json['investigation_id'], "results": []}
+        request_json = request.get_json()
+        for model in request_json["models"]:
+            model_result = excecute_linearizations(request_json['investigation_id'], model.get('linearizations', []),
                                                model["model"])
-        response["results"].append(model_result)
+            response["results"].append(model_result)
 
-    return jsonify(response), HTTPStatus.OK
+        return jsonify(response), HTTPStatus.OK
+    except Exception as me:
+        msg = f"Error running linealization: {me}"
+        logging.error(msg, exc_info=me)
+        return {"message": msg}, HTTPStatus.BAD_REQUEST

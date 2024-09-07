@@ -4,6 +4,7 @@ from sympy import Eq, solve, sympify, symbols
 from .formula import Formula
 from .model import Model
 
+ROUND_DIGIT = 2
 
 class Linearization(Model):
     def __init__(
@@ -26,14 +27,14 @@ class Linearization(Model):
 
             # Si algún punto tiene algún valor en 0, no se hace la transformación.
             if data["ce"] != 0:
-                x_dots.append(x_function.apply(**data))
+                x_dots.append(round(x_function.apply(**data), ROUND_DIGIT))
             else:
-                x_dots.append(data["ce"])
+                x_dots.append(round(data["ce"], ROUND_DIGIT))
             y_function = Formula(self.parameters["y"])
             if data["qe"] != 0:
-                y_dots.append(y_function.apply(**data))
+                y_dots.append(round(y_function.apply(**data), ROUND_DIGIT))
             else:
-                y_dots.append(data["qe"])
+                y_dots.append(round(data["qe"], ROUND_DIGIT))
         return x_dots, y_dots
 
     def _solve_equations(self, equations, unknown, slope, intercept):
