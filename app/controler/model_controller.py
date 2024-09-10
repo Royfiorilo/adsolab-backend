@@ -8,7 +8,6 @@ from entities.schemas.model_schema import MODEL_SCHEMA
 blueprint = Blueprint('model', __name__)
 
 
-
 @blueprint.route('/models', methods=['GET'])
 def get_models():
     models = Model.with_schema(None).all()

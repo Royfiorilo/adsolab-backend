@@ -1,6 +1,8 @@
 import unittest
 from entities.formula import Formula
 import math
+
+
 class FormulaApplyTest(unittest.TestCase):
 
     def setUp(self):
@@ -16,67 +18,115 @@ class FormulaApplyTest(unittest.TestCase):
     def test_sum_formula(self):
         sum_args = {"a": 1, "b": 2}
         self.assertEqual(self.sum_formula.apply(**sum_args), 3)
-        #self.assertEqual(self.sum_formula.apply(1.3, 2.4), 3.7)
-        #self.assertEqual(self.sum_formula.apply(-3, -9), -12)
+        sum_args = {"a": 1.3, "b": 2.4}
+        self.assertEqual(self.sum_formula.apply(**sum_args), 3.7)
+        sum_args = {"a": -3, "b": -9}
+        self.assertEqual(self.sum_formula.apply(**sum_args), -12)
 
     def test_multiply_formula(self):
-        self.assertEqual(self.multiply_formula.apply(3, 3), 9)
-        self.assertEqual(self.multiply_formula.apply(0.5, 0.02), 0.01)
-        self.assertEqual(self.multiply_formula.apply(-3, -4), 12)
-        self.assertEqual(self.multiply_formula.apply(-2, 0.45), -0.9)
+        mult_args = {"a": 3, "b": 3}
+        self.assertEqual(self.multiply_formula.apply(**mult_args), 9)
+        mult_args = {"a": 0.5, "b": 0.02}
+        self.assertEqual(self.multiply_formula.apply(**mult_args), 0.01)
+        mult_args = {"a": -3, "b": -4}
+        self.assertEqual(self.multiply_formula.apply(**mult_args), 12)
+        mult_args = {"a": -2, "b": 0.45}
+        self.assertEqual(self.multiply_formula.apply(**mult_args), -0.9)
 
     def test_divide_formula(self):
-        self.assertEqual(self.divide_formula.apply(1, 2), 0.5)
-        self.assertAlmostEqual(self.divide_formula.apply(1.3, 2.4), 0.5416, 3)
-        self.assertEqual(self.divide_formula.apply(0.5, 2), 0.25)
-        self.assertEqual(self.divide_formula.apply(-4, -2), 2)
-        self.assertEqual(self.divide_formula.apply(0.5, 0.5), 1)
-        self.assertEqual(self.divide_formula.apply(0.5, 0.05), 10)
+        div_args = {"a": 1, "b": 2}
+        self.assertEqual(self.divide_formula.apply(**div_args), 0.5)
+        div_args = {"a": 1.3, "b": 2.4}
+        self.assertAlmostEqual(self.divide_formula.apply(**div_args), 0.5416, 3)
+        div_args = {"a": 0.5, "b": 2}
+        self.assertEqual(self.divide_formula.apply(**div_args), 0.25)
+        div_args = {"a": -4, "b": -2}
+        self.assertEqual(self.divide_formula.apply(**div_args), 2)
+        div_args = {"a": 0.5, "b": 0.5}
+        self.assertEqual(self.divide_formula.apply(**div_args), 1)
+        div_args = {"a": 0.5, "b": 0.05}
+        self.assertEqual(self.divide_formula.apply(**div_args), 10)
 
     def test_log_formula(self):
-        self.assertAlmostEqual(self.log_formula.apply(1), 0, places=4)
-        self.assertAlmostEqual(self.log_formula.apply(math.e), 1, places=4)
-        self.assertAlmostEqual(self.log_formula.apply(math.e ** 2), 2, places=4)
-        self.assertAlmostEqual(self.log_formula.apply(math.e ** 3), 3, places=4)
+        log_args = {"a": 1}
+        self.assertAlmostEqual(self.log_formula.apply(**log_args), 0, places=4)
+        log_args = {"a": math.e}
+        self.assertAlmostEqual(self.log_formula.apply(**log_args), 1, places=4)
+        log_args = {"a": math.e ** 2}
+        self.assertAlmostEqual(self.log_formula.apply(**log_args), 2, places=4)
+        log_args = {"a": math.e ** 3}
+        self.assertAlmostEqual(self.log_formula.apply(**log_args), 3, places=4)
 
     def test_log_formula_base2(self):
-        self.assertAlmostEqual(self.log_formula_base.apply(1, 2), 0, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(2, 2), 1, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(4, 2), 2, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(8, 2), 3, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(16, 2), 4, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(1024, 2), 10, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(2048, 2), 11, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(4096, 2), 12, places=4)
+        log_args = {"a": 1, "n": 2}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), 0, places=4)
+        log_args = {"a": 2, "n": 2}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), 1, places=4)
+        log_args = {"a": 4, "n": 2}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), 2, places=4)
+        log_args = {"a": 8, "n": 2}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), 3, places=4)
+        log_args = {"a": 1024, "n": 2}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), 10, places=4)
+        log_args = {"a": 2048, "n": 2}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), 11, places=4)
+        log_args = {"a": 4096, "n": 2}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), 12, places=4)
+
     def test_log_formula_base10(self):
-        self.assertAlmostEqual(self.log_formula_base.apply(1, 10), 0, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(10, 10), 1, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(100, 10), 2, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(1000, 10), 3, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(0.1, 10), -1, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(0.01, 10), -2, places=4)
-        self.assertAlmostEqual(self.log_formula_base.apply(0.001, 10), -3, places=4)
+        log_args = {"a": 1, "n": 10}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), 0, places=4)
+        log_args = {"a": 10, "n": 10}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), 1, places=4)
+        log_args = {"a": 100, "n": 10}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), 2, places=4)
+        log_args = {"a": 1000, "n": 10}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), 3, places=4)
+        log_args = {"a": 0.1, "n": 10}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), -1, places=4)
+        log_args = {"a": 0.01, "n": 10}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), -2, places=4)
+        log_args = {"a": 0.001, "n": 10}
+        self.assertAlmostEqual(self.log_formula_base.apply(**log_args), -3, places=4)
+
     def test_power_formula(self):
-        self.assertEqual(self.power_formula.apply(1, 2), 1)
-        self.assertEqual(self.power_formula.apply(1, 0), 1)
-        self.assertEqual(self.power_formula.apply(2, 1), 2)
-        self.assertEqual(self.power_formula.apply(2, 4), 16)
-        self.assertEqual(self.power_formula.apply(0.5, 2), 0.25)
-        self.assertEqual(self.power_formula.apply(4, 0.5), 2)
+        power_args = {"a": 1, "b": 2}
+        self.assertEqual(self.power_formula.apply(**power_args), 1)
+        power_args = {"a": 1, "b": 0}
+        self.assertEqual(self.power_formula.apply(**power_args), 1)
+        power_args = {"a": 2, "b": 1}
+        self.assertEqual(self.power_formula.apply(**power_args), 2)
+        power_args = {"a": 2, "b": 4}
+        self.assertEqual(self.power_formula.apply(**power_args), 16)
+        power_args = {"a": 0.5, "b": 2}
+        self.assertEqual(self.power_formula.apply(**power_args), 0.25)
+        power_args = {"a": 4, "b": 0.5}
+        self.assertEqual(self.power_formula.apply(**power_args), 2)
 
     def test_langmuir_formula(self):
-        self.assertAlmostEqual(self.langmuir_formula.apply(1.0, 0.5, 10), 3.3333, places=4)
-        self.assertAlmostEqual(self.langmuir_formula.apply(1.0, 1, 10), 5.0, places=4)
-        self.assertAlmostEqual(self.langmuir_formula.apply(1.0, 0.1, 10), 0.9091, places=4)
-        self.assertAlmostEqual(self.langmuir_formula.apply(2.0, 0.5, 10), 5, places=4)
-        self.assertAlmostEqual(self.langmuir_formula.apply(0.5, 0.5, 10), 2, places=4)
+        langmuir_args = {"ce": 1.0, "qmax": 10, "k": 0.5}
+        self.assertAlmostEqual(self.langmuir_formula.apply(**langmuir_args), 3.3333, places=4)
+        langmuir_args = {"ce": 1.0, "qmax": 10, "k": 1}
+        self.assertAlmostEqual(self.langmuir_formula.apply(**langmuir_args), 5.0, places=4)
+        langmuir_args = {"ce": 1.0, "qmax": 10, "k": 0.1}
+        self.assertAlmostEqual(self.langmuir_formula.apply(**langmuir_args), 0.9091, places=4)
+        langmuir_args = {"ce": 2.0, "qmax": 10, "k": 0.5}
+        self.assertAlmostEqual(self.langmuir_formula.apply(**langmuir_args), 5, places=4)
+        langmuir_args = {"ce": 0.5, "qmax": 10, "k": 0.5}
+        self.assertAlmostEqual(self.langmuir_formula.apply(**langmuir_args), 2, places=4)
 
     def test_formula_freundlich(self):
-        self.assertAlmostEqual(self.freundlich_formula.apply(1.0, 2, 2), 2.0, places=4)
-        self.assertAlmostEqual(self.freundlich_formula.apply(4.0, 2, 2), 4.0, places=4)
-        self.assertAlmostEqual(self.freundlich_formula.apply(1.0, 3, 3), 3.0, places=4)
-        self.assertAlmostEqual(self.freundlich_formula.apply(8.0, 1, 3), 2.0, places=4)
-        self.assertAlmostEqual(self.freundlich_formula.apply(27.0, 2, 3), 6.0, places=4)
+        freundlich_args = {"ce": 1.0, "kf": 2, "nf": 2}
+        self.assertAlmostEqual(self.freundlich_formula.apply(**freundlich_args), 2.0, places=4)
+        freundlich_args = {"ce": 4.0, "kf": 2, "nf": 2}
+        self.assertAlmostEqual(self.freundlich_formula.apply(**freundlich_args), 4.0, places=4)
+        freundlich_args = {"ce": 1.0, "kf": 3, "nf": 3}
+        self.assertAlmostEqual(self.freundlich_formula.apply(**freundlich_args), 3.0, places=4)
+        freundlich_args = {"ce": 8.0, "kf": 1, "nf": 3}
+        self.assertAlmostEqual(self.freundlich_formula.apply(**freundlich_args), 2.0, places=4)
+        freundlich_args = {"ce": 27.0, "kf": 2, "nf": 3}
+        self.assertAlmostEqual(self.freundlich_formula.apply(**freundlich_args), 6.0, places=4)
+
 
 if __name__ == '__main__':
     unittest.main()

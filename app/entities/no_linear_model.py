@@ -22,3 +22,6 @@ class NoLinearModel(Model):
 
     def get_linearizations(self):
         return self.linearizations
+
+    def run(self, *args):
+        return 0
