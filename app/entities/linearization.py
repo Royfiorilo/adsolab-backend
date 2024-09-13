@@ -4,7 +4,7 @@ from sympy import Eq, solve, sympify, symbols
 from .formula import Formula
 from .model import Model
 
-ROUND_DIGIT = 2
+ROUND_DIGIT = 4
 
 class Linearization(Model):
     def __init__(
