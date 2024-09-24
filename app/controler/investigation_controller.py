@@ -21,7 +21,7 @@ def create_investigation():
 
         sample = Sample(ce=sample_data.ce, qe=sample_data.qe)
         db.session.add(sample)
-        db.session.commit()  # necesito este commit para que me cree el sample_id
+        db.session.flush()
 
         investigation = Investigation(sample_id=sample.sample_id)
         db.session.add(investigation)
