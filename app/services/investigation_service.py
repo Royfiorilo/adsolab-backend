@@ -25,7 +25,8 @@ def excecute_linearizations(investigation_id, linearizations, model):
             raise Exception(f"{model_name} not found")
         solution = linearization.run(sample)
         linearization_results.append(solution)
-        best_result = compare_r2_linearizations(best_result, solution)
-        result["best_result"] = best_result["name"]
+        if solution["status"] == "OK":
+            best_result = compare_r2_linearizations(best_result, solution)
+            result["best_result"] = best_result["name"]
     result["linearizations"] = linearization_results
     return result
