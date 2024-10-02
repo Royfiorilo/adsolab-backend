@@ -47,6 +47,7 @@ class Linearization(Model):
     def _format_solution(self, x_dots, y_dots, slope, intercept, r_value, std_err, solutions_dict, vars):
         return {
             "name": self.name,
+            "status": "OK",
             "transformed": {"x": x_dots, "y": y_dots},
             "slope": slope,
             "intercept": intercept,
@@ -58,7 +59,10 @@ class Linearization(Model):
         sample = args[0]
         # Transformamos los puntos para realizar la regresión lineal sobre esos puntos.
         x_dots, y_dots = self._calculate_dots(sample)
-        slope, intercept, r_value, p_value, std_err = linregress(x_dots, y_dots)
+        try:
+            slope, intercept, r_value, p_value, std_err = linregress(x_dots, y_dots)
+        except ValueError as e:
+            return {"name": self.name, "status": "ERROR", "reason": str(e)}
 
         # Obtenemos las ecuaciones que van a ser utilizadas para resolver el esquema de ecuaciones para despejar los
         # parámetros
