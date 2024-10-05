@@ -51,8 +51,8 @@ class Linearization(Model):
             "transformed": {"x": x_dots, "y": y_dots},
             "slope": slope,
             "intercept": intercept,
-            "statistics": {"r": r_value, "std_err": std_err},
-            "parameters": [{"name": var, "value": solutions_dict[0][var]} for var in vars]
+            "statistics": {"r": round(r_value, ROUND_DIGIT), "std_err": round(std_err, ROUND_DIGIT)},
+            "parameters": [{"name": var, "value": round(solutions_dict[0][var], ROUND_DIGIT)} for var in vars]
         }
 
     def run(self, *args):
