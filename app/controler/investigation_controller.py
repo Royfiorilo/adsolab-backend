@@ -17,11 +17,17 @@ blueprint = Blueprint('investigation', __name__)
 def create_investigation():
     try:
         request_json = request.get_json()
-        sample = Sample.with_schema(SAMPLE_SCHEMA).filter_by(sample_id=request_json["sample_id"]).first()
 
-        if not sample:
-            msg = f"Sample with {request_json['sample_id']} doesn't exist"
-            return jsonify({"status": "ERROR", "message": msg}), HTTPStatus.NOT_FOUND
+        if "sample_id" in request_json:
+            sample = Sample.with_schema(SAMPLE_SCHEMA).filter_by(sample_id=request_json["sample_id"]).first()
+            if not sample:
+                msg = f"Sample with {request_json['sample_id']} doesn't exist"
+                return jsonify({"status": "ERROR", "message": msg}), HTTPStatus.NOT_FOUND
+        else:
+            sample_data = SAMPLE_SCHEMA.load(request_json)
+            sample = Sample(ce=sample_data.ce, qe=sample_data.qe)
+            db.session.add(sample)
+            db.session.commit()
 
         investigation = Investigation(sample_id=sample.sample_id)
         db.session.add(investigation)
