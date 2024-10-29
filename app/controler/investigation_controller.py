@@ -5,35 +5,53 @@ from flask import Blueprint, request, jsonify
 from marshmallow.exceptions import ValidationError
 
 from app import db
-from database import Sample, Investigation
-from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
+from database import Sample
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
-from services.investigation_service import excecute_linearizations
+from services.investigation_service import excecute_linearizations, add_investigation_db
 
 blueprint = Blueprint('investigation', __name__)
 
 
-@blueprint.route('/investigation/sample', methods=['POST'])
+@blueprint.route('/investigation', methods=['POST'])
 def create_investigation():
     try:
         request_json = request.get_json()
 
-        if "sample_id" in request_json:
-            sample = Sample.with_schema(SAMPLE_SCHEMA).filter_by(sample_id=request_json["sample_id"]).first()
-            if not sample:
-                msg = f"Sample with {request_json['sample_id']} doesn't exist"
-                return jsonify({"status": "ERROR", "message": msg}), HTTPStatus.NOT_FOUND
-        else:
-            sample_data = SAMPLE_SCHEMA.load(request_json)
-            sample = Sample(ce=sample_data.ce, qe=sample_data.qe)
-            db.session.add(sample)
-            db.session.commit()
+        if 'ce' and 'qe' not in request_json:
+            msg = f"Bad Request: ce and qe are required"
+            return jsonify({"status": "ERROR", "message": msg}), HTTPStatus.BAD_REQUEST
 
-        investigation = Investigation(sample_id=sample.sample_id)
-        db.session.add(investigation)
+        sample_data = SAMPLE_SCHEMA.load(request_json)
+        sample = Sample(ce=sample_data.ce, qe=sample_data.qe)
+        db.session.add(sample)
         db.session.commit()
+        result = add_investigation_db(sample)
 
-        result = INVESTIGATION_SCHEMA.dump(investigation)
+        return jsonify(result), HTTPStatus.CREATED
+
+    except ValidationError as me:
+        msg = f"Input validation error: {me}"
+        logging.error(msg, exc_info=me)
+        db.session.rollback()
+        return {"message": msg}, HTTPStatus.BAD_REQUEST
+
+
+@blueprint.route('/investigation/sample', methods=['POST'])
+def create_investigation_with_sample():
+    try:
+        request_json = request.get_json()
+
+        if 'sample_id' not in request_json:
+            msg = f"Bad Request: sample_id is required"
+            return jsonify({"status": "ERROR", "message": msg}), HTTPStatus.BAD_REQUEST
+
+        sample = Sample.with_schema(SAMPLE_SCHEMA).filter_by(sample_id=request_json["sample_id"]).first()
+        if not sample:
+            msg = f"Sample with {request_json['sample_id']} doesn't exist"
+            return jsonify({"status": "ERROR", "message": msg}), HTTPStatus.NOT_FOUND
+
+        result = add_investigation_db(sample)
+
         return jsonify(result), HTTPStatus.CREATED
 
     except ValidationError as me:
