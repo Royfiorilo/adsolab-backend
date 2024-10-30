@@ -1,6 +1,16 @@
 from database import Investigation, Linearization, Sample
 from entities.schemas.linearization_schema import LINEARIZATION_SCHEMA
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
+from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
+from app import db
+
+def add_investigation_db(sample):
+    investigation = Investigation(sample_id=sample.sample_id)
+    db.session.add(investigation)
+    db.session.commit()
+
+    result = INVESTIGATION_SCHEMA.dump(investigation)
+    return result
 
 
 def compare_r2_linearizations(linearization1, linearization2):
