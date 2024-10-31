@@ -1,42 +1,63 @@
-from database import Investigation, Linearization, Sample
-from entities.schemas.linearization_schema import LINEARIZATION_SCHEMA
-from entities.schemas.sample_schema import SAMPLE_SCHEMA
-from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
+from marshmallow import ValidationError
+
 from app import db
-
-def add_investigation_db(sample):
-    investigation = Investigation(sample_id=sample.sample_id)
-    db.session.add(investigation)
-    db.session.commit()
-
-    result = INVESTIGATION_SCHEMA.dump(investigation)
-    return result
+from database import Investigation
+from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
+from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
+from services.linearization_service import excecute_linearizations
+from services.sample_service import create_sample_db, find_sample
 
 
-def compare_r2_linearizations(linearization1, linearization2):
-    if not linearization1:
-        return linearization2
+def create_investigation_and_sample(request_json):
+    sample = create_sample_db(request_json)
+    investigation = _create_investigation_db(sample.sample_id)
 
-    return linearization1 if abs(linearization1["statistics"]["r"]) >= abs(
-        linearization2["statistics"]["r"]) else linearization2
+    return investigation
 
 
-def excecute_linearizations(investigation_id, linearizations, model):
-    result = {"model": model}
-    best_result = None
-    investigation = Investigation.with_schema(None).filter_by(
-        investigation_id=investigation_id).first()
-    sample = Sample.with_schema(SAMPLE_SCHEMA).filter_by(sample_id=investigation.sample_id).first()
+def create_investigation_with_sample_id(sample_id):
+    sample = find_sample(sample_id)
+    investigation = _create_investigation_db(sample.sample_id)
+    return investigation
 
-    linearization_results = []
-    for model_name in linearizations:
-        linearization = Linearization.with_schema(LINEARIZATION_SCHEMA).filter_by(name=model_name).first()
-        if linearization is None:
-            raise Exception(f"{model_name} not found")
-        solution = linearization.run(sample)
-        linearization_results.append(solution)
-        if solution["status"] == "OK":
-            best_result = compare_r2_linearizations(best_result, solution)
-            result["best_result"] = best_result["name"]
-    result["linearizations"] = linearization_results
-    return result
+
+def _create_investigation_db(sample_id):
+    try:
+        investigation = Investigation(sample_id=sample_id)
+        db.session.add(investigation)
+        db.session.commit()
+
+        result = INVESTIGATION_SCHEMA.dump(investigation)
+        return result
+    except ValidationError as me:
+        db.session.rollback()
+        raise BadRequestError(f"Validation Error: {me}")
+
+
+def get_investigation(investigation_id):
+    investigation = Investigation.with_schema(None).filter_by(investigation_id=investigation_id).first()
+    if investigation is None:
+        raise NotFoundError(f"Investigation with ID {investigation_id} not found")
+    return investigation
+
+
+def run_linearization_models(request_data):
+    results = []
+    investigation = get_investigation(request_data['investigation_id'])
+
+    for model in request_data["models"]:
+        try:
+            model_result = execute_model_linearization(investigation, model)
+            results.append(model_result)
+        except LinearizationError as e:
+            results.append({"model": model["model"], "error": str(e)})
+
+    return results
+
+
+def execute_model_linearization(investigation_id, model):
+    return excecute_linearizations(
+        investigation_id,
+        model.get('linearizations', []),
+        model["model"]
+    )
