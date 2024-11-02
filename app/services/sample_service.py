@@ -21,7 +21,7 @@ def get_all_samples():
 def create_sample_db(request_json):
     try:
         sample_data = SAMPLE_SCHEMA.load(request_json)
-        sample = Sample.create(**sample_data)
+        sample = Sample(ce=sample_data.ce, qe= sample_data.qe)
         db.session.add(sample)
         db.session.commit()
         return sample

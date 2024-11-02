@@ -2,14 +2,14 @@ from http import HTTPStatus
 
 from flask import jsonify, Blueprint
 from entities.schemas.model_schema import MODEL_SCHEMA
-
+from services.model_service import find_models
 
 blueprint = Blueprint('model', __name__)
 
 
 @blueprint.route('/models', methods=['GET'])
 def get_models():
-    models = get_models()
+    models = find_models()
     output = []
 
     for model in models:
