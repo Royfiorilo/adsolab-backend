@@ -5,7 +5,7 @@ from entities.schemas.dump_mixin import DumpMixin
 
 
 class ModelSchema(Schema, DumpMixin):
-    _id = fields.Integer(dump_only=True)
+    id = fields.Integer(missing=None)
     name = fields.Str(required=True)
     formula = fields.Str(required=True)
     description = fields.Str(required=True)
@@ -13,7 +13,7 @@ class ModelSchema(Schema, DumpMixin):
     linearizations = fields.List(fields.Nested(LinearizationSchema), missing=None)
 
     @post_load
-    def make_model(self, data):
+    def make_model(self, data, **kwargs):
         return NoLinearModel(**data)
 
 

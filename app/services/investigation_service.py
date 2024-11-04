@@ -4,7 +4,7 @@ from app import db
 from database import Investigation
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
-from services.linearization_service import excecute_linearizations
+from services.model_service import excecute_linearizations, exec_no_linear_models
 from services.sample_service import create_sample_db, find_sample
 
 
@@ -55,9 +55,24 @@ def run_linearization_models(request_data):
     return results
 
 
-def execute_model_linearization(investigation_id, model):
+def execute_model_linearization(investigation, model):
     return excecute_linearizations(
-        investigation_id,
+        investigation,
         model.get('linearizations', []),
         model["model"]
     )
+
+
+
+def  run_no_linear_models(request_data):
+    results = []
+    investigation = get_investigation(request_data['investigation_id'])
+
+    for model in request_data["models"]:
+        try:
+            model_result = exec_no_linear_models(investigation, model.get("seeds"), model["model"])
+            results.append(model_result)
+        except LinearizationError as e:
+            results.append({"model": model["model"], "error": str(e)})
+
+    return results
