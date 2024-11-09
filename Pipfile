@@ -10,6 +10,7 @@ python-dotenv = "*"
 marshmallow = "*"
 sympy = "*"
 scipy = "*"
+lmfit = "*"
 
 [dev-packages]
 pytest = "==6.2.2"
