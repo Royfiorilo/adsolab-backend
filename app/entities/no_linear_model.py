@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List, Any
 
 import numpy as np
 import lmfit
@@ -9,19 +9,19 @@ class NoLinearModel(Model):
 
     def __init__(
             self,
-            id,
+            _id,
             name,
             formula,
             description,
             parameters,
             linearizations=None
     ):
-        super().__init__(id, name, formula, description, parameters)
+        super().__init__(_id, name, formula, description, parameters)
         if linearizations is None:
             linearizations = []
         self.linearizations = linearizations
         self.model = lmfit.Model(self.formula.to_function())
-        self.method_results = {}
+        self.method_results = []
 
     def has_linearizations(self):
         return len(self.linearizations) == 0
@@ -38,7 +38,7 @@ class NoLinearModel(Model):
         return self.fit_all_methods(x, y, seeds)
 
     def fit_all_methods(self, x: np.array, y: np.array,
-                        initial_seeds: Dict[str, float]) -> Dict[str, any]:
+                        initial_seeds: Dict[str, float]) -> list[Any]:
 
         params = self.model.make_params(**initial_seeds)
 
@@ -57,14 +57,15 @@ class NoLinearModel(Model):
 
                 stats_dict = Statistics.all_statistics(y, y_pred, len(initial_seeds))
 
-                self.method_results[method] = {
+                self.method_results.append( {
+                    'name': method,
                     'description': description,
                     'success': bool(result.success),
                     'params': dict(result.best_values),
-                    'AIC': float(result.aic),
-                    'BIC': float(result.bic),
+                    'x': x.tolist(),
+                    'y_pred': y_pred.tolist(),
                     'stats': stats_dict
-                }
+                })
 
             except Exception as e:
                 print(f"Método {method} falló: {str(e)}")
