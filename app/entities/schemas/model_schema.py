@@ -5,7 +5,7 @@ from entities.schemas.dump_mixin import DumpMixin
 
 
 class ModelSchema(Schema, DumpMixin):
-    id = fields.Integer(missing=None)
+    _id = fields.Integer(missing=None)
     name = fields.Str(required=True)
     formula = fields.Str(required=True)
     description = fields.Str(required=True)
