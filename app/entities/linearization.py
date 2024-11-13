@@ -3,6 +3,7 @@ from sympy import Eq, solve, sympify, symbols
 
 from .formula import Formula
 from .model import Model
+from .statistics import Statistics
 
 ROUND_DIGIT = 4
 
@@ -43,8 +44,6 @@ class Linearization(Model):
         solutions = solve((eq_m, eq_b), tuple(unknown))
         solutions_dict = [{var.name: float(sol) for var, sol in zip(unknown, sol_tuple)} for sol_tuple in solutions]
         return solutions_dict
-
-
 
     def run(self, *args):
         sample = args[0]
