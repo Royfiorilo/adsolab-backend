@@ -2,6 +2,8 @@ import numpy as np
 from sklearn.metrics import r2_score, mean_squared_error
 from scipy.stats import chisquare
 
+ROUND_DIGIT = 4
+
 
 class Statistics():
     _instance = None
@@ -93,13 +95,13 @@ class Statistics():
     def all_statistics(cls, y_exp, y_pred, num_params):
 
         stats = {
-            "r_squared": cls.r_squared(y_exp, y_pred),
-            "adjust_r_squared": cls.adjust_r_squared(y_exp, y_pred, num_params),
-            "chi_squared": cls.chi_squared(y_exp, y_pred),
-            "adjust_chi_squeared": cls.adjust_chi_squared(y_exp, y_pred, num_params),
-            "RMSE": cls.rmse(y_exp, y_pred),
-            "SSE": cls.sse(y_exp, y_pred),
-            "HYBRID": cls.hybrid(y_exp, y_pred, num_params)
+            "r_squared": round(cls.r_squared(y_exp, y_pred), ROUND_DIGIT),
+            "adjust_r_squared": round(cls.adjust_r_squared(y_exp, y_pred, num_params), ROUND_DIGIT),
+            "chi_squared": round(cls.chi_squared(y_exp, y_pred), ROUND_DIGIT),
+            "adjust_chi_squeared": round(cls.adjust_chi_squared(y_exp, y_pred, num_params), ROUND_DIGIT),
+            "RMSE": round(cls.rmse(y_exp, y_pred), ROUND_DIGIT),
+            "SSE": round(cls.sse(y_exp, y_pred), ROUND_DIGIT),
+            "HYBRID": round(cls.hybrid(y_exp, y_pred, num_params), ROUND_DIGIT)
         }
 
         return stats

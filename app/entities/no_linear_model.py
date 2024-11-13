@@ -3,7 +3,7 @@ from typing import Dict
 import numpy as np
 import lmfit
 from .model import Model
-
+from .statistics import Statistics
 
 class NoLinearModel(Model):
 
@@ -55,7 +55,7 @@ class NoLinearModel(Model):
 
                 y_pred = result.best_fit
 
-                stats_dict = self._calculate_all_statistics(y, y_pred, len(initial_seeds))
+                stats_dict = Statistics.all_statistics(y, y_pred, len(initial_seeds))
 
                 self.method_results[method] = {
                     'description': description,

@@ -3,6 +3,7 @@ from sympy import Eq, solve, sympify, symbols
 
 from .formula import Formula
 from .model import Model
+from .statistics import Statistics
 
 ROUND_DIGIT = 4
 
@@ -51,7 +52,7 @@ class Linearization(Model):
             "transformed": {"x": x_dots, "y": y_dots},
             "slope": slope,
             "intercept": intercept,
-            "statistics": {"r": round(r_value, ROUND_DIGIT), "std_err": round(std_err, ROUND_DIGIT)},
+            "statistics": {"r_squared": round(Statistics.linear_r_squeared(r_value), ROUND_DIGIT), "std_err": round(std_err, ROUND_DIGIT)},
             "parameters": [{"name": var, "value": round(solutions_dict[0][var], ROUND_DIGIT)} for var in vars]
         }
 
