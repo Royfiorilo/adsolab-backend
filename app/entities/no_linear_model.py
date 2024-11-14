@@ -51,7 +51,8 @@ class NoLinearModel(Model):
 
         for method, description in methods.items():
             try:
-                result = self.model.fit(y, params, ce=x, method=method)
+                bounds = ([0, 0], [np.inf, max(y)]) #a chequear (?
+                result = self.model.fit(y, params, ce=x, method=method, bounds=bounds)
 
                 y_pred = result.best_fit
 

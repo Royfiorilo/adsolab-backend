@@ -1,6 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
-import numpy as np
+from unittest.mock import MagicMock
 
 from entities.no_linear_model import NoLinearModel
 from entities.sample import SampleEntity

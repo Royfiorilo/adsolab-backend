@@ -2,6 +2,8 @@ import numpy as np
 from sklearn.metrics import r2_score, mean_squared_error
 from scipy.stats import chisquare
 
+from utils import round_number
+
 ROUND_DIGIT = 4
 
 
@@ -64,7 +66,7 @@ class Statistics():
         chi_squared = np.sum(((y_exp - y_pred) ** 2) / np.abs(y_pred))
         '''
         #chi_squared, pvalue = chisquare(y_exp, y_pred)
-        chi_squared = np.sum(((y_exp - y_pred) ** 2) / np.abs(y_pred))
+        chi_squared = np.sum(((y_exp - y_pred) ** 2) / (y_pred ** 2))
         return chi_squared
 
     @classmethod
@@ -95,13 +97,13 @@ class Statistics():
     def all_statistics(cls, y_exp, y_pred, num_params):
 
         stats = {
-            "r_squared": round(cls.r_squared(y_exp, y_pred), ROUND_DIGIT),
-            "adjust_r_squared": round(cls.adjust_r_squared(y_exp, y_pred, num_params), ROUND_DIGIT),
-            "chi_squared": round(cls.chi_squared(y_exp, y_pred), ROUND_DIGIT),
-            "adjust_chi_squeared": round(cls.adjust_chi_squared(y_exp, y_pred, num_params), ROUND_DIGIT),
-            "RMSE": round(cls.rmse(y_exp, y_pred), ROUND_DIGIT),
-            "SSE": round(cls.sse(y_exp, y_pred), ROUND_DIGIT),
-            "HYBRID": round(cls.hybrid(y_exp, y_pred, num_params), ROUND_DIGIT)
+            "r_squared": round_number(cls.r_squared(y_exp, y_pred)),
+            "adjust_r_squared": round_number(cls.adjust_r_squared(y_exp, y_pred, num_params)),
+            "chi_squared": round_number(cls.chi_squared(y_exp, y_pred)),
+            "adjust_chi_squeared": round_number(cls.adjust_chi_squared(y_exp, y_pred, num_params)),
+            "RMSE": round_number(cls.rmse(y_exp, y_pred)),
+            "SSE": round_number(cls.sse(y_exp, y_pred)),
+            "HYBRID": round_number(cls.hybrid(y_exp, y_pred, num_params))
         }
 
         return stats
