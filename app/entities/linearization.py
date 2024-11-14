@@ -73,7 +73,7 @@ class Linearization(Model):
             "intercept": intercept,
             "vars": vars,
             "solutions_dict": solutions_dict,
-            "statistics": {}
+            "statistics": {"r_squared": round(Statistics.linear_r_squeared(r_value), ROUND_DIGIT), "std_err": round(std_err, ROUND_DIGIT)},
         }
 
         return result

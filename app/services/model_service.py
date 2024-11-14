@@ -18,8 +18,8 @@ def compare_r2_linearizations(linearization1, linearization2):
     if not linearization1:
         return linearization2
 
-    return linearization1 if abs(linearization1["statistics"]["r"]) >= abs(
-        linearization2["statistics"]["r"]) else linearization2
+    return linearization1 if abs(linearization1["statistics"]["r_squared"]) >= abs(
+        linearization2["statistics"]["r_squared"]) else linearization2
 
 
 def excecute_linearizations(investigation, linearizations, model):
@@ -31,7 +31,7 @@ def excecute_linearizations(investigation, linearizations, model):
 
     for model_name in linearizations:
         solution = process_linearization(model_name, sample)
-        formated_solution  = format_solution_linearization(**solution)
+        formated_solution = format_solution_linearization(**solution)
         linearization_results.append(formated_solution)
 
         if formated_solution["status"] == "OK":

@@ -32,7 +32,6 @@ class Statistics():
         :param y_pred: Array de las predecciones realizadas.
         :return: Valor numérico de R cuadrado.
         '''
-
         r2 = r2_score(y_exp, y_pred)
         return r2
 
@@ -54,7 +53,7 @@ class Statistics():
         :return: Valor numérico de R cuadrado ajustado.
         '''
         n = len(y_exp)
-        r2_adjusted = 1 - ((n-1) / (n - num_params - 1)) * (1 - cls.r_squared(y_exp, y_pred))
+        r2_adjusted = 1 - (((n-1) / (n - num_params - 1)) * (1 - cls.r_squared(y_exp, y_pred)))
         return r2_adjusted
 
     @classmethod
@@ -64,7 +63,8 @@ class Statistics():
         La manera de calcularla es como está detallado a continuación
         chi_squared = np.sum(((y_exp - y_pred) ** 2) / np.abs(y_pred))
         '''
-        chi_squared, pvalue = chisquare(y_exp, y_pred)
+        #chi_squared, pvalue = chisquare(y_exp, y_pred)
+        chi_squared = np.sum(((y_exp - y_pred) ** 2) / np.abs(y_pred))
         return chi_squared
 
     @classmethod
