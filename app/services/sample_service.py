@@ -18,10 +18,17 @@ def get_all_samples():
         raise NotFoundError("No samples found")
     return samples
 
+def order_sample(ce, qe):
+    pears = sorted(zip(ce, qe))
+    x, y= zip(*pears)
+    return list(x), list(y)
+
+
 def create_sample_db(request_json):
     try:
         sample_data = SAMPLE_SCHEMA.load(request_json)
-        sample = Sample(ce=sample_data.ce, qe= sample_data.qe)
+        x,y = order_sample(ce=sample_data.ce, qe= sample_data.qe)
+        sample = Sample(x,y)
         db.session.add(sample)
         db.session.commit()
         return sample

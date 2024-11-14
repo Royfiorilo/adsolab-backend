@@ -14,6 +14,12 @@ def find_models():
         raise NotFoundError('No models found')
     return models
 
+def find_model(model_name):
+    model = Model.with_schema(MODEL_SCHEMA).filter_by(_id=model_name).first()
+    if not model:
+        raise NotFoundError(f'Model {model_name} not found')
+    return model
+
 def compare_r2_linearizations(linearization1, linearization2):
     if not linearization1:
         return linearization2
@@ -53,11 +59,7 @@ def process_linearization(model_name, sample):
 
 
 def process_model(model_name, sample,seeds):
-    model = Model.with_schema(MODEL_SCHEMA).filter_by(name=model_name).first()
-    if model is None:
-        me = f"Model '{model_name}' not found"
-        logging.error(me)
-        raise NotFoundError(me)
+    model = find_model(model_name)
     return model.run(sample, seeds)
 
 
