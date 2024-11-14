@@ -3,6 +3,7 @@ from sympy import Eq, solve, sympify, symbols
 
 from .formula import Formula
 from .model import Model
+from .statistics import Statistics
 
 ROUND_DIGIT = 4
 
@@ -44,17 +45,6 @@ class Linearization(Model):
         solutions_dict = [{var.name: float(sol) for var, sol in zip(unknown, sol_tuple)} for sol_tuple in solutions]
         return solutions_dict
 
-    def _format_solution(self, x_dots, y_dots, slope, intercept, r_value, std_err, solutions_dict, vars):
-        return {
-            "name": self.name,
-            "status": "OK",
-            "transformed": {"x": x_dots, "y": y_dots},
-            "slope": slope,
-            "intercept": intercept,
-            "statistics": {"r": round(r_value, ROUND_DIGIT), "std_err": round(std_err, ROUND_DIGIT)},
-            "parameters": [{"name": var, "value": round(solutions_dict[0][var], ROUND_DIGIT)} for var in vars]
-        }
-
     def run(self, *args):
         sample = args[0]
         # Transformamos los puntos para realizar la regresión lineal sobre esos puntos.
@@ -75,4 +65,15 @@ class Linearization(Model):
         unkown = symbols(vars)
         solutions_dict = self._solve_equations(equations, unkown, slope, intercept)
 
-        return self._format_solution(x_dots, y_dots, slope, intercept, r_value, std_err, solutions_dict, vars)
+        result = {
+            "name": self.name,
+            "x": x_dots,
+            "y": y_dots,
+            "slope": slope,
+            "intercept": intercept,
+            "vars": vars,
+            "solutions_dict": solutions_dict,
+            "statistics": {"r_squared": round(Statistics.linear_r_squeared(r_value), ROUND_DIGIT), "std_err": round(std_err, ROUND_DIGIT)},
+        }
+
+        return result

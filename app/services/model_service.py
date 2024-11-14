@@ -5,6 +5,7 @@ from entities.schemas.linearization_schema import LINEARIZATION_SCHEMA
 from entities.schemas.model_schema import MODEL_SCHEMA
 from exceptions.exceptions import NotFoundError
 from services.sample_service import find_sample
+from utils import round_list_numbers, round_number
 
 
 def find_models():
@@ -17,8 +18,8 @@ def compare_r2_linearizations(linearization1, linearization2):
     if not linearization1:
         return linearization2
 
-    return linearization1 if abs(linearization1["statistics"]["r"]) >= abs(
-        linearization2["statistics"]["r"]) else linearization2
+    return linearization1 if abs(linearization1["statistics"]["r_squared"]) >= abs(
+        linearization2["statistics"]["r_squared"]) else linearization2
 
 
 def excecute_linearizations(investigation, linearizations, model):
@@ -30,10 +31,11 @@ def excecute_linearizations(investigation, linearizations, model):
 
     for model_name in linearizations:
         solution = process_linearization(model_name, sample)
-        linearization_results.append(solution)
+        formated_solution = format_solution_linearization(**solution)
+        linearization_results.append(formated_solution)
 
-        if solution["status"] == "OK":
-            best_result = compare_r2_linearizations(best_result, solution)
+        if formated_solution["status"] == "OK":
+            best_result = compare_r2_linearizations(best_result, formated_solution)
             result["best_result"] = best_result["name"]
 
     result["linearizations"] = linearization_results
@@ -63,6 +65,32 @@ def exec_no_linear_models(investigation, seeds, model_name):
     result = {"model": model_name}
     sample = find_sample(investigation.sample_id)
 
-    solution  = process_model(model_name, sample, seeds)
-    result["adjustment_methods"] = solution
+    adjustments  = process_model(model_name, sample, seeds)
+    formated_adjustments = []
+    for adjustment in adjustments:
+        formated_solution = format_solution_no_linear(**adjustment)
+        formated_adjustments.append(formated_solution)
+
+    result["adjustment_methods"] = formated_adjustments
     return result
+
+def format_solution_linearization(name, x, y, slope, intercept, vars, solutions_dict, statistics):
+    return {
+        "name": name,
+        "status": "OK",
+        "transformed": {"x": x, "y": round_list_numbers(y)},
+        "slope": slope,
+        "intercept": intercept,
+        "statistics": statistics,
+        "parameters": [{"name": var, "value": round_number(solutions_dict[0][var])} for var in vars]
+    }
+
+def format_solution_no_linear(name, description, success, params, x, y_pred, stats):
+    return {
+        "name": name,
+        "description": description,
+        "status": success,
+        "transformed": {"x": x, "y": round_list_numbers(y_pred)},
+        "statistics": stats,
+        "parameters": [{"name": var, "value": round_number(params[var])} for var in params.keys()]
+    }
