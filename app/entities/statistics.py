@@ -146,28 +146,3 @@ class Statistics():
         outliers = residuals_df[(residuals_df['residuals'] < (q1 - 1.5 * iqr)) | (residuals_df['residuals'] > (q3 + 1.5 * iqr))].tolist()
 
         return outliers
-
-    @classmethod
-    def calculate_comparator_statistics(self, test_metrics:list[Any], train_metrics:list[Any], parameters:list[Any], outliers:list[Any], residuals_stats:list[Any]):
-
-        test_metrics_df = pd.DataFrame(test_metrics)
-        train_metrics_df = pd.DataFrame(train_metrics)
-
-        #Excluir de las metricas los outliers
-        filtered_test_metrics_df = test_metrics_df.drop(index=outliers, errors='ignore')
-        filtered_train_metrics_df = train_metrics_df.drop(index=outliers, errors='ignore')
-
-
-        result = {
-            'test_metrics_mean': filtered_test_metrics_df.mean(),
-            'test_metrics_std': filtered_test_metrics_df.std(),
-            'train_metrics_mean': filtered_train_metrics_df.mean(),
-            'train_metrics_std': filtered_train_metrics_df.std(),
-            'parameters_mean': np.mean(parameters, axis=0),
-            'parameters_std': np.std(parameters, axis=0),
-            'residuals_summary': residuals_stats,
-            'outliers': len(outliers)
-
-        }
-
-        return result
