@@ -12,6 +12,10 @@ sympy = "*"
 scipy = "*"
 lmfit = "*"
 scikit-learn = "*"
+ipykernel = "*"
+jupyter = "*"
+matplotlib = "*"
+statsmodels = "*"
 
 [dev-packages]
 pytest = "==6.2.2"

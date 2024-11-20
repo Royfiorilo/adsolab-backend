@@ -1,6 +1,11 @@
+from typing import Any
+
 import numpy as np
+import pandas as pd
+from scipy import stats
 from sklearn.metrics import r2_score, mean_squared_error
-from scipy.stats import chisquare
+from statsmodels.stats.stattools import durbin_watson
+
 
 from utils import round_number
 
@@ -65,8 +70,7 @@ class Statistics():
         La manera de calcularla es como está detallado a continuación
         chi_squared = np.sum(((y_exp - y_pred) ** 2) / np.abs(y_pred))
         '''
-        #chi_squared, pvalue = chisquare(y_exp, y_pred)
-        chi_squared = np.sum(((y_exp - y_pred) ** 2) / (y_pred ** 2))
+        chi_squared = np.sum(((y_exp - y_pred) ** 2) / ((y_pred + 1e-10) ** 2))
         return chi_squared
 
     @classmethod
@@ -74,6 +78,7 @@ class Statistics():
         n = len(y_exp)
         chi2_adjusted = cls.chi_squared(y_exp, y_pred) / (n - num_params)
         return chi2_adjusted
+
 
     @classmethod
     def rmse(cls, y_exp, y_pred):
@@ -93,9 +98,11 @@ class Statistics():
             hybrid = (100 / (n - num_params)) * np.sum((y_exp - y_pred) ** 2 / y_exp)
         return hybrid
 
-    @classmethod
-    def all_statistics(cls, y_exp, y_pred, num_params):
 
+
+    @classmethod
+    def all_statistics(cls, y_exp, y_pred, num_params, aic, bic):
+        hybrid = cls.hybrid(y_exp, y_pred, num_params)
         stats = {
             "r_squared": round_number(cls.r_squared(y_exp, y_pred)),
             "adjust_r_squared": round_number(cls.adjust_r_squared(y_exp, y_pred, num_params)),
@@ -103,7 +110,64 @@ class Statistics():
             "adjust_chi_squeared": round_number(cls.adjust_chi_squared(y_exp, y_pred, num_params)),
             "RMSE": round_number(cls.rmse(y_exp, y_pred)),
             "SSE": round_number(cls.sse(y_exp, y_pred)),
-            "HYBRID": round_number(cls.hybrid(y_exp, y_pred, num_params))
+            "HYBRID": round_number(hybrid) if hybrid else None,
+            "AIC": round_number(aic),
+            "BIC": round_number(bic)
         }
 
         return stats
+
+    @classmethod
+    def check_residuals(self, residuals):
+        #normalidad (shapiro)
+        _, normality_p = stats.shapiro(residuals)
+
+        #homocedasticidad (levene)
+        _, homo_p = stats.levene(residuals, np.ones_like(residuals))
+
+        #autocorrelación
+        dw_stat = durbin_watson(residuals)
+
+        return {
+            'normality_pvalue': normality_p,
+            'homoscedasticity_pvalue': homo_p,
+            'durbin_watson': dw_stat,
+            'passes_normality': 0 if normality_p > 0.05 else 1,
+            'passes_homoscedasticity': 0 if homo_p > 0.05 else 1,
+            'passes_independence': 1 if not (1.5 < dw_stat < 2.5) else 0
+        }
+
+    @classmethod
+    def get_outliers(self, residuals_list):
+        residuals_df = pd.concat(residuals_list, ignore_index=True)
+        q1 = residuals_df['residuals'].quantile(0.25)
+        q3 = residuals_df['residuals'].quantile(0.75)
+        iqr = q3 - q1
+        outliers = residuals_df[(residuals_df['residuals'] < (q1 - 1.5 * iqr)) | (residuals_df['residuals'] > (q3 + 1.5 * iqr))].tolist()
+
+        return outliers
+
+    @classmethod
+    def calculate_comparator_statistics(self, test_metrics:list[Any], train_metrics:list[Any], parameters:list[Any], outliers:list[Any], residuals_stats:list[Any]):
+
+        test_metrics_df = pd.DataFrame(test_metrics)
+        train_metrics_df = pd.DataFrame(train_metrics)
+
+        #Excluir de las metricas los outliers
+        filtered_test_metrics_df = test_metrics_df.drop(index=outliers, errors='ignore')
+        filtered_train_metrics_df = train_metrics_df.drop(index=outliers, errors='ignore')
+
+
+        result = {
+            'test_metrics_mean': filtered_test_metrics_df.mean(),
+            'test_metrics_std': filtered_test_metrics_df.std(),
+            'train_metrics_mean': filtered_train_metrics_df.mean(),
+            'train_metrics_std': filtered_train_metrics_df.std(),
+            'parameters_mean': np.mean(parameters, axis=0),
+            'parameters_std': np.std(parameters, axis=0),
+            'residuals_summary': residuals_stats,
+            'outliers': len(outliers)
+
+        }
+
+        return result
