@@ -15,10 +15,10 @@ def find_models():
         raise NotFoundError('No models found')
     return models
 
-def find_model(model_name):
-    model = Model.with_schema(MODEL_SCHEMA).filter_by(_id=model_name).first()
+def find_model(model_id):
+    model = Model.with_schema(MODEL_SCHEMA).filter_by(_id=model_id).first()
     if not model:
-        raise NotFoundError(f'Model {model_name} not found')
+        raise NotFoundError(f'Model {model_id} not found')
     return model
 
 def compare_r2_linearizations(linearization1, linearization2):
@@ -29,34 +29,36 @@ def compare_r2_linearizations(linearization1, linearization2):
         linearization2["statistics"]["r_squared"]) else linearization2
 
 
-def excecute_linearizations(investigation, linearizations, model):
-    result = {"model": model}
+def excecute_linearizations(investigation, linearizations, model_id):
+    model = find_model(model_id)
+    result = {"model": model.name}
     sample = find_sample(investigation.sample_id)
 
     linearization_results = []
     best_result = None
 
-    for model_name in linearizations:
-        solution = process_linearization(model_name, sample)
+    for linearization_id in linearizations:
+        solution = process_linearization(linearization_id, sample)
         formated_solution = format_solution_linearization(**solution)
         linearization_results.append(formated_solution)
 
         if formated_solution["status"] == "OK":
             best_result = compare_r2_linearizations(best_result, formated_solution)
-            result["best_result"] = best_result["name"]
+            result["best_result"] = best_result["id"]
 
     result["linearizations"] = linearization_results
     return result
 
 
-def process_linearization(model_name, sample):
-    linearization = Linearization.with_schema(LINEARIZATION_SCHEMA).filter_by(name=model_name).first()
+def process_linearization(linearization_id, sample):
+    linearization = Linearization.with_schema(LINEARIZATION_SCHEMA).filter_by(linearization_id=linearization_id).first()
     if linearization is None:
-        me = f"Linearization '{model_name}' not found"
+        me = f"Linearization '{linearization_id}' not found"
         logging.error(me)
         raise NotFoundError(me)
 
     return linearization.run(sample)
+
 
 
 def process_model(model_name, sample,seeds):
@@ -82,9 +84,10 @@ def get_best_model(results, model):
     return best_model
 
 
-def format_solution_linearization(name, x, y, slope, intercept, vars, solutions_dict, statistics):
+def format_solution_linearization(name, id, x, y, slope, intercept, vars, solutions_dict, statistics):
     return {
         "name": name,
+        "id": id,
         "status": "OK",
         "transformed": {"x": x, "y": round_list_numbers(y)},
         "slope": slope,
