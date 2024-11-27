@@ -67,6 +67,7 @@ class Linearization(Model):
 
         result = {
             "name": self.name,
+            "id": self._id,
             "x": x_dots,
             "y": y_dots,
             "slope": slope,

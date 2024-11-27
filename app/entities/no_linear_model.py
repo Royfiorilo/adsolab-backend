@@ -61,7 +61,9 @@ class NoLinearModel(Model):
 
         for method, description in methods.items():
             try:
+
                 splits = self.get_cv_splits(ce, cv_folds)
+
 
                 global_stats = self.evaluate_method(ce, qe, params, splits, method)
 
