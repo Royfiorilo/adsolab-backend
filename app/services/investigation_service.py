@@ -2,7 +2,6 @@ from marshmallow import ValidationError
 
 from app import db
 from database import Investigation
-from entities.comparator import AdsorptionModelComparison
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
 from services.model_service import excecute_linearizations, exec_no_linear_models, get_best_model

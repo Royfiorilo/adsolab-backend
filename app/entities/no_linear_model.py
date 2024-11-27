@@ -134,7 +134,7 @@ class NoLinearModel(Model):
             qe_train = qe[train_idx]
 
             fold_result = self._evaluate_fit(
-                ce_train, qe_train, params, method, fold_idx=f"{train_idx} - {test_idx}"
+                ce_train, qe_train, params, method, fold_idx=f"{ce[test_idx][0]},{qe[test_idx][0]}"
             )
             fold_stats.append(fold_result)
 
