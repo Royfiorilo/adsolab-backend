@@ -68,14 +68,13 @@ class NoLinearModel(Model):
                 global_stats = self.evaluate_method(ce, qe, params, splits, method)
 
 
-                best_performance = AdsorptionModelComparison.determine_best_model(global_stats, "fold_idx")
+                best_performance = AdsorptionModelComparison.determine_best_model(global_stats.values(), "fold_idx")
 
-                self.method_results.append({
-                    "name": method,
-                    "description": description,
-                    "best_performance": best_performance,
-                    "folds": global_stats,
-                })
+                best_fold =  global_stats[best_performance]
+                best_fold ["name"] = method
+                best_fold ["description"] = description
+                best_fold ["best_performance"] = best_performance
+                self.method_results.append(best_fold)
 
             except Exception as e:
                 print(f"Método {method} falló: {str(e)}")
@@ -104,7 +103,7 @@ class NoLinearModel(Model):
             qe_train: np.array,
             params,
             method: str,
-            fold_idx: str
+            fold_idx: int
     ) -> Dict[str, Any]:
         result = self.model.fit(qe_train, params, ce=ce_train, method=method, nan_policy='omit',  bounds=([0, 0], [np.inf, np.inf]))
         qe_pred = result.best_fit
@@ -128,42 +127,42 @@ class NoLinearModel(Model):
 
     def evaluate_method(
             self, ce: np.array, qe: np.array, params, splits: List[tuple], method: str
-    ) -> List[Dict[str, Any]]:
-        fold_stats = []
+    ) -> Dict[int, Any]:
+        fold_stats = {}
 
         for train_idx, test_idx in splits:
             ce_train = ce[train_idx]
             qe_train = qe[train_idx]
 
+            fold_id = int(test_idx[0])
             fold_result = self._evaluate_fit(
-                ce_train, qe_train, params, method, fold_idx=f"{ce[test_idx][0]},{qe[test_idx][0]}"
+                ce_train, qe_train, params, method, fold_idx=fold_id
             )
-            fold_stats.append(fold_result)
+            fold_stats[fold_id] = fold_result
 
-        fold_stats.append(self._evaluate_fit(
+        fold_stats[len(ce)] = self._evaluate_fit(
             ce_train=ce,
             qe_train=qe,
             params=params,
             method=method,
-            fold_idx="all"
-        ))
+            fold_idx=len(ce)
+        )
 
         return fold_stats
 
     def determine_best_method(self):
         results = []
-        best_fold = None
         for method in self.method_results:
-            for fold in method["folds"]:
-                if fold["fold_idx"] == method["best_performance"]:
-                    best_fold = fold
-                    self.best_method = fold
-            results.append({ "statistics":best_fold["statistics"],
-                             "residuals":best_fold["residuals"],
+            results.append({ "statistics":method["statistics"],
+                             "residuals":method["residuals"],
                              "name": method["name"]
                              })
 
         best_method = AdsorptionModelComparison.determine_best_model(results, "name")
+
+        for method in self.method_results:
+            if method["name"] == best_method:
+                self.best_method = method
         return best_method
 
     def get_best_method(self):
