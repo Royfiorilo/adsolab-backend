@@ -1,6 +1,7 @@
 import logging
 
 from database import Model, Linearization
+from entities.comparator import AdsorptionModelComparison
 from entities.schemas.linearization_schema import LINEARIZATION_SCHEMA
 from entities.schemas.model_schema import MODEL_SCHEMA
 from exceptions.exceptions import NotFoundError
@@ -59,23 +60,29 @@ def process_linearization(linearization_id, sample):
     return linearization.run(sample)
 
 
-def process_model(model_id, sample, seeds):
-    model = find_model(model_id)
-    return model.run(sample, seeds)
+
+def process_model(model_name, sample,seeds):
+    model = find_model(model_name)
+    return model.run(sample, seeds), model
 
 
-def exec_no_linear_models(investigation, seeds, model_id):
-    result = {"model": model_id}
+def exec_no_linear_models(investigation, seeds, model_name):
     sample = find_sample(investigation.sample_id)
 
-    adjustments = process_model(model_id, sample, seeds)
-    formated_adjustments = []
-    for adjustment in adjustments:
-        formated_solution = format_solution_no_linear(**adjustment)
-        formated_adjustments.append(formated_solution)
+    adjustments, model  = process_model(model_name, sample, seeds)
+    adjustments["model"] = model_name
 
-    result["adjustment_methods"] = formated_adjustments
-    return result
+    return adjustments, model
+
+def get_best_model(results, model):
+    compare = []
+    for result in results:
+        best_method = model.get_best_method()
+        compare.append({"statistics": best_method["statistics"], "name": result["model"], "residuals": best_method["residuals"]})
+
+    best_model = AdsorptionModelComparison.determine_best_model(compare, "name")
+    return best_model
+
 
 def format_solution_linearization(name, id, x, y, slope, intercept, vars, solutions_dict, statistics):
     return {
