@@ -66,7 +66,7 @@ class Statistics():
         chi_squared = np.sum(((y_exp - y_pred) ** 2) / np.abs(y_pred))
         '''
         #chi_squared, pvalue = chisquare(y_exp, y_pred)
-        chi_squared = np.sum(((y_exp - y_pred) ** 2) / (y_pred ** 2))
+        chi_squared = np.sum(((y_exp - y_pred) ** 2) / ((y_pred + 1e-10) ** 2))
         return chi_squared
 
     @classmethod
@@ -90,7 +90,7 @@ class Statistics():
         n = len(y_exp)
         hybrid = None
         if n > 1:
-            hybrid = (100 / (n - num_params)) * np.sum((y_exp - y_pred) ** 2 / y_exp)
+            hybrid = (100 / (n - num_params)) * np.sum((y_exp - y_pred) ** 2 / (y_exp + 1e-10))
         return hybrid
 
     @classmethod

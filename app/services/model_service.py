@@ -77,7 +77,15 @@ def exec_no_linear_models(investigation, seeds, model_id):
     result["adjustment_methods"] = formated_adjustments
     return result
 
-def format_solution_linearization(name, id, x, y, slope, intercept, vars, solutions_dict, statistics):
+def format_solution_linearization(name, id, x, y, slope, intercept, vars, params_info, statistics):
+    parameters = []
+    for var in vars:
+        parameters.append(
+            {"name": var,
+             "value": round_number(params_info[0][var]),
+             "stderr": round_number(params_info[1][var])
+             })
+
     return {
         "name": name,
         "id": id,
@@ -86,15 +94,22 @@ def format_solution_linearization(name, id, x, y, slope, intercept, vars, soluti
         "slope": slope,
         "intercept": intercept,
         "statistics": statistics,
-        "parameters": [{"name": var, "value": round_number(solutions_dict[0][var])} for var in vars]
+        "parameters": parameters
     }
 
-def format_solution_no_linear(name, description, success, params, x, y_pred, stats):
+def format_solution_no_linear(name, description, success, vars,params, x, y_pred, stats):
+    parameters = []
+    for var in vars:
+        parameters.append(
+            {"name": var,
+             "value": round_number(params[0][var]),
+             "stderr": round_number(params[1][var]) if params[1][var] is not None else None
+             })
     return {
         "name": name,
         "description": description,
         "status": success,
         "transformed": {"x": x, "y": round_list_numbers(y_pred)},
         "statistics": stats,
-        "parameters": [{"name": var, "value": round_number(params[var])} for var in params.keys()]
+        "parameters": parameters
     }

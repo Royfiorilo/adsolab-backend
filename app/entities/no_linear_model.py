@@ -55,13 +55,21 @@ class NoLinearModel(Model):
 
                 y_pred = result.best_fit
 
+                params_adjust = [dict(result.best_values)]
+                params_stderr = {}
+                for param, value in result.params.items():
+                    params_stderr[param] = result.params[param].stderr
+
+                params_adjust.append(params_stderr)
+
                 stats_dict = Statistics.all_statistics(y, y_pred, len(initial_seeds))
 
                 self.method_results.append( {
                     'name': method,
                     'description': description,
                     'success': bool(result.success),
-                    'params': dict(result.best_values),
+                    'vars': result.params.keys(),
+                    'params': params_adjust,
                     'x': x.tolist(),
                     'y_pred': y_pred.tolist(),
                     'stats': stats_dict
