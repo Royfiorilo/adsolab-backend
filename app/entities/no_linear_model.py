@@ -62,19 +62,16 @@ class NoLinearModel(Model):
         for method, description in methods.items():
             try:
 
-                splits = self.get_cv_splits(ce, cv_folds)
+                result = self._evaluate_fit(
+                ce_train=ce,
+                qe_train=qe,
+                params=params,
+                method=method,
+                )
 
-
-                global_stats = self.evaluate_method(ce, qe, params, splits, method)
-
-
-                best_performance = AdsorptionModelComparison.determine_best_model(global_stats.values(), "fold_idx")
-
-                best_fold =  global_stats[best_performance]
-                best_fold ["name"] = method
-                best_fold ["description"] = description
-                best_fold ["best_performance"] = best_performance
-                self.method_results.append(best_fold)
+                result ["name"] = method
+                result ["description"] = description
+                self.method_results.append(result)
 
             except Exception as e:
                 print(f"Método {method} falló: {str(e)}")
@@ -91,19 +88,13 @@ class NoLinearModel(Model):
             "cobyla": "COBYLA",
         }
 
-    def get_cv_splits(self, ce: np.array, cv_folds: int) -> List[tuple]:
-        if len(ce) >= 100:
-            return list(KFold(n_splits=cv_folds, shuffle=True, random_state=42).split(ce))
-        return list(LeaveOneOut().split(ce))
-
 
     def _evaluate_fit(
             self,
             ce_train: np.array,
             qe_train: np.array,
             params,
-            method: str,
-            fold_idx: int
+            method: str
     ) -> Dict[str, Any]:
         result = self.model.fit(qe_train, params, ce=ce_train, method=method, nan_policy='omit',  bounds=([0, 0], [np.inf, np.inf]))
         qe_pred = result.best_fit
@@ -114,7 +105,6 @@ class NoLinearModel(Model):
         )
 
         return {
-            "fold_idx": fold_idx,
             "transformed": {"x": ce_train.tolist(), "y": round_list_numbers(qe_pred.tolist())},
             "success": bool(result.success),
             "parameters": [
@@ -125,30 +115,6 @@ class NoLinearModel(Model):
         }
 
 
-    def evaluate_method(
-            self, ce: np.array, qe: np.array, params, splits: List[tuple], method: str
-    ) -> Dict[int, Any]:
-        fold_stats = {}
-
-        for train_idx, test_idx in splits:
-            ce_train = ce[train_idx]
-            qe_train = qe[train_idx]
-
-            fold_id = int(test_idx[0])
-            fold_result = self._evaluate_fit(
-                ce_train, qe_train, params, method, fold_idx=fold_id
-            )
-            fold_stats[fold_id] = fold_result
-
-        fold_stats[len(ce)] = self._evaluate_fit(
-            ce_train=ce,
-            qe_train=qe,
-            params=params,
-            method=method,
-            fold_idx=len(ce)
-        )
-
-        return fold_stats
 
     def determine_best_method(self):
         results = []
@@ -158,7 +124,8 @@ class NoLinearModel(Model):
                              "name": method["name"]
                              })
 
-        best_method = AdsorptionModelComparison.determine_best_model(results, "name")
+        scores = AdsorptionModelComparison.determine_heuristic_scores_models(results, "name")
+        best_method = max(scores, key=scores.get)
 
         for method in self.method_results:
             if method["name"] == best_method:

@@ -104,7 +104,7 @@ class Statistics():
         n = len(y_exp)
         hybrid = None
         if n > 1:
-            hybrid = (100 / (n - num_params)) * np.sum((y_exp - y_pred) ** 2 / y_exp)
+            hybrid = (100 / (n - num_params)) * np.sum((y_exp - y_pred) ** 2 / (y_exp+ 1e-10))
         return hybrid
 
 

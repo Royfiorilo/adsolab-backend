@@ -1,5 +1,14 @@
 import math
 
+import numpy as np
+from sklearn.linear_model import Ridge
+from sklearn.metrics import r2_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.neural_network import MLPRegressor
+from sklearn.preprocessing import StandardScaler
+
+from entities.statistics import Statistics
+
 
 class AdsorptionModelComparison:
     def __init__(self):
@@ -7,7 +16,7 @@ class AdsorptionModelComparison:
         self.best_model = None
 
     @staticmethod
-    def determine_best_model(results, key):
+    def determine_heuristic_scores_models(results, key):
         """
     Determina el mejor modelo basado en múltiples criterios de evaluación estadística. La función
     calcula un puntaje para cada modelo utilizando varias métricas estadísticas y penaliza o premia
@@ -47,7 +56,6 @@ class AdsorptionModelComparison:
             aic = result['statistics'].get('AIC', float('inf'))
             chi_squared = result['statistics'].get('chi_squared', float('inf'))
             r_squared_adjusted = result['statistics'].get('r_squared_adjusted', 0)
-            durbin_watson = result['statistics'].get('durbin_watson', 0)
 
             passes_normality = result['residuals'].get('passes_normality', False)
             passes_homoscedasticity = result['residuals'].get('passes_homoscedasticity', False)
@@ -60,11 +68,10 @@ class AdsorptionModelComparison:
 
 
             score = (
-                    max(r_squared_adjusted, 0) * 0.25 +  # Asegurar que r_squared no sea negativo
-                    (1 / max(rmse, 1e-9)) * 0.2 +  # Evitar división por 0
-                    (1 / max(abs(aic), 1e-9)) * 0.2 +  # Asegurar que AIC no sea 0
+                    max(r_squared_adjusted, 0) * 0.3 +  # Asegurar que r_squared no sea negativo
+                    (1 / max(rmse, 1e-9)) * 0.3 +  # Evitar división por 0
+                    (1 / max(abs(aic), 1e-9)) * 0.25 +  # Asegurar que AIC no sea 0
                     (1 / (1 + chi_squared)) * 0.1 +
-                    (1 / (1 + abs(durbin_watson - 2))) * 0.1 +
                     (0.05 if passes_normality else 0) +  # Normalidad
                     (0.05if passes_homoscedasticity else 0) +  # Homocedasticidad
                     (0.05 if passes_independence else 0)  # Independencia
@@ -76,6 +83,57 @@ class AdsorptionModelComparison:
         if not scores:
             raise ValueError("No se pudieron calcular puntajes válidos para ningun modelo.")
 
-        best_model = max(scores, key=scores.get)
-        return best_model
 
+        return scores
+
+    def _best_alpha(self, X_scaled, y):
+        ridge = Ridge()
+        param_grid = {'alpha': [0.001, 0.1, 0.05, 0.2, 1, 5, 10, 100, 1000]}
+        grid_search = GridSearchCV(estimator=ridge, param_grid=param_grid, scoring='neg_mean_squared_error', cv=5)
+        grid_search.fit(X_scaled, y)
+        return grid_search.best_params_['alpha']
+
+    def get_ml_coefs_models(self, qe, models_y_preds):
+
+        X = np.column_stack(tuple(models_y_preds))
+        y = qe
+
+        # estandarizo para escalar las magnitudes
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        # elijo best alpha
+        alpha = self._best_alpha(X_scaled, y)
+
+        # regresion
+        ridge = Ridge(alpha=alpha)
+        ridge.fit(X_scaled, y)
+        ridge_coefs = ridge.coef_
+        qe_pred_ridge = ridge.predict(X_scaled)
+        ridge_aic, ridge_bic = self._manual_aic_bic_ridge(X_scaled, y, qe_pred_ridge)
+        statistics_ridge = Statistics.all_statistics(y, qe_pred_ridge, len(ridge_coefs), ridge_aic, ridge_bic)
+        residuales_ridge = qe - qe_pred_ridge
+
+        return {
+            "name": "Ridge",
+            "coefs": ridge_coefs,
+            "statistics": statistics_ridge,
+            "residuals": Statistics.check_residuals(residuales_ridge)
+        }
+
+
+
+    def _manual_aic_bic_ridge(self, X, y, y_pred):
+        n = len(y)
+        #num parametros num columns
+        k = X.shape[1]
+
+        rss = np.sum((y - y_pred) ** 2)
+        sigma_squared = rss / n
+
+        llf = -n / 2 * (np.log(2 * np.pi) + np.log(sigma_squared)) - rss / (2 * sigma_squared)
+
+        aic = 2 * k - 2 * llf
+
+        bic = np.log(n) * k - 2 * llf
+        return aic, bic

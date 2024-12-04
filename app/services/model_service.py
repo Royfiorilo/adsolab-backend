@@ -80,7 +80,8 @@ def get_best_model(results, model):
         best_method = model.get_best_method()
         compare.append({"statistics": best_method["statistics"], "name": result["model"], "residuals": best_method["residuals"]})
 
-    best_model = AdsorptionModelComparison.determine_best_model(compare, "name")
+    scores = AdsorptionModelComparison.determine_heuristic_scores_models(compare, "name")
+    best_model = max(scores, key=scores.get)
     return best_model
 
 
