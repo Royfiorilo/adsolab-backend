@@ -50,9 +50,10 @@ def execute_no_linear_models():
     if "investigation_id" not in request_json:
         raise BadRequestError("investigation_id is required")
 
-    results = run_no_linear_models(request_json)
+    results, best_model = run_no_linear_models(request_json)
     response = {
         "investigation_id": request_json['investigation_id'],
+        "best_model": best_model,
         "results": results
     }
     return jsonify(response), HTTPStatus.OK

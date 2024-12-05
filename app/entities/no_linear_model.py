@@ -2,86 +2,124 @@ from typing import Dict, List, Any
 
 import numpy as np
 import lmfit
+
+from utils import round_list_numbers
+from .comparator import AdsorptionModelComparison
 from .model import Model
 from .statistics import Statistics
+
 
 class NoLinearModel(Model):
 
     def __init__(
             self,
-            _id,
-            name,
-            formula,
-            description,
-            parameters,
-            linearizations=None
+            _id: str,
+            name: str,
+            formula: Any,
+            description: str,
+            parameters: List[Dict[str, Any]],
+            linearizations: List[Any] = None,
     ):
         super().__init__(_id, name, formula, description, parameters)
-        if linearizations is None:
-            linearizations = []
-        self.linearizations = linearizations
+        self.linearizations = linearizations or []
         self.model = lmfit.Model(self.formula.to_function())
         self.method_results = []
+        self.best_method = None
 
-    def has_linearizations(self):
-        return len(self.linearizations) == 0
+    def has_linearizations(self) -> bool:
+        return len(self.linearizations) > 0
 
-    def get_linearizations(self):
+    def get_linearizations(self) -> List[Any]:
+
         return self.linearizations
 
-    def run(self, *args):
-        sample = args[0]
+    def get_best_method(self):
+        return self.best_method
+
+    def _get_parameters_with_stderr(self, result):
+        return [
+            {"name": param, "value": value.value, "std_err": value.stderr}
+            for param, value in result.params.items()
+        ]
+
+    def get_optimization_methods(self) -> Dict[str, str]:
+        return {
+            "leastsq": "Levenberg-Marquardt (Gauss-Newton modificado)",
+            "cg": "Gradiente Conjugado",
+            "newton": "Newton-CG",
+            "cobyla": "COBYLA",
+        }
+
+    def get_seeds(self, parameters: List[Dict[str, Any]]) -> Dict[str, float]:
+        return {param["name"]: param["value"] for param in parameters}
+
+    def run(self, sample, parameters) -> dict[str, list[Any] | Any]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
-        seeds = self.get_seeds(args[1])
+        seeds = self.get_seeds(parameters)
 
-        return self.fit_all_methods(x, y, seeds)
+        self.fit_all_methods(x, y, seeds)
+        best_method = self.determine_best_method()
 
-    def fit_all_methods(self, x: np.array, y: np.array,
-                        initial_seeds: Dict[str, float]) -> list[Any]:
-
-        params = self.model.make_params(**initial_seeds)
-
-        methods = {
-            'leastsq': 'Levenberg-Marquardt (Gauss-Newton modificado)',
-            'cg': 'Gradiente Conjugado',
-            'newton': 'Newton-CG',
-            'cobyla': 'COBYLA'
+        return {
+            "best_adjust": best_method,
+            "adjustment_methods": self.method_results
         }
+
+    def fit_all_methods(
+            self, ce: np.array, qe: np.array, initial_seeds: Dict[str, float], cv_folds: int = 5
+    ):
+        """
+        Ajusta modelo usando varios metodos y hace ademas validacion cruzada
+        """
+        params = self.model.make_params(**initial_seeds)
+        methods = self.get_optimization_methods()
 
         for method, description in methods.items():
             try:
-                result = self.model.fit(y, params, ce=x, method=method)
-
-                y_pred = result.best_fit
-
-                params_adjust = [dict(result.best_values)]
-                params_stderr = {}
-                for param, value in result.params.items():
-                    params_stderr[param] = result.params[param].stderr
-
-                params_adjust.append(params_stderr)
-
-                stats_dict = Statistics.all_statistics(y, y_pred, len(initial_seeds))
-
-                self.method_results.append( {
-                    'name': method,
-                    'description': description,
-                    'success': bool(result.success),
-                    'vars': result.params.keys(),
-                    'params': params_adjust,
-                    'x': x.tolist(),
-                    'y_pred': y_pred.tolist(),
-                    'stats': stats_dict
-                })
-
+                result = self._evaluate_fit(ce, qe, params, method)
+                result.update({"name": method, "description": description})
+                self.method_results.append(result)
             except Exception as e:
                 print(f"Método {method} falló: {str(e)}")
 
-        return self.method_results
+    def _evaluate_fit(
+            self,
+            ce: np.array,
+            qe: np.array,
+            params,
+            method: str
+    ) -> Dict[str, Any]:
+        result = self.model.fit(
+            qe, params, ce=ce, method=method, nan_policy="omit", bounds=([0, 0], [np.inf, np.inf])
+        )
+        qe_pred = result.best_fit
+        residuals = qe - qe_pred
 
-    def get_seeds(self, parameters):
-        seeds = {}
-        for parameter in parameters:
-            seeds[parameter["name"]] = parameter["value"]
-        return seeds
+        statistics = Statistics.all_statistics(
+            qe, qe_pred, len(params), float(result.aic), float(result.bic)
+        )
+
+        return {
+            "transformed": {"x": ce.tolist(), "y": round_list_numbers(qe_pred.tolist())},
+            "success": bool(result.success),
+            "parameters": self._get_parameters_with_stderr(result),
+            "statistics": statistics,
+            "residuals": Statistics.check_residuals(residuals),
+        }
+
+    def determine_best_method(self):
+        results = []
+        for method in self.method_results:
+            results.append({"statistics": method["statistics"],
+                            "residuals": method["residuals"],
+                            "name": method["name"]
+                            })
+
+        scores = AdsorptionModelComparison.determine_heuristic_scores_models(results, "name")
+        best_method = max(scores, key=scores.get)
+
+        for method in self.method_results:
+            if method["name"] == best_method:
+                self.best_method = method
+        return best_method
