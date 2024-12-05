@@ -46,7 +46,6 @@ class NoLinearModel(Model):
         return {
             "leastsq": "Levenberg-Marquardt (Gauss-Newton modificado)",
             "cg": "Gradiente Conjugado",
-            "newton": "Newton-CG",
             "cobyla": "COBYLA",
         }
 
@@ -90,9 +89,13 @@ class NoLinearModel(Model):
             params,
             method: str
     ) -> Dict[str, Any]:
+
+        for param_name, param in params.items():
+            param.set(min=0, max=np.inf)
+
         result = self.model.fit(
-            qe, params, ce=ce, method=method, nan_policy="omit", bounds=([0, 0], [np.inf, np.inf])
-        )
+            qe, params, ce=ce, method=method, nan_policy="omit")
+
         qe_pred = result.best_fit
         residuals = qe - qe_pred
 
