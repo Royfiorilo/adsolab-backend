@@ -1,80 +1,136 @@
 from typing import Dict, List, Any
 
-import numpy as np
 import lmfit
+import numpy as np
+from sklearn.model_selection import LeaveOneOut, KFold
+
+from utils import round_list_numbers
+from .comparator import AdsorptionModelComparison
 from .model import Model
 from .statistics import Statistics
 
+
 class NoLinearModel(Model):
+
 
     def __init__(
             self,
-            _id,
-            name,
-            formula,
-            description,
-            parameters,
-            linearizations=None
+            _id: str,
+            name: str,
+            formula: Any,
+            description: str,
+            parameters: List[Dict[str, Any]],
+            linearizations: List[Any] = None,
     ):
         super().__init__(_id, name, formula, description, parameters)
-        if linearizations is None:
-            linearizations = []
-        self.linearizations = linearizations
+        self.linearizations = linearizations or []
         self.model = lmfit.Model(self.formula.to_function())
         self.method_results = []
+        self.best_method = None
 
-    def has_linearizations(self):
-        return len(self.linearizations) == 0
+    def has_linearizations(self) -> bool:
+        return len(self.linearizations) > 0
 
-    def get_linearizations(self):
+    def get_linearizations(self) -> List[Any]:
+
         return self.linearizations
 
-    def run(self, *args):
-        sample = args[0]
+    def run(self, sample, parameters) -> dict[str, list[Any] | Any]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
-        seeds = self.get_seeds(args[1])
+        seeds = self.get_seeds(parameters)
 
-        return self.fit_all_methods(x, y, seeds)
+        self.fit_all_methods(x, y, seeds)
+        best_method = self.determine_best_method()
 
-    def fit_all_methods(self, x: np.array, y: np.array,
-                        initial_seeds: Dict[str, float]) -> list[Any]:
 
-        params = self.model.make_params(**initial_seeds)
-
-        methods = {
-            'leastsq': 'Levenberg-Marquardt (Gauss-Newton modificado)',
-            'cg': 'Gradiente Conjugado',
-            'newton': 'Newton-CG',
-            'cobyla': 'COBYLA'
+        return {
+            "best_adjust": best_method,
+            "adjustment_methods": self.method_results
         }
+
+
+    def fit_all_methods(
+            self, ce: np.array, qe: np.array, initial_seeds: Dict[str, float], cv_folds: int = 5
+    ) :
+        """
+        Ajusta modelo usando varios metodos y hace ademas validacion cruzada
+        """
+        params = self.model.make_params(**initial_seeds)
+        methods = self.get_optimization_methods()
 
         for method, description in methods.items():
             try:
-                bounds = ([0, 0], [np.inf, max(y)]) #a chequear (?
-                result = self.model.fit(y, params, ce=x, method=method, bounds=bounds)
 
-                y_pred = result.best_fit
+                result = self._evaluate_fit(
+                ce_train=ce,
+                qe_train=qe,
+                params=params,
+                method=method,
+                )
 
-                stats_dict = Statistics.all_statistics(y, y_pred, len(initial_seeds))
-
-                self.method_results.append( {
-                    'name': method,
-                    'description': description,
-                    'success': bool(result.success),
-                    'params': dict(result.best_values),
-                    'x': x.tolist(),
-                    'y_pred': y_pred.tolist(),
-                    'stats': stats_dict
-                })
+                result ["name"] = method
+                result ["description"] = description
+                self.method_results.append(result)
 
             except Exception as e:
                 print(f"Método {method} falló: {str(e)}")
 
-        return self.method_results
 
-    def get_seeds(self, parameters):
-        seeds = {}
-        for parameter in parameters:
-            seeds[parameter["name"]] = parameter["value"]
-        return seeds
+    def get_seeds(self, parameters: List[Dict[str, Any]]) -> Dict[str, float]:
+        return {param["name"]: param["value"] for param in parameters}
+
+    def get_optimization_methods(self) -> Dict[str, str]:
+        return {
+            "leastsq": "Levenberg-Marquardt (Gauss-Newton modificado)",
+            "cg": "Gradiente Conjugado",
+            "newton": "Newton-CG",
+            "cobyla": "COBYLA",
+        }
+
+
+    def _evaluate_fit(
+            self,
+            ce_train: np.array,
+            qe_train: np.array,
+            params,
+            method: str
+    ) -> Dict[str, Any]:
+        result = self.model.fit(qe_train, params, ce=ce_train, method=method, nan_policy='omit',  bounds=([0, 0], [np.inf, np.inf]))
+        qe_pred = result.best_fit
+        residuals = qe_train - qe_pred
+
+        statistics = Statistics.all_statistics(
+            qe_train, qe_pred, len(params), float(result.aic), float(result.bic)
+        )
+
+        return {
+            "transformed": {"x": ce_train.tolist(), "y": round_list_numbers(qe_pred.tolist())},
+            "success": bool(result.success),
+            "parameters": [
+                {"name": k, "value": v} for k, v in result.best_values.items()
+            ],
+            "statistics": statistics,
+            "residuals": Statistics.check_residuals(residuals),
+        }
+
+
+
+    def determine_best_method(self):
+        results = []
+        for method in self.method_results:
+            results.append({ "statistics":method["statistics"],
+                             "residuals":method["residuals"],
+                             "name": method["name"]
+                             })
+
+        scores = AdsorptionModelComparison.determine_heuristic_scores_models(results, "name")
+        best_method = max(scores, key=scores.get)
+
+        for method in self.method_results:
+            if method["name"] == best_method:
+                self.best_method = method
+        return best_method
+
+    def get_best_method(self):
+        return self.best_method
