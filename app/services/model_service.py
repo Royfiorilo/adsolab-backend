@@ -1,6 +1,6 @@
 import logging
 
-from database import Model, Linearization
+from database import Model, Linearization, Method
 from entities.comparator import AdsorptionModelComparison
 from entities.schemas.linearization_schema import LINEARIZATION_SCHEMA
 from entities.schemas.model_schema import MODEL_SCHEMA
@@ -15,11 +15,13 @@ def find_models():
         raise NotFoundError('No models found')
     return models
 
+
 def find_model(model_id):
     model = Model.with_schema(MODEL_SCHEMA).filter_by(_id=model_id).first()
     if not model:
         raise NotFoundError(f'Model {model_id} not found')
     return model
+
 
 def compare_r2_linearizations(linearization1, linearization2):
     if not linearization1:
@@ -60,7 +62,6 @@ def process_linearization(linearization_id, sample):
     return linearization.run(sample)
 
 
-
 def process_model(model_name, sample,seeds):
     model = find_model(model_name)
     return model.run(sample, seeds), model
@@ -73,6 +74,7 @@ def exec_no_linear_models(investigation, seeds, model_name):
     adjustments["model"] = model_name
 
     return adjustments, model
+
 
 def get_best_model(results, model):
     compare = []
@@ -105,6 +107,7 @@ def format_solution_linearization(name, id, x, y, slope, intercept, vars, params
         "parameters": parameters
     }
 
+
 def format_solution_no_linear(name, description, success, vars,params, x, y_pred, stats):
     parameters = []
     for var in vars:
@@ -113,6 +116,7 @@ def format_solution_no_linear(name, description, success, vars,params, x, y_pred
              "value": round_number(params[0][var]),
              "stderr": round_number(params[1][var]) if params[1][var] is not None else None
              })
+
     return {
         "name": name,
         "description": description,
@@ -121,3 +125,11 @@ def format_solution_no_linear(name, description, success, vars,params, x, y_pred
         "statistics": stats,
         "parameters": parameters
     }
+
+
+def find_methods():
+    methods = Method.with_schema(None).all()
+    if not methods:
+        raise NotFoundError('No adjust methods found')
+    return methods
+

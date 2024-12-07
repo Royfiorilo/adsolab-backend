@@ -1,9 +1,11 @@
 from typing import Dict, List, Any
 
 import numpy as np
+from numdifftools import Hessian
 import lmfit
 
 from utils import round_list_numbers
+from database import Method
 from .comparator import AdsorptionModelComparison
 from .model import Model
 from .statistics import Statistics
@@ -30,24 +32,50 @@ class NoLinearModel(Model):
         return len(self.linearizations) > 0
 
     def get_linearizations(self) -> List[Any]:
-
         return self.linearizations
 
     def get_best_method(self):
         return self.best_method
 
+
+    def _calculate_standard_errors(self, result, params):
+        """
+        Calculate standard errors for parameters using numerical Hessian.
+        """
+        # Compute the Hessian matrix
+        hessian_func = Hessian(lambda p: np.sum(result['residuals'] ** 2))
+        hessian_matrix = hessian_func(params)
+
+        # Covariance matrix is the inverse of the Hessian
+        covariance_matrix = np.linalg.inv(hessian_matrix)
+
+        # Standard errors are the square roots of the diagonal elements
+        return np.sqrt(np.diag(covariance_matrix))
+
+
     def _get_parameters_with_stderr(self, result):
-        return [
-            {"name": param, "value": value.value, "std_err": value.stderr}
-            for param, value in result.params.items()
-        ]
+        params = []
+
+        for param, value in result.params.items():
+            stderr = None
+            if value.stderr is None:
+                stderr = self._calculate_standard_errors(result, result.params)
+            else:
+                stderr = value.stderr
+
+            params.append({"name": param, "value": value.value, "std_err": stderr})
+
+        return params
+
 
     def get_optimization_methods(self) -> Dict[str, str]:
-        return {
-            "leastsq": "Levenberg-Marquardt (Gauss-Newton modificado)",
-            "cg": "Gradiente Conjugado",
-            "cobyla": "COBYLA",
-        }
+        methods = Method.with_schema(None).all()
+        method_dict = {}
+
+        for method in methods:
+            method_dict[method.code] = method.description
+
+        return method_dict
 
     def get_seeds(self, parameters: List[Dict[str, Any]]) -> Dict[str, float]:
         return {param["name"]: param["value"] for param in parameters}
