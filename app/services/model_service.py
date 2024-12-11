@@ -1,4 +1,5 @@
 import logging
+from typing import Dict
 
 from database import Model, Linearization, Method
 from entities.comparator import AdsorptionModelComparison
@@ -62,15 +63,16 @@ def process_linearization(linearization_id, sample):
     return linearization.run(sample)
 
 
-def process_model(model_name, sample,seeds):
+def process_model(model_name, sample, seeds, methods):
     model = find_model(model_name)
-    return model.run(sample, seeds), model
+    return model.run(sample, seeds, methods), model
 
 
 def exec_no_linear_models(investigation, seeds, model_name):
+    methods = get_optimization_methods()
     sample = find_sample(investigation.sample_id)
 
-    adjustments, model  = process_model(model_name, sample, seeds)
+    adjustments, model  = process_model(model_name, sample, seeds, methods)
     adjustments["model"] = model_name
 
     return adjustments, model
@@ -126,6 +128,16 @@ def format_solution_no_linear(name, description, success, vars,params, x, y_pred
         "parameters": parameters
     }
 
+
+
+def get_optimization_methods() -> Dict[str, str]:
+    methods = find_methods()
+    method_dict = {}
+
+    for method in methods:
+        method_dict[method.code] = method.description
+
+    return method_dict
 
 def find_methods():
     methods = Method.with_schema(None).all()

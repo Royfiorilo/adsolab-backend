@@ -164,9 +164,9 @@ class Statistics():
         dw_stat = durbin_watson(residuals)
 
         return {
-            'normality_pvalue': normality_p,
-            'homoscedasticity_pvalue': homo_p,
-            'durbin_watson': dw_stat,
+            'normality_pvalue': round_number(normality_p),
+            'homoscedasticity_pvalue': round_number(homo_p),
+            'durbin_watson': round_number(dw_stat),
             'passes_normality': 0 if normality_p > 0.05 else 1,
             # Si el valor p de la homocedasticidad es mayor a 0.05, se acepta homocedasticidad (0).
             # Si el valor p es menor o igual a 0.05, se rechaza homocedasticidad (1).

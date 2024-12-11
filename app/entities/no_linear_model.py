@@ -4,7 +4,7 @@ import numpy as np
 from numdifftools import Hessian
 import lmfit
 
-from utils import round_list_numbers
+from utils import round_list_numbers, round_number
 from database import Method
 from .comparator import AdsorptionModelComparison
 from .model import Model
@@ -63,29 +63,19 @@ class NoLinearModel(Model):
             else:
                 stderr = value.stderr
 
-            params.append({"name": param, "value": value.value, "std_err": stderr})
+            params.append({"name": param, "value": round_number(value.value), "std_err": round_number(stderr)})
 
         return params
-
-
-    def get_optimization_methods(self) -> Dict[str, str]:
-        methods = Method.with_schema(None).all()
-        method_dict = {}
-
-        for method in methods:
-            method_dict[method.code] = method.description
-
-        return method_dict
 
     def get_seeds(self, parameters: List[Dict[str, Any]]) -> Dict[str, float]:
         return {param["name"]: param["value"] for param in parameters}
 
-    def run(self, sample, parameters) -> dict[str, list[Any] | Any]:
+    def run(self, sample, parameters, methods) -> dict[str, list[Any] | Any]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
         seeds = self.get_seeds(parameters)
 
-        self.fit_all_methods(x, y, seeds)
+        self.fit_all_methods(x, y, seeds, methods)
         best_method = self.determine_best_method()
 
         return {
@@ -94,13 +84,12 @@ class NoLinearModel(Model):
         }
 
     def fit_all_methods(
-            self, ce: np.array, qe: np.array, initial_seeds: Dict[str, float], cv_folds: int = 5
+            self, ce: np.array, qe: np.array, initial_seeds: Dict[str, float], methods: Dict[str, str], cv_folds: int = 5
     ):
         """
         Ajusta modelo usando varios metodos y hace ademas validacion cruzada
         """
         params = self.model.make_params(**initial_seeds)
-        methods = self.get_optimization_methods()
 
         for method, description in methods.items():
             try:
