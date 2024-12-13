@@ -7,6 +7,7 @@ class MethodSchema(Schema, DumpMixin):
     name = fields.Str(required=True)
     code = fields.Str(required=True)
     description = fields.Str(required=True)
+    color = fields.Str(required=True)
 
 
 METHOD_SCHEMA = MethodSchema()

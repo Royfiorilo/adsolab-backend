@@ -57,4 +57,5 @@ class Method(DumpMixin, db.Model):
     name = db.Column(db.String(100), nullable=False)
     code = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(500), nullable=True)
+    color = db.Column(db.String(10), nullable=False)
 
