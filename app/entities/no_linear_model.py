@@ -1,17 +1,17 @@
 from typing import Dict, List, Any
 
-import lmfit
 import numpy as np
-from sklearn.model_selection import LeaveOneOut, KFold
+from numdifftools import Hessian
+import lmfit
 
-from utils import round_list_numbers
+from utils import round_list_numbers, round_number
+from database import Method
 from .comparator import AdsorptionModelComparison
 from .model import Model
 from .statistics import Statistics
 
 
 class NoLinearModel(Model):
-
 
     def __init__(
             self,
@@ -32,97 +32,109 @@ class NoLinearModel(Model):
         return len(self.linearizations) > 0
 
     def get_linearizations(self) -> List[Any]:
-
         return self.linearizations
 
-    def run(self, sample, parameters) -> dict[str, list[Any] | Any]:
+    def get_best_method(self):
+        return self.best_method
+
+
+    def _calculate_standard_errors(self, result, params):
+        """
+        Calculate standard errors for parameters using numerical Hessian.
+        """
+        # Compute the Hessian matrix
+        hessian_func = Hessian(lambda p: np.sum(result['residuals'] ** 2))
+        hessian_matrix = hessian_func(params)
+
+        # Covariance matrix is the inverse of the Hessian
+        covariance_matrix = np.linalg.inv(hessian_matrix)
+
+        # Standard errors are the square roots of the diagonal elements
+        return np.sqrt(np.diag(covariance_matrix))
+
+
+    def _get_parameters_with_stderr(self, result):
+        params = []
+
+        for param, value in result.params.items():
+            stderr = None
+            if value.stderr is None:
+                stderr = self._calculate_standard_errors(result, result.params)
+            else:
+                stderr = value.stderr
+
+            params.append({"name": param, "value": round_number(value.value), "std_err": round_number(stderr)})
+
+        return params
+
+    def get_seeds(self, parameters: List[Dict[str, Any]]) -> Dict[str, float]:
+        return {param["name"]: param["value"] for param in parameters}
+
+    def run(self, sample, parameters, methods) -> dict[str, list[Any] | Any]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
         seeds = self.get_seeds(parameters)
 
-        self.fit_all_methods(x, y, seeds)
+        self.fit_all_methods(x, y, seeds, methods)
         best_method = self.determine_best_method()
-
 
         return {
             "best_adjust": best_method,
             "adjustment_methods": self.method_results
         }
 
-
     def fit_all_methods(
-            self, ce: np.array, qe: np.array, initial_seeds: Dict[str, float], cv_folds: int = 5
-    ) :
+            self, ce: np.array, qe: np.array, initial_seeds: Dict[str, float], methods: Dict[str, str], cv_folds: int = 5
+    ):
         """
         Ajusta modelo usando varios metodos y hace ademas validacion cruzada
         """
         params = self.model.make_params(**initial_seeds)
-        methods = self.get_optimization_methods()
 
         for method, description in methods.items():
             try:
-
-                result = self._evaluate_fit(
-                ce_train=ce,
-                qe_train=qe,
-                params=params,
-                method=method,
-                )
-
-                result ["name"] = method
-                result ["description"] = description
+                result = self._evaluate_fit(ce, qe, params, method)
+                result.update({"name": method, "description": description})
                 self.method_results.append(result)
-
             except Exception as e:
                 print(f"Método {method} falló: {str(e)}")
 
-
-    def get_seeds(self, parameters: List[Dict[str, Any]]) -> Dict[str, float]:
-        return {param["name"]: param["value"] for param in parameters}
-
-    def get_optimization_methods(self) -> Dict[str, str]:
-        return {
-            "leastsq": "Levenberg-Marquardt (Gauss-Newton modificado)",
-            "cg": "Gradiente Conjugado",
-            "newton": "Newton-CG",
-            "cobyla": "COBYLA",
-        }
-
-
     def _evaluate_fit(
             self,
-            ce_train: np.array,
-            qe_train: np.array,
+            ce: np.array,
+            qe: np.array,
             params,
             method: str
     ) -> Dict[str, Any]:
-        result = self.model.fit(qe_train, params, ce=ce_train, method=method, nan_policy='omit',  bounds=([0, 0], [np.inf, np.inf]))
+
+        for param_name, param in params.items():
+            param.set(min=0, max=np.inf)
+
+        result = self.model.fit(
+            qe, params, ce=ce, method=method, nan_policy="omit")
+
         qe_pred = result.best_fit
-        residuals = qe_train - qe_pred
+        residuals = qe - qe_pred
 
         statistics = Statistics.all_statistics(
-            qe_train, qe_pred, len(params), float(result.aic), float(result.bic)
+            qe, qe_pred, len(params), float(result.aic), float(result.bic)
         )
 
         return {
-            "transformed": {"x": ce_train.tolist(), "y": round_list_numbers(qe_pred.tolist())},
+            "transformed": {"x": ce.tolist(), "y": round_list_numbers(qe_pred.tolist())},
             "success": bool(result.success),
-            "parameters": [
-                {"name": k, "value": v} for k, v in result.best_values.items()
-            ],
+            "parameters": self._get_parameters_with_stderr(result),
             "statistics": statistics,
             "residuals": Statistics.check_residuals(residuals),
         }
 
-
-
     def determine_best_method(self):
         results = []
         for method in self.method_results:
-            results.append({ "statistics":method["statistics"],
-                             "residuals":method["residuals"],
-                             "name": method["name"]
-                             })
+            results.append({"statistics": method["statistics"],
+                            "residuals": method["residuals"],
+                            "name": method["name"]
+                            })
 
         scores = AdsorptionModelComparison.determine_heuristic_scores_models(results, "name")
         best_method = max(scores, key=scores.get)
@@ -131,6 +143,3 @@ class NoLinearModel(Model):
             if method["name"] == best_method:
                 self.best_method = method
         return best_method
-
-    def get_best_method(self):
-        return self.best_method

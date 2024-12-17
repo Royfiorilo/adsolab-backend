@@ -29,6 +29,8 @@ class Sample(DumpMixin, db.Model):
     ce = db.Column(ARRAY(db.Float), nullable=False)
     qe = db.Column(ARRAY(db.Float), nullable=False)
     investigations = db.relationship('Investigation', backref='sample', lazy=True)
+    title = db.Column(db.String(100))
+    description = db.Column(db.String(500))
 
 
 class Investigation(DumpMixin, db.Model):
@@ -48,3 +50,12 @@ class Linearization(DumpMixin, db.Model):
     description = db.Column(db.String(500), nullable=False)
     parameters = db.Column(JSON, nullable=False)
     model_id = db.Column(db.Integer, db.ForeignKey('model._id'), nullable=False)
+
+class Method(DumpMixin, db.Model):
+    __tablename__ = 'method'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False)
+    code = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(500), nullable=True)
+    color = db.Column(db.String(10), nullable=False)
+

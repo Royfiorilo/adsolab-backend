@@ -13,6 +13,8 @@ class SampleSchema(Schema, DumpMixin):
         fields.Float(), required=True, validate=validate.Length(min=1)
     )
     investigations = fields.List(fields.Nested(InvestigationSchema), missing=None)
+    title = fields.Str(missing=None)
+    description = fields.Str(missing=None)
 
     @pre_load
     def normalize_numbers(self, data, **kwargs):
