@@ -2,11 +2,9 @@ import math
 
 import numpy as np
 from sklearn.linear_model import Ridge
-from sklearn.metrics import r2_score
 from sklearn.model_selection import GridSearchCV
-from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import StandardScaler
-
+from utils import round_list_numbers
 from entities.statistics import Statistics
 
 
@@ -86,46 +84,18 @@ class AdsorptionModelComparison:
 
         return scores
 
-    def _best_alpha(self, X_scaled, y):
+    @classmethod
+    def _best_alpha(cls, X_scaled, y):
         ridge = Ridge()
         param_grid = {'alpha': [0.001, 0.1, 0.05, 0.2, 1, 5, 10, 100, 1000]}
         grid_search = GridSearchCV(estimator=ridge, param_grid=param_grid, scoring='neg_mean_squared_error', cv=5)
         grid_search.fit(X_scaled, y)
         return grid_search.best_params_['alpha']
 
-    def get_ml_coefs_models(self, qe, models_y_preds):
-
-        X = np.column_stack(tuple(models_y_preds))
-        y = qe
-
-        # estandarizo para escalar las magnitudes
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)
-
-        # elijo best alpha
-        alpha = self._best_alpha(X_scaled, y)
-
-        # regresion
-        ridge = Ridge(alpha=alpha)
-        ridge.fit(X_scaled, y)
-        ridge_coefs = ridge.coef_
-        qe_pred_ridge = ridge.predict(X_scaled)
-        ridge_aic, ridge_bic = self._manual_aic_bic_ridge(X_scaled, y, qe_pred_ridge)
-        statistics_ridge = Statistics.all_statistics(y, qe_pred_ridge, len(ridge_coefs), ridge_aic, ridge_bic)
-        residuales_ridge = qe - qe_pred_ridge
-
-        return {
-            "name": "Ridge",
-            "coefs": ridge_coefs,
-            "statistics": statistics_ridge,
-            "residuals": Statistics.check_residuals(residuales_ridge)
-        }
-
-
-
-    def _manual_aic_bic_ridge(self, X, y, y_pred):
+    @classmethod
+    def _manual_aic_bic_ridge(cls, X, y, y_pred):
         n = len(y)
-        #num parametros num columns
+        # num parametros num columns
         k = X.shape[1]
 
         rss = np.sum((y - y_pred) ** 2)
@@ -137,3 +107,34 @@ class AdsorptionModelComparison:
 
         bic = np.log(n) * k - 2 * llf
         return aic, bic
+
+    @classmethod
+    def get_ml_coefs_models(cls, qe, models_y_preds):
+
+        X = np.column_stack(tuple(models_y_preds))
+        y = qe
+
+        # estandarizo para escalar las magnitudes
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        # elijo best alpha
+        alpha = cls._best_alpha(X_scaled, y)
+
+        # regresion
+        ridge = Ridge(alpha=alpha)
+        ridge.fit(X_scaled, y)
+        ridge_coefs = ridge.coef_
+        qe_pred_ridge = ridge.predict(X_scaled)
+        ridge_aic, ridge_bic = cls._manual_aic_bic_ridge(X_scaled, y, qe_pred_ridge)
+        statistics_ridge = Statistics.all_statistics(np.array(y), qe_pred_ridge, len(ridge_coefs), ridge_aic, ridge_bic)
+        residuales_ridge = qe - qe_pred_ridge
+
+        return {
+            "name": "Ridge",
+            "y_pred": round_list_numbers(qe_pred_ridge.tolist()),
+            "coefs": round_list_numbers(ridge_coefs),
+            "statistics": statistics_ridge,
+            "residuals": Statistics.check_residuals(residuales_ridge)
+        }
+

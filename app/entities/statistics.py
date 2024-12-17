@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.metrics import r2_score, mean_squared_error
-from scipy.stats import chisquare
 from statsmodels.stats.stattools import durbin_watson
 
 from utils import round_number
@@ -105,7 +104,7 @@ class Statistics():
         n = len(y_exp)
         hybrid = None
         if n > 1:
-            hybrid = (100 / (n - num_params)) * np.sum((y_exp - y_pred) ** 2 / (y_exp+ 1e-10))
+            hybrid = (100 / (n - num_params)) * np.sum((y_exp - y_pred) ** 2 / (y_exp + 1e-10))
         return hybrid
 
 

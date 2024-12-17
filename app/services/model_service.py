@@ -1,5 +1,6 @@
 import logging
 from typing import Dict
+import numpy as np
 
 from database import Model, Linearization, Method
 from entities.comparator import AdsorptionModelComparison
@@ -82,16 +83,51 @@ def exec_no_linear_models(investigation, seeds, model_name, filter: None):
     return adjustments, model
 
 
-def get_best_model(results, model):
+def get_comparision(results, models, y):
     compare = []
-    for result in results:
-        best_method = model.get_best_method()
+    y_preds = []
+    model_results_ridge = []
+
+
+    for idx, result in enumerate(results):
+        best_method = models[idx].get_best_method()
         compare.append({"statistics": best_method["statistics"], "name": result["model"], "residuals": best_method["residuals"]})
+        y_preds.append(best_method['transformed']['y'])
 
-    scores = AdsorptionModelComparison.determine_heuristic_scores_models(compare, "name")
-    best_model = max(scores, key=scores.get)
-    return best_model
+    scores_heuristic = AdsorptionModelComparison.determine_heuristic_scores_models(compare, "name")
+    best_model_heuristic = max(scores_heuristic, key=scores_heuristic.get)
 
+    score_ridge = AdsorptionModelComparison.get_ml_coefs_models(y, y_preds)
+    coefs = score_ridge['coefs']
+
+    for idx, model in enumerate(models):
+        model_results_ridge.append({
+            'model': model._id,
+            'coef': coefs[idx]
+        })
+
+
+    max_model_ridge = max(coefs)
+    best_model_ridge = coefs.index(max_model_ridge)
+    best_model_ridge = model_results_ridge[best_model_ridge]['model']
+    comparision = format_comparision(scores_heuristic, best_model_heuristic, score_ridge, best_model_ridge, model_results_ridge)
+
+    return comparision
+
+
+def format_comparision(scores_heuristic, best_heuristic, score_ridge, best_ridge, model_results_ridge):
+    return {
+        "heuristic": {
+            "best_model": best_heuristic,
+            "results": [{'model': model, 'score': round_number(score)} for model, score in scores_heuristic.items()]
+        },
+        "ridge": {
+            "best_model": best_ridge,
+            "y_pred": score_ridge['y_pred'],
+            "statistics":score_ridge['statistics'],
+            "results": model_results_ridge
+        }
+    }
 
 def format_solution_linearization(name, id, x, y, slope, intercept, vars, params_info, statistics):
     parameters = []
