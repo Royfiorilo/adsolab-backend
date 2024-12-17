@@ -3,7 +3,7 @@ from marshmallow import ValidationError
 from database import Sample
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
 from app import db
-from exceptions.exceptions import NotFoundError, BadRequestError
+from exceptions.exceptions import NotFoundError, BadRequestError, FilterSampleError
 
 
 def find_sample(sample_id):
@@ -22,6 +22,16 @@ def order_sample(ce, qe):
     pears = sorted(zip(ce, qe))
     x, y= zip(*pears)
     return list(x), list(y)
+
+def filter_sample(sample, filter):
+    if not filter:
+        return sample
+    if sample.len() < len(filter):
+        raise FilterSampleError("The number of items to filter is greater than the sample.")
+    if sample.len() <= max(filter) or min(filter) < 0:
+        raise FilterSampleError("An index is outside the sample range.")
+
+    return sample.remove(filter)
 
 
 def create_sample_db(request_json):

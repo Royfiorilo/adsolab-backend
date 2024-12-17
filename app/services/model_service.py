@@ -6,7 +6,7 @@ from entities.comparator import AdsorptionModelComparison
 from entities.schemas.linearization_schema import LINEARIZATION_SCHEMA
 from entities.schemas.model_schema import MODEL_SCHEMA
 from exceptions.exceptions import NotFoundError
-from services.sample_service import find_sample
+from services.sample_service import find_sample, filter_sample
 from utils import round_list_numbers, round_number
 
 
@@ -32,10 +32,12 @@ def compare_r2_linearizations(linearization1, linearization2):
         linearization2["statistics"]["r_squared"]) else linearization2
 
 
-def excecute_linearizations(investigation, linearizations, model_id):
+def excecute_linearizations(investigation, linearizations, model_id, filter: None):
     model = find_model(model_id)
     result = {"model": model.name}
     sample = find_sample(investigation.sample_id)
+
+    filter_sample(sample,filter)
 
     linearization_results = []
     best_result = None
@@ -68,9 +70,11 @@ def process_model(model_name, sample, seeds, methods):
     return model.run(sample, seeds, methods), model
 
 
-def exec_no_linear_models(investigation, seeds, model_name):
+def exec_no_linear_models(investigation, seeds, model_name, filter: None):
     methods = get_optimization_methods()
     sample = find_sample(investigation.sample_id)
+
+    filter_sample(sample,filter)
 
     adjustments, model  = process_model(model_name, sample, seeds, methods)
     adjustments["model"] = model_name
