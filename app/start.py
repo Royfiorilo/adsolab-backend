@@ -3,7 +3,7 @@ from http import HTTPStatus
 from flask import jsonify
 
 from app import create_app
-from exceptions.exceptions import BadRequestError, NotFoundError
+from exceptions.exceptions import BadRequestError, NotFoundError, FilterSampleError
 
 app = create_app()
 @app.after_request
@@ -15,6 +15,7 @@ def add_header(response):
 
 
 @app.errorhandler(BadRequestError)
+@app.errorhandler(FilterSampleError)
 def handle_bad_request_error(e):
     return jsonify({
         "status": "ERROR",

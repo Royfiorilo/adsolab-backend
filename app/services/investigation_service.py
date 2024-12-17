@@ -45,9 +45,11 @@ def run_linearization_models(request_data):
     results = []
     investigation = get_investigation(request_data['investigation_id'])
 
+    filter = request_data['filter'] if 'filter' in request_data.keys() else None
+
     for model in request_data["models"]:
         try:
-            model_result = execute_model_linearization(investigation, model)
+            model_result = execute_model_linearization(investigation, model, filter)
             results.append(model_result)
         except LinearizationError as e:
             results.append({"model": model["model"], "error": str(e)})
@@ -55,11 +57,12 @@ def run_linearization_models(request_data):
     return results
 
 
-def execute_model_linearization(investigation, model):
+def execute_model_linearization(investigation, model, filter):
     return excecute_linearizations(
         investigation,
         model.get('linearizations', []),
-        model["model"]
+        model["model"],
+        filter
     )
 
 
@@ -69,9 +72,11 @@ def  run_no_linear_models(request_data):
 
     investigation = get_investigation(request_data['investigation_id'])
 
+    filter = request_data['filter'] if 'filter' in request_data.keys() else None
+
     for model in request_data["models"]:
         try:
-            model_result, model = exec_no_linear_models(investigation, model.get("seeds"), model["model"])
+            model_result, model = exec_no_linear_models(investigation, model.get("seeds"), model["model"], filter)
             results.append(model_result)
 
         except LinearizationError as e:

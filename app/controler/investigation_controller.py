@@ -2,7 +2,7 @@ from http import HTTPStatus
 
 from flask import Blueprint, request, jsonify
 
-from exceptions.exceptions import BadRequestError
+from exceptions.exceptions import BadRequestError, FilterSampleError
 from services.investigation_service import run_linearization_models, \
     create_investigation_and_sample, create_investigation_with_sample_id, run_no_linear_models
 from services.sample_service import find_sample
@@ -34,8 +34,9 @@ def create_investigation_with_sample():
 @blueprint.route('/investigation/run-linearization', methods=['POST'])
 def execute_linear_models():
     request_json = request.get_json()
-    if "investigation_id" not in request_json:
-        raise BadRequestError("investigation_id is required")
+
+    if "investigation_id" not in request_json or "models" not in request_json:
+        raise BadRequestError("investigation_id and models are required")
 
     results = run_linearization_models(request_json)
     response = {
@@ -47,10 +48,13 @@ def execute_linear_models():
 @blueprint.route('/investigation/run-no-linear-model', methods=['POST'])
 def execute_no_linear_models():
     request_json = request.get_json()
-    if "investigation_id" not in request_json:
-        raise BadRequestError("investigation_id is required")
+
+    if "investigation_id" not in request_json or "models" not in request_json:
+        raise BadRequestError("investigation_id and models are required")
+
 
     results, best_model = run_no_linear_models(request_json)
+
     response = {
         "investigation_id": request_json['investigation_id'],
         "best_model": best_model,
