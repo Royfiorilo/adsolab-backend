@@ -58,6 +58,6 @@ def execute_no_linear_models():
     response = {
         "investigation_id": request_json['investigation_id'],
         "results": results,
-        "comparision": comparision
+        "comparison": comparision
     }
     return jsonify(response), HTTPStatus.OK
