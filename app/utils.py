@@ -21,8 +21,19 @@ def soft_curve(ce, qe_pred):
     y = interpolator(x_combined)
     return x, y
 
-def soft_curves(results):
+def process_adjustment_methods(adjustment_methods):
+    for adjustment_method in adjustment_methods:
+        x, y = soft_curve(adjustment_method["transformed"]["x"], adjustment_method["transformed"]["y"])
+        adjustment_method["transformed"] = {
+            "x": round_list_numbers(x),
+            "y": round_list_numbers(y),
+        }
+
+def process_comparison(x_reference, comparison):
+    x, y = soft_curve(x_reference, comparison["ridge"]["y_pred"])
+    comparison["ridge"]["y_pred"] = round_list_numbers(y)
+
+def soft_curves_response(results, comparison, ce):
     for result in results:
-        x,y = soft_curve(result["transformed"]["x"], result["transformed"]["y"])
-        transformed = {"x": round_list_numbers(x), "y": round_list_numbers(y)}
-        result["transformed"] = transformed
+        process_adjustment_methods(result["adjustment_methods"])
+    process_comparison(ce, comparison)
