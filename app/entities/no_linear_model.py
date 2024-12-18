@@ -1,11 +1,10 @@
 from typing import Dict, List, Any
 
+import lmfit
 import numpy as np
 from numdifftools import Hessian
-import lmfit
 
 from utils import round_list_numbers, round_number
-from database import Method
 from .comparator import AdsorptionModelComparison
 from .model import Model
 from .statistics import Statistics
@@ -119,6 +118,7 @@ class NoLinearModel(Model):
         statistics = Statistics.all_statistics(
             qe, qe_pred, len(params), float(result.aic), float(result.bic)
         )
+
 
         return {
             "transformed": {"x": ce.tolist(), "y": round_list_numbers(qe_pred.tolist())},
