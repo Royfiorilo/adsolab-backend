@@ -1,6 +1,5 @@
 import logging
 from typing import Dict
-import numpy as np
 
 from database import Model, Linearization, Method
 from entities.comparator import AdsorptionModelComparison
@@ -83,16 +82,15 @@ def exec_no_linear_models(investigation, seeds, model_name, filter: None):
     return adjustments, model
 
 
-def get_comparision(results, models, y):
+def get_comparision(results, y):
     compare = []
     y_preds = []
     model_results_ridge = []
 
 
-    for idx, result in enumerate(results):
-        best_method = models[idx].get_best_method()
-        compare.append({"statistics": best_method["statistics"], "name": result["model"], "residuals": best_method["residuals"]})
-        y_preds.append(best_method['transformed']['y'])
+    for result in results:
+        compare.append({"statistics": result["statistics"], "name": result["model"], "residuals": result["residuals"]})
+        y_preds.append(result['transformed']['y'])
 
     scores_heuristic = AdsorptionModelComparison.determine_heuristic_scores_models(compare, "name")
     best_model_heuristic = max(scores_heuristic, key=scores_heuristic.get)
@@ -100,9 +98,9 @@ def get_comparision(results, models, y):
     score_ridge = AdsorptionModelComparison.get_ml_coefs_models(y, y_preds)
     coefs = score_ridge['coefs']
 
-    for idx, model in enumerate(models):
+    for idx, model in enumerate(results):
         model_results_ridge.append({
-            'model': model._id,
+            'model': model['model'],
             'coef': coefs[idx]
         })
 
