@@ -1,11 +1,10 @@
 from typing import Dict, List, Any
 
+import lmfit
 import numpy as np
 from numdifftools import Hessian
-import lmfit
 
-from utils import round_list_numbers, round_number, soft_curve
-from database import Method
+from utils import round_list_numbers, round_number
 from .comparator import AdsorptionModelComparison
 from .model import Model
 from .statistics import Statistics
