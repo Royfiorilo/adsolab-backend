@@ -4,8 +4,8 @@ from app import db
 from database import Investigation
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
-from services.model_service import excecute_linearizations, exec_no_linear_models, get_best_model
-from services.sample_service import create_sample_db, find_sample
+from services.model_service import excecute_linearizations, exec_no_linear_models, get_comparision
+from services.sample_service import create_sample_db, find_sample, filter_sample
 
 
 def create_investigation_and_sample(request_json):
@@ -69,19 +69,22 @@ def execute_model_linearization(investigation, model, filter):
 
 def  run_no_linear_models(request_data):
     results = []
-
     investigation = get_investigation(request_data['investigation_id'])
 
     filter = request_data['filter'] if 'filter' in request_data.keys() else None
 
-    for model in request_data["models"]:
+    for model_data in request_data["models"]:
         try:
-            model_result, model = exec_no_linear_models(investigation, model.get("seeds"), model["model"], filter)
-            results.append(model_result)
-
+            _, model = exec_no_linear_models(investigation, model_data.get("seeds"), model_data["model"], filter)
+            result = model.get_best_method()
+            result["model"] = model_data["model"]
+            results.append(result)
         except LinearizationError as e:
-            results.append({"model": model["model"], "error": str(e)})
+            results.append({"model": model_data["model"], "error": str(e)})
 
-    best_model = get_best_model(results, model)
+    sample = find_sample(investigation.sample_id)
+    filter_sample(sample, filter)
 
-    return results, best_model
+    comparision = get_comparision(results, sample.qe)
+
+    return results, comparision

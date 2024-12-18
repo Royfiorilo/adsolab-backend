@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.metrics import r2_score, mean_squared_error
-from scipy.stats import chisquare
 from statsmodels.stats.stattools import durbin_watson
 
 from utils import round_number
@@ -68,7 +67,17 @@ class Statistics():
         La manera de calcularla es como está detallado a continuación
         chi_squared = np.sum(((y_exp - y_pred) ** 2) / np.abs(y_pred))
         '''
-        chi_squared = np.sum(((y_exp - y_pred) ** 2) / ((y_pred + 1e-10) ** 2))
+
+        # Normalización de los arrays para que sus sumas sean iguales
+        y_exp_normalized = y_exp / np.sum(y_exp)
+        y_pred_normalized = y_pred / np.sum(y_pred)
+
+        # Filtrar valores para evitar divisiones por cero
+        valid_indices = (y_exp_normalized > 0) & (y_pred_normalized > 0)
+        y_exp_filtered = y_exp_normalized[valid_indices]
+        y_pred_filtered = y_pred_normalized[valid_indices]
+
+        chi_squared = np.sum(((y_pred_filtered - y_exp_filtered) ** 2) / np.abs(y_exp_filtered))
         return chi_squared
 
     @classmethod
@@ -102,10 +111,17 @@ class Statistics():
         :param num_params: Número de parámetros del modelo.
         :return: Valor numérico del indicador híbrido.
         '''
+
+        # Filtrar valores para evitar divisiones por cero
+        valid_indices = (y_exp > 0) & (y_pred > 0)
+        y_exp = y_exp[valid_indices]
+        y_pred = y_pred[valid_indices]
+
+
         n = len(y_exp)
         hybrid = None
         if n > 1:
-            hybrid = (100 / (n - num_params)) * np.sum((y_exp - y_pred) ** 2 / (y_exp+ 1e-10))
+            hybrid = (100 / (n - num_params)) * np.sum((y_exp - y_pred) ** 2 / (y_exp))
         return hybrid
 
 

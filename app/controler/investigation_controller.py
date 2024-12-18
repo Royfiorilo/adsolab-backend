@@ -53,11 +53,11 @@ def execute_no_linear_models():
         raise BadRequestError("investigation_id and models are required")
 
 
-    results, best_model = run_no_linear_models(request_json)
+    results, comparision = run_no_linear_models(request_json)
 
     response = {
         "investigation_id": request_json['investigation_id'],
-        "best_model": best_model,
-        "results": results
+        "results": results,
+        "comparison": comparision
     }
     return jsonify(response), HTTPStatus.OK
