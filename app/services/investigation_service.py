@@ -6,7 +6,7 @@ from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
 from services.model_service import excecute_linearizations, exec_no_linear_models, get_comparision
 from services.sample_service import create_sample_db, find_sample, filter_sample
-from utils import soft_curves
+from utils import  soft_curves_response
 
 
 def create_investigation_and_sample(request_json):
@@ -89,4 +89,5 @@ def  run_no_linear_models(request_data):
 
     comparision = get_comparision(results, models, sample.qe)
 
+    soft_curves_response(results, comparision,sample.ce)
     return results, comparision
