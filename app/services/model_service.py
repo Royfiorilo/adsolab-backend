@@ -82,15 +82,15 @@ def exec_no_linear_models(investigation, seeds, model_name, filter: None):
     return adjustments, model
 
 
-def get_comparision(results, y):
+def get_comparision(results, models, y):
     compare = []
     y_preds = []
     model_results_ridge = []
 
-
-    for result in results:
-        compare.append({"statistics": result["statistics"], "name": result["model"], "residuals": result["residuals"]})
-        y_preds.append(result['transformed']['y'])
+    for idx, result in enumerate(results):
+        best_method = models[idx].get_best_method()
+        compare.append(
+            {"statistics": best_method["statistics"], "name": result["model"], "residuals": best_method["residuals"]})
 
     scores_heuristic = AdsorptionModelComparison.determine_heuristic_scores_models(compare, "name")
     best_model_heuristic = max(scores_heuristic, key=scores_heuristic.get)
@@ -100,7 +100,7 @@ def get_comparision(results, y):
 
     for idx, model in enumerate(results):
         model_results_ridge.append({
-            'model': model['model'],
+             'model': model._id,
             'coef': coefs[idx]
         })
 

@@ -70,24 +70,23 @@ def execute_model_linearization(investigation, model, filter):
 
 def  run_no_linear_models(request_data):
     results = []
+    models = []
     investigation = get_investigation(request_data['investigation_id'])
 
     filter = request_data['filter'] if 'filter' in request_data.keys() else None
 
-    for model_data in request_data["models"]:
+    for model in request_data["models"]:
         try:
-            _, model = exec_no_linear_models(investigation, model_data.get("seeds"), model_data["model"], filter)
-            result = model.get_best_method()
-            result["model"] = model_data["model"]
-            results.append(result)
+            model_result, model = exec_no_linear_models(investigation, model.get("seeds"), model["model"], filter)
+            results.append(model_result)
+            models.append(model)
         except LinearizationError as e:
-            results.append({"model": model_data["model"], "error": str(e)})
+            results.append({"model": model["model"], "error": str(e)})
+
 
     sample = find_sample(investigation.sample_id)
     filter_sample(sample, filter)
 
-    comparision = get_comparision(results, sample.qe)
-
-    soft_curves(results)
+    comparision = get_comparision(results, models, sample.qe)
 
     return results, comparision
