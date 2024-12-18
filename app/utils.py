@@ -1,5 +1,4 @@
 import numpy as np
-from mpl_toolkits.mplot3d.proj3d import transform
 from scipy.interpolate import CubicSpline
 
 ROUND_DIGIT = 4
