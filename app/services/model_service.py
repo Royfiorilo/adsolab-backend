@@ -65,19 +65,19 @@ def process_linearization(linearization_id, sample):
     return linearization.run(sample)
 
 
-def process_model(model_name, sample, seeds, methods):
-    model = find_model(model_name)
-    return model.run(sample, seeds, methods), model
+def process_model(model_json, sample, methods):
+    model = find_model(model_json['model'])
+    return model.run(sample, model_json, methods), model
 
 
-def exec_no_linear_models(investigation, seeds, model_name, filter: None):
+def exec_no_linear_models(investigation, model_json, filter: None):
     methods = get_optimization_methods()
     sample = find_sample(investigation.sample_id)
 
     filter_sample(sample,filter)
 
-    adjustments, model  = process_model(model_name, sample, seeds, methods)
-    adjustments["model"] = model_name
+    adjustments, model  = process_model(model_json, sample, methods)
+    adjustments["model"] = model_json['model']
 
     return adjustments, model
 
@@ -124,6 +124,7 @@ def format_comparision(scores_heuristic, best_heuristic, score_ridge, best_ridge
             "best_model": best_ridge,
             "y_pred": score_ridge['y_pred'],
             "statistics":score_ridge['statistics'],
+            "residuals": score_ridge['residuals'],
             "results": model_results_ridge
         }
     }

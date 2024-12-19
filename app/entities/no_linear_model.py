@@ -9,6 +9,9 @@ from .comparator import AdsorptionModelComparison
 from .model import Model
 from .statistics import Statistics
 
+DEFAULT_ITERATIONS = 10000
+DEFAULT_STEP = 0.1
+
 
 class NoLinearModel(Model):
 
@@ -69,12 +72,15 @@ class NoLinearModel(Model):
     def get_seeds(self, parameters: List[Dict[str, Any]]) -> Dict[str, float]:
         return {param["name"]: param["value"] for param in parameters}
 
-    def run(self, sample, parameters, methods) -> dict[str, list[Any] | Any]:
+    def run(self, sample, model_json, methods) -> dict[str, list[Any] | Any]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
-        seeds = self.get_seeds(parameters)
+        seeds = self.get_seeds(model_json['seeds'])
 
-        self.fit_all_methods(x, y, seeds, methods)
+        step = model_json['step'] if 'step' in model_json else DEFAULT_STEP
+        iteration = model_json['iteration'] if 'iteration' in model_json else DEFAULT_ITERATIONS
+
+        self.fit_all_methods(x, y, seeds, methods, step, iteration)
         best_method = self.determine_best_method()
 
         return {
@@ -83,7 +89,9 @@ class NoLinearModel(Model):
         }
 
     def fit_all_methods(
-            self, ce: np.array, qe: np.array, initial_seeds: Dict[str, float], methods: Dict[str, str], cv_folds: int = 5
+            self, ce: np.array, qe: np.array,
+            initial_seeds: Dict[str, float], methods: Dict[str, str],
+            step, iteration, cv_folds: int = 5
     ):
         """
         Ajusta modelo usando varios metodos y hace ademas validacion cruzada
@@ -92,7 +100,7 @@ class NoLinearModel(Model):
 
         for method, description in methods.items():
             try:
-                result = self._evaluate_fit(ce, qe, params, method)
+                result = self._evaluate_fit(ce, qe, params, step, iteration, method)
                 result.update({"name": method, "description": description})
                 self.method_results.append(result)
             except Exception as e:
@@ -103,14 +111,16 @@ class NoLinearModel(Model):
             ce: np.array,
             qe: np.array,
             params,
+            step,
+            iteration,
             method: str
     ) -> Dict[str, Any]:
 
         for param_name, param in params.items():
-            param.set(min=0, max=np.inf)
+            param.set(min=0, max=np.inf, brute_step=step)
 
         result = self.model.fit(
-            qe, params, ce=ce, method=method, nan_policy="omit")
+            qe, params, ce=ce, method=method, nan_policy="omit", max_nfev=iteration)
 
         qe_pred = result.best_fit
         residuals = qe - qe_pred
