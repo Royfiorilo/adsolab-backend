@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import UnivariateSpline
 
 ROUND_DIGIT = 4
 
@@ -13,12 +13,13 @@ def round_number(number, round_digit=ROUND_DIGIT):
 
 
 def soft_curve(ce, qe_pred):
-    interpolator = CubicSpline(ce, qe_pred)
+    #s=0 para que pase si o si por los puntos originales
+    spl = UnivariateSpline(ce, qe_pred, s=0, k=3)
 
-    x = np.linspace(min(ce), max(ce), 100)
-    x_combined = np.union1d(ce, x)
-    y = interpolator(x_combined)
-    return x, y
+    x_spline = np.linspace(min(ce), max(ce), 300)
+    y_spline = spl(x_spline)
+
+    return x_spline, y_spline
 
 def process_adjustment_methods(adjustment_methods):
     for adjustment_method in adjustment_methods:
