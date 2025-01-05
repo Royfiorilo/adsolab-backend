@@ -67,7 +67,9 @@ def process_linearization(linearization_id, sample):
 
 def process_model(model_json, sample, methods):
     model = find_model(model_json['model'])
-    return model.run(sample, model_json, methods), model
+    iteration = model_json['iteration'] if 'iteration' in model_json else None
+    step = model_json['step'] if 'step' in model_json else None
+    return model.run(sample,model_json['seeds'], methods, step, iteration), model
 
 
 def exec_no_linear_models(investigation, model_json, filter: None):

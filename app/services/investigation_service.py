@@ -67,7 +67,7 @@ def execute_model_linearization(investigation, model, filter):
     )
 
 
-
+    
 def  run_no_linear_models(request_data):
     results = []
     models = []

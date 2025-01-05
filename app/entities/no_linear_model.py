@@ -72,15 +72,15 @@ class NoLinearModel(Model):
     def get_seeds(self, parameters: List[Dict[str, Any]]) -> Dict[str, float]:
         return {param["name"]: param["value"] for param in parameters}
 
-    def run(self, sample, model_json, methods) -> dict[str, list[Any] | Any]:
+    def run(self, sample, seeds, methods, step: None, iterations: None) -> dict[str, list[Any] | Any]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
-        seeds = self.get_seeds(model_json['seeds'])
+        seeds = self.get_seeds(seeds)
 
-        step = model_json['step'] if 'step' in model_json else DEFAULT_STEP
-        iteration = model_json['iteration'] if 'iteration' in model_json else DEFAULT_ITERATIONS
+        step = step if step is not None else DEFAULT_STEP
+        iterations = iterations if iterations is not None else DEFAULT_ITERATIONS
 
-        self.fit_all_methods(x, y, seeds, methods, step, iteration)
+        self.fit_all_methods(x, y, seeds, methods, step, iterations)
         best_method = self.determine_best_method()
 
         return {
