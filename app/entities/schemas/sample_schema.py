@@ -15,6 +15,8 @@ class SampleSchema(Schema, DumpMixin):
     investigations = fields.List(fields.Nested(InvestigationSchema), missing=None)
     title = fields.Str(missing=None)
     description = fields.Str(missing=None)
+    temperature = fields.Float()
+    measure_unit = fields.Str()
 
     @pre_load
     def normalize_numbers(self, data, **kwargs):

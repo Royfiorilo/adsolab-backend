@@ -38,7 +38,11 @@ def create_sample_db(request_json):
     try:
         sample_data = SAMPLE_SCHEMA.load(request_json)
         x,y = order_sample(ce=sample_data.ce, qe= sample_data.qe)
-        sample = Sample(ce=x, qe =y, title=sample_data.title, description=sample_data.description)
+        sample = Sample(ce=x, qe =y,
+                        title=sample_data.title,
+                        description=sample_data.description,
+                        temperature=sample_data.temperature,
+                        measure_unit=sample_data.measure_unit)
         db.session.add(sample)
         db.session.commit()
         return sample
