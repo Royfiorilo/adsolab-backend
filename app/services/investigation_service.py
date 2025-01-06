@@ -67,7 +67,7 @@ def execute_model_linearization(investigation, model, filter):
     )
 
 
-
+    
 def  run_no_linear_models(request_data):
     results = []
     models = []
@@ -77,7 +77,7 @@ def  run_no_linear_models(request_data):
 
     for model in request_data["models"]:
         try:
-            model_result, model = exec_no_linear_models(investigation, model.get("seeds"), model["model"], filter)
+            model_result, model = exec_no_linear_models(investigation, model, filter)
             results.append(model_result)
             models.append(model)
         except LinearizationError as e:
