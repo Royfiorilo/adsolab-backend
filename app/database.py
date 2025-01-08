@@ -32,9 +32,9 @@ class Sample(DumpMixin, db.Model):
     title = db.Column(db.String(100))
     description = db.Column(db.String(500))
     temperature = db.Column(db.Float)
-    mesuare_unit = db.Column(db.String(10))
-    #adsorbate = db.Column(db.String(100))
-    #adsorbent = db.Column(db.String(100))
+    measure_unit = db.Column(db.String(10))
+    adsorbate_id = db.Column(db.Integer, db.ForeignKey('adsorbate.id'), nullable=False)
+    adsorbent_id = db.Column(db.Integer, db.ForeignKey('adsorbent.id'), nullable=False)
 
 
 class Investigation(DumpMixin, db.Model):

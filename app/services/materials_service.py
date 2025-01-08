@@ -32,6 +32,17 @@ def get_all_adsorbates():
         raise NotFoundError("No adsorbates found")
     return adsorbates
 
+def find_adsorbate(adsorbate_id):
+    adsorbate = Adsorbate.with_schema(ADSORBATE_SCHEMA).filter_by(id=adsorbate_id).first()
+    if not adsorbate:
+        raise NotFoundError(f"Adsorbate with {adsorbate_id} doesn't exist")
+    return adsorbate
+
+def find_adsorbent(adsorbent_id):
+    adsorbent = Adsorbent.with_schema(ADSORBENT_SCHEMA).filter_by(id=adsorbent_id).first()
+    if not adsorbent:
+        raise NotFoundError(f"Adsorbent with {adsorbent_id} doesn't exist")
+    return adsorbent
 
 def add_adsorbates(adsorbates):
 

@@ -4,7 +4,7 @@ from database import Sample
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
 from app import db
 from exceptions.exceptions import NotFoundError, BadRequestError, FilterSampleError
-
+from services.materials_service import find_adsorbate, find_adsorbent
 
 def find_sample(sample_id):
     sample = Sample.with_schema(SAMPLE_SCHEMA).filter_by(sample_id=sample_id).first()
@@ -42,7 +42,9 @@ def create_sample_db(request_json):
                         title=sample_data.title,
                         description=sample_data.description,
                         temperature=sample_data.temperature,
-                        measure_unit=sample_data.measure_unit)
+                        measure_unit=sample_data.measure_unit,
+                        adsorbent_id=sample_data.adsorbent_id,
+                        adsorbate_id=sample_data.adsorbate_id)
         db.session.add(sample)
         db.session.commit()
         return sample
