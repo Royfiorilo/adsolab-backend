@@ -38,9 +38,12 @@ def get_sample_by_id():
 
 @blueprint.route('/sample', methods=['POST'])
 def create_sample():
-    request_json = request.get_json()
 
-    sample = create_sample_db(request_json)
-
-    result = SAMPLE_SCHEMA.dump(sample)
-    return jsonify(result), HTTPStatus.CREATED
+    try:
+        request_json = request.get_json()
+        sample = create_sample_db(request_json)
+        result = SAMPLE_SCHEMA.dump(sample)
+        return jsonify(result), HTTPStatus.CREATED
+    except Exception as e:
+        logging.exception(e)
+        return jsonify({"status": "ERROR", "message": str(e)}), HTTPStatus.BAD_REQUEST

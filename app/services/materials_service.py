@@ -8,12 +8,6 @@ from exceptions.exceptions import NotFoundError, BadRequestError
 from services.reactorapp_service import get_adsorbents, get_adsorbates
 
 def get_all_adsorbents():
-    try:
-        reactor_adsorbents = get_adsorbents()
-        add_adsorbents(reactor_adsorbents)
-    except BadRequestError as e:
-        raise BadRequestError(str(e))
-
     adsorbents = Adsorbent.with_schema(None).all()
     if not adsorbents:
         raise NotFoundError("No adsorbents found")
@@ -21,12 +15,6 @@ def get_all_adsorbents():
 
 
 def get_all_adsorbates():
-    try:
-        reactor_adsorbates = get_adsorbates()
-        add_adsorbates(reactor_adsorbates)
-    except BadRequestError as e:
-        raise BadRequestError(str(e))
-    
     adsorbates = Adsorbate.with_schema(None).all()
     if not adsorbates:
         raise NotFoundError("No adsorbates found")
@@ -43,6 +31,17 @@ def find_adsorbent(adsorbent_id):
     if not adsorbent:
         raise NotFoundError(f"Adsorbent with {adsorbent_id} doesn't exist")
     return adsorbent
+
+
+def sync_materials():
+    try:
+        reactor_adsorbents = get_adsorbents()
+        add_adsorbents(reactor_adsorbents)
+        reactor_adsorbates = get_adsorbates()
+        add_adsorbates(reactor_adsorbates)
+    except Exception as e:
+        raise BadRequestError(str(e))
+
 
 def add_adsorbates(adsorbates):
 

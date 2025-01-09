@@ -4,7 +4,8 @@ from http import HTTPStatus
 from flask import Blueprint, request, jsonify
 from entities.schemas.adsorbate_schema import ADSORBATE_SCHEMA
 from entities.schemas.adsorbent_schema import ADSORBENT_SCHEMA
-from services.materials_service import get_all_adsorbents, get_all_adsorbates
+from services.materials_service import get_all_adsorbents, get_all_adsorbates, sync_materials
+from exceptions.exceptions import BadRequestError
 
 blueprint = Blueprint('materials', __name__)
 
@@ -32,3 +33,13 @@ def get_adsorbents():
 
     response = {'adsorbents': output}
     return jsonify(response), HTTPStatus.OK
+
+@blueprint.route('/materials_sync', methods=['GET'])
+def get_materials_sync():
+    try:
+        sync_materials()
+        response = {'message': 'Materials syncronized'}
+        return jsonify(response), HTTPStatus.OK
+    except BadRequestError as e:
+        response = {'message': str(e)}
+        return jsonify(response), HTTPStatus.BAD_REQUEST
