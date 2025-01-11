@@ -1,5 +1,8 @@
+import logging
+from datetime import datetime
 from http import HTTPStatus
 
+from arrow import now
 from flask import Blueprint, request, jsonify
 
 from exceptions.exceptions import BadRequestError, FilterSampleError
@@ -52,9 +55,9 @@ def execute_no_linear_models():
     if "investigation_id" not in request_json or "models" not in request_json:
         raise BadRequestError("investigation_id and models are required")
 
-
+    logging.log(f"Arranco a comparar:{datetime.now()}")
     results, comparision = run_no_linear_models(request_json)
-
+    logging.log(f"Finaliza la comparacion:{datetime.now()}")
     response = {
         "investigation_id": request_json['investigation_id'],
         "results": results,
