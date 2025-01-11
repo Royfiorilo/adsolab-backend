@@ -1,3 +1,5 @@
+import logging
+from datetime import datetime
 from typing import Dict, List, Any
 
 import lmfit
@@ -10,7 +12,7 @@ from .model import Model
 from .statistics import Statistics
 
 DEFAULT_ITERATIONS = 10000
-DEFAULT_STEP = 0.1
+DEFAULT_STEP = None
 
 
 class NoLinearModel(Model):
@@ -72,13 +74,11 @@ class NoLinearModel(Model):
     def get_seeds(self, parameters: List[Dict[str, Any]]) -> Dict[str, float]:
         return {param["name"]: param["value"] for param in parameters}
 
-    def run(self, sample, seeds, methods, step: None, iterations: None) -> dict[str, list[Any] | Any]:
+    def run(self, sample, seeds, methods, step: DEFAULT_STEP, iterations: DEFAULT_ITERATIONS) -> dict[str, list[Any] | Any]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
         seeds = self.get_seeds(seeds)
 
-        step = step if step is not None else DEFAULT_STEP
-        iterations = iterations if iterations is not None else DEFAULT_ITERATIONS
 
         self.fit_all_methods(x, y, seeds, methods, step, iterations)
         best_method = self.determine_best_method()
@@ -116,6 +116,7 @@ class NoLinearModel(Model):
             method: str
     ) -> Dict[str, Any]:
 
+        logging.log(f"Ejecuto el method {method} :{datetime.now()}")
         for param_name, param in params.items():
             param.set(min=0, max=np.inf, brute_step=step)
 
@@ -129,7 +130,7 @@ class NoLinearModel(Model):
             qe, qe_pred, len(params), float(result.aic), float(result.bic)
         )
 
-
+        logging.log(f"Finalizo ejecucion del method {method} :{datetime.now()}")
         return {
             "transformed": {"x": ce.tolist(), "y": round_list_numbers(qe_pred.tolist())},
             "success": bool(result.success),
