@@ -80,7 +80,7 @@ def  run_no_linear_models(request_data):
 
     for model in request_data["models"]:
         try:
-            logging.info(f"Ejecuto el modelo {model['model']} :{datetime.now()}")
+            print(f"Ejecuto el modelo {model['model']} :{datetime.now()}")
             model_result, model = exec_no_linear_models(investigation, model, filter)
             results.append(model_result)
             models.append(model)
@@ -91,7 +91,7 @@ def  run_no_linear_models(request_data):
     sample = find_sample(investigation.sample_id)
     filter_sample(sample, filter)
 
-    logging.info(f"Ejecuto comparacion :{datetime.now()}")
+    print(f"Ejecuto comparacion :{datetime.now()}")
     comparision = get_comparision(results, models, sample.qe)
 
     soft_curves_response(results, comparision,sample.ce)
