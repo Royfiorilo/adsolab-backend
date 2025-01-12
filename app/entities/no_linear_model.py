@@ -116,7 +116,7 @@ class NoLinearModel(Model):
             method: str
     ) -> Dict[str, Any]:
 
-        logging.info(f"Ejecuto el method {method} :{datetime.now()}")
+        print(f"Ejecuto el method {method} :{datetime.now()}")
         for param_name, param in params.items():
             param.set(min=0, max=np.inf, brute_step=step)
 
@@ -130,7 +130,7 @@ class NoLinearModel(Model):
             qe, qe_pred, len(params), float(result.aic), float(result.bic)
         )
 
-        logging.info(f"Finalizo ejecucion del method {method} :{datetime.now()}")
+        print(f"Finalizo ejecucion del method {method} :{datetime.now()}")
         return {
             "transformed": {"x": ce.tolist(), "y": round_list_numbers(qe_pred.tolist())},
             "success": bool(result.success),
