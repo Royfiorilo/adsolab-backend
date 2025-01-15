@@ -16,10 +16,9 @@ class Model(DumpMixin, db.Model):
 class FittedModel(DumpMixin, db.Model):
     __tablename__ = 'fitted_model'
 
-    _id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    x = db.Column(ARRAY(db.Float), nullable=False)
-    y = db.Column(ARRAY(db.Float), nullable=False)
+    fitted_model_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     investigation_id = db.Column(db.Integer, db.ForeignKey('investigation.investigation_id'), nullable=False)
+    models = db.Column(ARRAY(db.Integer), nullable=False)
 
 
 class Sample(DumpMixin, db.Model):

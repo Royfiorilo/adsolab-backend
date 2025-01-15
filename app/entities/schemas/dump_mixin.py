@@ -31,4 +31,8 @@ class DumpMixin:
                     return self._schema.load(self._schema.dump(results, many=True), many=True)
                 return results
 
+            def count(self):
+                results = super().count()
+                return results
+
         return SchemaQuery(cls, session=app.db.session, schema=schema)
