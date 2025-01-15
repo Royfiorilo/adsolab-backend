@@ -96,3 +96,7 @@ def  run_no_linear_models(request_data):
 
     soft_curves_response(results, comparision,sample.ce)
     return results, comparision
+
+def get_investigations_from_db():
+    investigations =  Investigation.with_schema(INVESTIGATION_SCHEMA).all()
+    return investigations

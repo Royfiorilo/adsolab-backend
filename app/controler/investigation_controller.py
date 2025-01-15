@@ -5,9 +5,11 @@ from http import HTTPStatus
 from arrow import now
 from flask import Blueprint, request, jsonify
 
+from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, FilterSampleError
 from services.investigation_service import run_linearization_models, \
-    create_investigation_and_sample, create_investigation_with_sample_id, run_no_linear_models
+    create_investigation_and_sample, create_investigation_with_sample_id, run_no_linear_models, \
+    get_investigations_from_db
 from services.sample_service import find_sample
 
 blueprint = Blueprint('investigation', __name__)
@@ -63,4 +65,16 @@ def execute_no_linear_models():
         "results": results,
         "comparison": comparision
     }
+    return jsonify(response), HTTPStatus.OK
+
+@blueprint.route('/investigations', methods=['GET'])
+def get_investigations():
+    investigations_db = get_investigations_from_db()
+
+    investigations = []
+    for investigation in investigations_db:
+        investigations.append(INVESTIGATION_SCHEMA.dump(investigation))
+
+    response =  {"investigations": investigations}
+
     return jsonify(response), HTTPStatus.OK
