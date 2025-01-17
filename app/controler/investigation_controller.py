@@ -2,11 +2,11 @@ import logging
 from datetime import datetime
 from http import HTTPStatus
 
-from arrow import now
 from flask import Blueprint, request, jsonify
 
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
-from exceptions.exceptions import BadRequestError, FilterSampleError
+from entities.schemas.sample_schema import SAMPLE_SCHEMA
+from exceptions.exceptions import BadRequestError
 from services.investigation_service import run_linearization_models, \
     create_investigation_and_sample, create_investigation_with_sample_id, run_no_linear_models, \
     get_investigations_from_db, save_investigation
@@ -72,7 +72,13 @@ def get_investigations():
 
     investigations = []
     for investigation in investigations_db:
-        investigations.append(INVESTIGATION_SCHEMA.dump(investigation))
+        sample = find_sample(investigation.sample_id)
+        result = {
+            'investigation_id': investigation.id,
+            'sample': SAMPLE_SCHEMA.dump(sample)
+        }
+        investigations.append(result)
+
 
     response =  {"investigations": investigations}
 

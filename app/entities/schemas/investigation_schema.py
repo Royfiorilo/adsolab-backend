@@ -5,6 +5,7 @@ from .dump_mixin import DumpMixin
 
 class InvestigationSchema(Schema, DumpMixin):
     investigation_id = fields.Integer(missing=None)
+    #TODO: Analizar si no es necesario resolver acá la sample en vez del id únicamente.
     sample_id = fields.Integer()
     #fitted_models = fields.Nested("FittedModelSchema")
 
