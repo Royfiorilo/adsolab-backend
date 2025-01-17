@@ -1,10 +1,9 @@
+from dataclasses import dataclass
+
+
+@dataclass
 class Adsorbent:
-    def __init__(
-            self,
-            id,
-            name
-    ):
-        self.id = id
-        self.name = name
+    id : int
+    name : str
 
 

@@ -36,10 +36,6 @@ def get_adsorbents():
 
 @blueprint.route('/materials_sync', methods=['GET'])
 def get_materials_sync():
-    try:
-        sync_materials()
-        response = {'message': 'Materials syncronized','status':'OK'}
-        return jsonify(response), HTTPStatus.OK
-    except BadRequestError as e:
-        response = {'message': str(e), 'status': 'ERROR'}
-        return jsonify(response), HTTPStatus.BAD_REQUEST
+    sync_materials()
+    response = {'message': 'Materials syncronized','status':'OK'}
+    return jsonify(response), HTTPStatus.OK
