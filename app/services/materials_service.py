@@ -34,13 +34,11 @@ def find_adsorbent(adsorbent_id):
 
 
 def sync_materials():
-    try:
-        reactor_adsorbents = get_adsorbents()
-        add_adsorbents(reactor_adsorbents)
-        reactor_adsorbates = get_adsorbates()
-        add_adsorbates(reactor_adsorbates)
-    except Exception as e:
-        raise BadRequestError(str(e))
+    reactor_adsorbents = get_adsorbents()
+    add_adsorbents(reactor_adsorbents)
+    reactor_adsorbates = get_adsorbates()
+    add_adsorbates(reactor_adsorbates)
+
 
 
 def add_adsorbates(adsorbates):
@@ -64,7 +62,7 @@ def create_adsorbate(adsorbate_data):
         return adsorbate
     except ValidationError as me:
         db.session.rollback()
-        raise BadRequestError(f"Validation Error: {me}")
+        raise me
 
 
 def add_adsorbents(adsorbents):
@@ -86,7 +84,7 @@ def create_adsorbent(adsorbent_data):
         return adsorbent
     except ValidationError as me:
         db.session.rollback()
-        raise BadRequestError(f"Validation Error: {me}")
+        raise me
 
 def traslate_adsorbate(json):
     return {

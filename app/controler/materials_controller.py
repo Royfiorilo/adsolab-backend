@@ -2,6 +2,8 @@ import logging
 from http import HTTPStatus
 
 from flask import Blueprint, request, jsonify
+from jsonschema.exceptions import ValidationError
+
 from entities.schemas.adsorbate_schema import ADSORBATE_SCHEMA
 from entities.schemas.adsorbent_schema import ADSORBENT_SCHEMA
 from services.materials_service import get_all_adsorbents, get_all_adsorbates, sync_materials
@@ -36,6 +38,9 @@ def get_adsorbents():
 
 @blueprint.route('/materials_sync', methods=['GET'])
 def get_materials_sync():
-    sync_materials()
-    response = {'message': 'Materials syncronized','status':'OK'}
-    return jsonify(response), HTTPStatus.OK
+    try:
+        sync_materials()
+        response = {'message': 'Materials syncronized','status':'OK'}
+        return jsonify(response), HTTPStatus.OK
+    except ValidationError as me:
+        BadRequestError(f"{me}")

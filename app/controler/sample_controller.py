@@ -2,8 +2,10 @@ import logging
 from http import HTTPStatus
 
 from flask import Blueprint, request, jsonify
+from jsonschema.exceptions import ValidationError
 
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
+from exceptions.exceptions import BadRequestError
 from services.sample_service import get_all_samples, find_sample, create_sample_db
 
 blueprint = Blueprint('sample', __name__)
@@ -32,7 +34,10 @@ def get_sample_by_id():
 
 @blueprint.route('/sample', methods=['POST'])
 def create_sample():
-    request_json = request.get_json()
-    sample = create_sample_db(request_json)
-    result = SAMPLE_SCHEMA.dump(sample)
-    return jsonify(result), HTTPStatus.CREATED
+    try:
+        request_json = request.get_json()
+        sample = create_sample_db(request_json)
+        result = SAMPLE_SCHEMA.dump(sample)
+        return jsonify(result), HTTPStatus.CREATED
+    except ValidationError as me:
+        BadRequestError(f"Validation Error: {me}")

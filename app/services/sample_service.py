@@ -1,10 +1,10 @@
 from marshmallow import ValidationError
 
+from app import db
 from database import Sample
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
-from app import db
-from exceptions.exceptions import NotFoundError, BadRequestError, FilterSampleError
-from services.materials_service import find_adsorbate, find_adsorbent
+from exceptions.exceptions import NotFoundError, FilterSampleError
+
 
 def find_sample(sample_id):
     sample = Sample.with_schema(SAMPLE_SCHEMA).filter_by(sample_id=sample_id).first()
@@ -50,4 +50,4 @@ def create_sample_db(request_json):
         return sample
     except ValidationError as me:
         db.session.rollback()
-        raise BadRequestError(f"Validation Error: {me}")
+        raise me
