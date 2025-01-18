@@ -37,6 +37,7 @@ class Investigation(DumpMixin, db.Model):
 
     investigation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     sample_id = db.Column(db.Integer, db.ForeignKey('sample.sample_id'), nullable=False)
+    sample = db.relationship('Sample', backref='investigation', uselist=False, lazy=True)
     #fitted_model = db.relationship('FittedModel', backref='investigation', lazy=True)
 
 

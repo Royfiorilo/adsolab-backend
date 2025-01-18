@@ -5,7 +5,6 @@ from http import HTTPStatus
 from flask import Blueprint, request, jsonify
 
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
-from entities.schemas.sample_schema import SAMPLE_SCHEMA
 from exceptions.exceptions import BadRequestError
 from services.investigation_service import run_linearization_models, \
     create_investigation_and_sample, create_investigation_with_sample_id, run_no_linear_models, \
@@ -72,12 +71,7 @@ def get_investigations():
 
     investigations = []
     for investigation in investigations_db:
-        sample = find_sample(investigation.sample_id)
-        result = {
-            'investigation_id': investigation.id,
-            'sample': SAMPLE_SCHEMA.dump(sample)
-        }
-        investigations.append(result)
+        investigations.append(INVESTIGATION_SCHEMA.dump(investigation))
 
 
     response =  {"investigations": investigations}
