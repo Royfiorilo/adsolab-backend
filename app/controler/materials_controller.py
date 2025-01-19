@@ -6,7 +6,7 @@ from jsonschema.exceptions import ValidationError
 
 from entities.schemas.adsorbate_schema import ADSORBATE_SCHEMA
 from entities.schemas.adsorbent_schema import ADSORBENT_SCHEMA
-from services.materials_service import get_all_adsorbents, get_all_adsorbates, sync_materials
+from services.materials_service import get_all_adsorbents, get_all_adsorbates, sync_materials, dump_adsorbates, dump_adsorbents
 from exceptions.exceptions import BadRequestError
 
 blueprint = Blueprint('materials', __name__)
@@ -15,11 +15,8 @@ blueprint = Blueprint('materials', __name__)
 @blueprint.route('/adsorbates', methods=['GET'])
 def get_adsorbates():
     adsorbates = get_all_adsorbates()
-    output = []
 
-    for adsorbate in adsorbates:
-        adsorbate_json = ADSORBATE_SCHEMA.dump(adsorbate)
-        output.append(adsorbate_json)
+    output = dump_adsorbates(adsorbates)
 
     response = {'adsorbates': output}
     return jsonify(response), HTTPStatus.OK
@@ -27,11 +24,7 @@ def get_adsorbates():
 @blueprint.route('/adsorbents', methods=['GET'])
 def get_adsorbents():
     adsorbents = get_all_adsorbents()
-    output = []
-
-    for adsorbent in adsorbents:
-        adsorbent_json = ADSORBENT_SCHEMA.dump(adsorbent)
-        output.append(adsorbent_json)
+    output = dump_adsorbents(adsorbents)
 
     response = {'adsorbents': output}
     return jsonify(response), HTTPStatus.OK
@@ -44,3 +37,14 @@ def get_materials_sync():
         return jsonify(response), HTTPStatus.OK
     except ValidationError as me:
         BadRequestError(f"{me}")
+
+@blueprint.route('/adsorption-materials', methods=['GET'])
+def get_adsorption_materials():
+    adsorbates = get_all_adsorbates()
+    adsorbents = get_all_adsorbents()
+
+    adsorbents = dump_adsorbents(adsorbents)
+    adsorbates = dump_adsorbates(adsorbates)
+
+    response = {'adsorbates': adsorbates, 'adsorbents': adsorbents}
+    return jsonify(response), HTTPStatus.OK

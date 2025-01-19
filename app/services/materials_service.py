@@ -13,6 +13,19 @@ def get_all_adsorbents():
         raise NotFoundError("No adsorbents found")
     return adsorbents
 
+def dump_adsorbents(adsorbents):
+    dumps = []
+    for adsorbent in adsorbents:
+        adsorbent_json = ADSORBENT_SCHEMA.dump(adsorbent)
+        dumps.append(adsorbent_json)
+    return dumps
+
+def dump_adsorbates(adsorbates):
+    dumps = []
+    for adsorbate in adsorbates:
+        adsorbate_json = ADSORBATE_SCHEMA.dump(adsorbate)
+        dumps.append(adsorbate_json)
+    return dumps
 
 def get_all_adsorbates():
     adsorbates = Adsorbate.with_schema(None).all()
