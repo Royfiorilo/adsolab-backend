@@ -31,6 +31,10 @@ class Sample(DumpMixin, db.Model):
     investigations = db.relationship('Investigation', backref='sample', lazy=True)
     title = db.Column(db.String(100))
     description = db.Column(db.String(500))
+    temperature = db.Column(db.Float)
+    measure_unit = db.Column(db.String(10))
+    adsorbate_id = db.Column(db.Integer, db.ForeignKey('adsorbate.id'), nullable=False)
+    adsorbent_id = db.Column(db.Integer, db.ForeignKey('adsorbent.id'), nullable=False)
 
 
 class Investigation(DumpMixin, db.Model):
@@ -59,3 +63,14 @@ class Method(DumpMixin, db.Model):
     description = db.Column(db.String(500), nullable=True)
     color = db.Column(db.String(10), nullable=False)
 
+class Adsorbent(DumpMixin, db.Model):
+    __tablename__ = 'adsorbent'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(255), nullable=False)
+
+class Adsorbate(DumpMixin, db.Model):
+    __tablename__ = 'adsorbate'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    ion_name = db.Column(db.String(100), nullable=False)
+    IUPAC_name = db.Column(db.String(100), nullable=False)
+    formula = db.Column(db.String(10), nullable=False)

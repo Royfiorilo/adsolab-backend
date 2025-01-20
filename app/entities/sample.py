@@ -1,7 +1,9 @@
 class SampleEntity:
     def __init__(
             self,
-            ce, qe, investigations=None, sample_id=None, title=None, description=None
+            ce, qe, investigations=None, sample_id=None,
+            title=None, description=None,
+            temperature=None, measure_unit=None, adsorbate_id=None, adsorbent_id=None
     ):
         if investigations is None:
             investigations = []
@@ -11,7 +13,10 @@ class SampleEntity:
         self.investigations = investigations
         self.title = title
         self.description = description
-
+        self.temperature = temperature
+        self.measure_unit = measure_unit
+        self.adsorbate_id = adsorbate_id
+        self.adsorbent_id = adsorbent_id
     @property
     def id(self):
         return self.sample_id
