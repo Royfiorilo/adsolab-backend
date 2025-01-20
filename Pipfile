@@ -17,7 +17,6 @@ jupyter = "*"
 matplotlib = "*"
 statsmodels = "*"
 numdifftools = "*"
-requests = "*"
 
 [dev-packages]
 pytest = "==6.2.2"
