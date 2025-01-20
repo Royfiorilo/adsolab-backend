@@ -5,7 +5,7 @@ from database import Model, Linearization, Method
 from entities.comparator import AdsorptionModelComparison
 from entities.schemas.linearization_schema import LINEARIZATION_SCHEMA
 from entities.schemas.model_schema import MODEL_SCHEMA
-from exceptions.exceptions import NotFoundError
+from exceptions.exceptions import NotFoundError, BadRequestError
 from services.sample_service import find_sample, filter_sample
 from utils import round_list_numbers, round_number
 
@@ -43,7 +43,7 @@ def excecute_linearizations(investigation, linearizations, model_id, filter: Non
     best_result = None
 
     for linearization_id in linearizations:
-        solution = process_linearization(linearization_id, sample)
+        solution = process_linearization(linearization_id, sample, model_id)
         formated_solution = format_solution_linearization(**solution)
         linearization_results.append(formated_solution)
 
@@ -55,12 +55,16 @@ def excecute_linearizations(investigation, linearizations, model_id, filter: Non
     return result
 
 
-def process_linearization(linearization_id, sample):
+def process_linearization(linearization_id, sample,model_id):
     linearization = Linearization.with_schema(LINEARIZATION_SCHEMA).filter_by(linearization_id=linearization_id).first()
     if linearization is None:
         me = f"Linearization '{linearization_id}' not found"
         logging.error(me)
         raise NotFoundError(me)
+    if linearization.model_id != model_id:
+        me = f"Linearization '{linearization_id}' don't belong to model '{model_id}'"
+        logging.error(me)
+        raise BadRequestError(me)
 
     return linearization.run(sample)
 
