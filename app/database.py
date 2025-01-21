@@ -52,7 +52,6 @@ class Sample(DumpMixin, db.Model):
     sample_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     ce = db.Column(ARRAY(db.Float), nullable=False)
     qe = db.Column(ARRAY(db.Float), nullable=False)
-    investigations = db.relationship('Investigation', backref='sample', lazy=True)
     title = db.Column(db.String(100))
     description = db.Column(db.String(500))
 
@@ -62,6 +61,7 @@ class Investigation(DumpMixin, db.Model):
 
     investigation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     sample_id = db.Column(db.Integer, db.ForeignKey('sample.sample_id'), nullable=False)
+    sample = db.relationship('Sample', backref='investigation', uselist=False, lazy=True)
     #fitted_model = db.relationship('FittedModel', backref='investigation', lazy=True)
 
 

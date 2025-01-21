@@ -99,7 +99,7 @@ def  run_no_linear_models(request_data):
     return results, comparision
 
 def get_investigations_from_db():
-    investigations =  Investigation.with_schema(INVESTIGATION_SCHEMA).all()
+    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).all()
     return investigations
 
 def is_valid_investigation(investigation_id):
