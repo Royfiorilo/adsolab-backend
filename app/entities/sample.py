@@ -5,12 +5,9 @@ class SampleEntity:
             title=None, description=None,
             temperature=None, measure_unit=None, adsorbate_id=None, adsorbent_id=None
     ):
-        if investigations is None:
-            investigations = []
         self.sample_id = sample_id
         self.ce = ce
         self.qe = qe
-        self.investigations = investigations
         self.title = title
         self.description = description
         self.temperature = temperature

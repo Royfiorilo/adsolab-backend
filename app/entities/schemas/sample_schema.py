@@ -1,6 +1,5 @@
 from marshmallow import fields, post_load, validate, Schema, ValidationError, pre_load, validates_schema
 from entities.sample import SampleEntity
-from entities.schemas.investigation_schema import InvestigationSchema
 from .dump_mixin import DumpMixin
 
 
@@ -12,7 +11,6 @@ class SampleSchema(Schema, DumpMixin):
     qe = fields.List(
         fields.Float(), required=True, validate=validate.Length(min=1)
     )
-    investigations = fields.List(fields.Nested(InvestigationSchema), missing=None)
     title = fields.Str(missing=None)
     description = fields.Str(missing=None)
     temperature = fields.Float(missing=None)
@@ -50,4 +48,3 @@ class SampleSchema(Schema, DumpMixin):
 
 
 SAMPLE_SCHEMA = SampleSchema()
-__all__ = ["InvestigationSchema"]
