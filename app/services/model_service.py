@@ -45,7 +45,7 @@ def excecute_linearizations(investigation, linearizations, model_id, filter: Non
 
 
     for linearization_id in linearizations:
-        solution = process_linearization(linearization_id, sample, model_id)
+        solution = process_linearization(linearization_id, sample, model_id, investigation.constants)
         formated_solution = format_solution_linearization(**solution)
         linearization_results.append(formated_solution)
 
@@ -57,7 +57,7 @@ def excecute_linearizations(investigation, linearizations, model_id, filter: Non
     return result
 
 
-def process_linearization(linearization_id, sample,model_id):
+def process_linearization(linearization_id, sample,model_id, constants):
     linearization = Linearization.with_schema(LINEARIZATION_SCHEMA).filter_by(linearization_id=linearization_id).first()
     if linearization is None:
         me = f"Linearization '{linearization_id}' not found"
@@ -68,7 +68,7 @@ def process_linearization(linearization_id, sample,model_id):
         logging.error(me)
         raise BadRequestError(me)
 
-    return linearization.run(sample)
+    return linearization.run(sample, constants)
 
 
 def process_model(model_json, sample, methods):

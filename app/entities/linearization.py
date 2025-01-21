@@ -78,15 +78,15 @@ class Linearization(Model):
         return parameter_std_errs
 
 
-    def _find_params_values(self, equations, unknown, result_lreg):
+    def _find_params_values(self, equations, unknown, result_lreg, constants):
         m_ecuation = equations['m']
         b_ecuation = equations['b']
         for constant in self.constants:
             m_ecuation =equations['m']
             b_ecuation =equations['b']
 
-            m_ecuation = m_ecuation.subs(constant, 5)
-            b_ecuation = b_ecuation.subs(constant, 5)
+            m_ecuation = m_ecuation.subs(constant, constants[constant])
+            b_ecuation = b_ecuation.subs(constant, constants[constant])
 
         eq_m = Eq(sympify(m_ecuation), result_lreg.slope)
         eq_b = Eq(sympify(b_ecuation), result_lreg.intercept)
@@ -102,6 +102,7 @@ class Linearization(Model):
 
     def run(self, *args):
         sample = args[0]
+        constants = args[1]
 
         # Transformamos los puntos para realizar la regresión lineal sobre esos puntos.
         x_dots, y_dots = self._calculate_dots(sample)
@@ -124,7 +125,7 @@ class Linearization(Model):
         unkown = symbols(vars)
 
         # Ejecuta el sistema de ecuaciones para descubrir el valor de los parámetros y su desvío estándar.
-        params_info = self._find_params_values(equations, unkown, result_lr)
+        params_info = self._find_params_values(equations, unkown, result_lr, constants)
 
         result = {
             "name": self.name,

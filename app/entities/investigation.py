@@ -1,3 +1,5 @@
+R_CONSTANT = 8.3144598
+
 class InvestigationEntity:
     def __init__(
             self,
@@ -10,6 +12,8 @@ class InvestigationEntity:
         self.sample_id = sample_id
         self.fitted_models = fitted_models
         self.sample = sample
+        self.constants = {"t": sample.temperature, "r": R_CONSTANT}
+
     @property
     def id(self):
         return self.investigation_id
