@@ -11,6 +11,7 @@ class Model(DumpMixin, db.Model):
     formula = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(500), nullable=False)
     parameters = db.Column(JSON, nullable=False)
+    constants = db.Column(ARRAY(db.String(5)), nullable=True)
     linearizations = db.relationship('Linearization', backref='model', lazy=True)
 
 class FittedModel(DumpMixin, db.Model):
@@ -49,6 +50,7 @@ class Linearization(DumpMixin, db.Model):
     formula = db.Column(db.String(255), nullable=False)
     description = db.Column(db.String(500), nullable=False)
     parameters = db.Column(JSON, nullable=False)
+    constants = db.Column(ARRAY(db.String(5)), nullable=True)
     model_id = db.Column(db.Integer, db.ForeignKey('model._id'), nullable=False)
 
 class Method(DumpMixin, db.Model):

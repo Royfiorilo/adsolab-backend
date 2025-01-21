@@ -10,6 +10,7 @@ class LinearizationSchema(Schema, DumpMixin):
     description = fields.Str(required=True)
     parameters = fields.Dict(allow_none=False)
     model_id = fields.Integer()
+    constants = fields.List( fields.Str, allow_none=True)
 
     @post_load
     def make_linearization(self, data, **kwargs):

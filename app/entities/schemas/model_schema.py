@@ -11,6 +11,7 @@ class ModelSchema(Schema, DumpMixin):
     description = fields.Str(required=True)
     parameters = fields.Dict(allow_none=False)
     linearizations = fields.List(fields.Nested(LinearizationSchema), missing=None)
+    constants = fields.List(fields.Str, allow_none=True)
 
     @post_load
     def make_model(self, data, **kwargs):

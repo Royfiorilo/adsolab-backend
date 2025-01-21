@@ -25,8 +25,9 @@ class NoLinearModel(Model):
             description: str,
             parameters: List[Dict[str, Any]],
             linearizations: List[Any] = None,
+            constants: List[Any] = None
     ):
-        super().__init__(_id, name, formula, description, parameters)
+        super().__init__(_id, name, formula, description, parameters, constants)
         self.linearizations = linearizations or []
         self.model = lmfit.Model(self.formula.to_function())
         self.method_results = []

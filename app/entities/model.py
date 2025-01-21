@@ -11,6 +11,7 @@ class Model(ABC):
             formula,
             description,
             parameters,
+            constants =None,
             linearizations=None
     ):
         if linearizations is None:
@@ -21,6 +22,7 @@ class Model(ABC):
         self.description = description
         self.parameters = parameters
         self.linearizations = linearizations
+        self.constants = constants
 
     @property
     def id(self):

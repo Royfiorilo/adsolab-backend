@@ -16,9 +16,10 @@ class Linearization(Model):
             formula,
             description,
             parameters,
+            constants = None,
             model_id=None
     ):
-        super().__init__(linearization_id, name, formula, description, parameters)
+        super().__init__(linearization_id, name, formula, description, parameters, constants)
         self.model_id = model_id
 
     def _calculate_dots(self, sample):
@@ -78,8 +79,17 @@ class Linearization(Model):
 
 
     def _find_params_values(self, equations, unknown, result_lreg):
-        eq_m = Eq(sympify(equations['m']), result_lreg.slope)
-        eq_b = Eq(sympify(equations['b']), result_lreg.intercept)
+        m_ecuation = equations['m']
+        b_ecuation = equations['b']
+        for constant in self.constants:
+            m_ecuation =equations['m']
+            b_ecuation =equations['b']
+
+            m_ecuation = m_ecuation.subs(constant, 5)
+            b_ecuation = b_ecuation.subs(constant, 5)
+
+        eq_m = Eq(sympify(m_ecuation), result_lreg.slope)
+        eq_b = Eq(sympify(b_ecuation), result_lreg.intercept)
         solutions = solve((eq_m, eq_b), tuple(unknown))
         params_info = [{var.name: float(sol) for var, sol in zip(unknown, sol_tuple)} for sol_tuple in solutions]
 
@@ -110,7 +120,7 @@ class Linearization(Model):
 
         # Transforma los parámetros a descubrir en incógnitas.
         variables = self.formula.get_variables()
-        vars = [x.name for x in variables if x.name not in ['ce', 'qe']]
+        vars = [x.name for x in variables if (x.name not in ['ce', 'qe'])  and  (x.name not in self.constants)]
         unkown = symbols(vars)
 
         # Ejecuta el sistema de ecuaciones para descubrir el valor de los parámetros y su desvío estándar.

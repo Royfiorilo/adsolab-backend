@@ -5,6 +5,7 @@ from database import Model, Linearization, Method
 from entities.comparator import AdsorptionModelComparison
 from entities.schemas.linearization_schema import LINEARIZATION_SCHEMA
 from entities.schemas.model_schema import MODEL_SCHEMA
+from entities.schemas.sample_schema import SAMPLE_SCHEMA
 from exceptions.exceptions import NotFoundError, BadRequestError
 from services.sample_service import find_sample, filter_sample
 from utils import round_list_numbers, round_number
@@ -41,6 +42,7 @@ def excecute_linearizations(investigation, linearizations, model_id, filter: Non
 
     linearization_results = []
     best_result = None
+
 
     for linearization_id in linearizations:
         solution = process_linearization(linearization_id, sample, model_id)
