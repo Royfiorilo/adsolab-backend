@@ -1,9 +1,9 @@
 from marshmallow import ValidationError
 
+from app import db
 from database import Sample
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
-from app import db
-from exceptions.exceptions import NotFoundError, BadRequestError, FilterSampleError
+from exceptions.exceptions import NotFoundError, FilterSampleError
 
 
 def find_sample(sample_id):
@@ -39,10 +39,16 @@ def create_sample_db(request_json):
     try:
         sample_data = SAMPLE_SCHEMA.load(request_json)
         x,y = order_sample(ce=sample_data.ce, qe= sample_data.qe)
-        sample = Sample(ce=x, qe =y, title=sample_data.title, description=sample_data.description)
+        sample = Sample(ce=x, qe =y,
+                        title=sample_data.title,
+                        description=sample_data.description,
+                        temperature=sample_data.temperature,
+                        measure_unit=sample_data.measure_unit,
+                        adsorbent_id=sample_data.adsorbent_id,
+                        adsorbate_id=sample_data.adsorbate_id)
         db.session.add(sample)
         db.session.commit()
         return sample
     except ValidationError as me:
         db.session.rollback()
-        raise BadRequestError(f"Validation Error: {me}")
+        raise me
