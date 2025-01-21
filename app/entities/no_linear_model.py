@@ -47,9 +47,11 @@ class NoLinearModel(Model):
         """
         Calculate standard errors for parameters using numerical Hessian.
         """
+
+        param_values = np.array([p.value for p in params.values()])
         # Compute the Hessian matrix
-        hessian_func = Hessian(lambda p: np.sum(result['residuals'] ** 2))
-        hessian_matrix = hessian_func(params)
+        hessian_func = Hessian(lambda p: np.sum(result.residual ** 2))
+        hessian_matrix = hessian_func(param_values)
 
         # Covariance matrix is the inverse of the Hessian
         covariance_matrix = np.linalg.inv(hessian_matrix)
@@ -62,7 +64,6 @@ class NoLinearModel(Model):
         params = []
 
         for param, value in result.params.items():
-            stderr = None
             if value.stderr is None:
                 stderr = self._calculate_standard_errors(result, result.params)
             else:

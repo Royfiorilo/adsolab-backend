@@ -1,13 +1,8 @@
-class FittedModel:
-    def __init__(
-            self,
-            _id,
-            params, statistics
-    ):
-        self._id = _id
-        self.params = params
-        self.statistics = statistics
+from dataclasses import dataclass
 
-    @property
-    def id(self):
-        return self._id
+
+@dataclass
+class FittedModel:
+    fitted_model_id = None
+    models : list
+    investigation_id: int

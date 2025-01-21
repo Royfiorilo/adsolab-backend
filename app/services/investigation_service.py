@@ -7,6 +7,7 @@ from app import db
 from database import Investigation
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
+from services.fitted_model_service import create_fitted_model, save_fitted_model
 from services.model_service import excecute_linearizations, exec_no_linear_models, get_comparision
 from services.sample_service import create_sample_db, find_sample, filter_sample
 from utils import  soft_curves_response
@@ -98,5 +99,14 @@ def  run_no_linear_models(request_data):
     return results, comparision
 
 def get_investigations_from_db():
-    investigations =  Investigation.with_schema(INVESTIGATION_SCHEMA).all()
+    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).all()
     return investigations
+
+def is_valid_investigation(investigation_id):
+    return Investigation.with_schema(None).filter_by(investigation_id=investigation_id).count() > 0
+
+def save_investigation(request_json):
+    if not is_valid_investigation(request_json["investigation_id"]):
+        raise NotFoundError(f"Investigation with ID {request_json['investigation_id']} not found")
+    fitted_model = create_fitted_model(request_json)
+    save_fitted_model(fitted_model)

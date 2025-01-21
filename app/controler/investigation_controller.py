@@ -2,16 +2,14 @@ import logging
 from datetime import datetime
 from http import HTTPStatus
 
-from arrow import now
 from flask import Blueprint, request, jsonify
 
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
-from exceptions.exceptions import BadRequestError, FilterSampleError
+from exceptions.exceptions import BadRequestError
 from services.investigation_service import run_linearization_models, \
     create_investigation_and_sample, create_investigation_with_sample_id, run_no_linear_models, \
-    get_investigations_from_db
+    get_investigations_from_db, save_investigation
 from services.sample_service import find_sample
-
 blueprint = Blueprint('investigation', __name__)
 
 
@@ -75,6 +73,18 @@ def get_investigations():
     for investigation in investigations_db:
         investigations.append(INVESTIGATION_SCHEMA.dump(investigation))
 
+
     response =  {"investigations": investigations}
 
     return jsonify(response), HTTPStatus.OK
+
+@blueprint.route('/investigation/save', methods=['POST'])
+def save():
+    request_json = request.get_json()
+    if "investigation_id" not in request_json:
+        raise BadRequestError("investigation_id is required")
+    try:
+        save_investigation(request_json)
+    except Exception as e:
+        raise e
+    return {"status": "ok"}, HTTPStatus.CREATED
