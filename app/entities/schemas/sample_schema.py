@@ -13,6 +13,10 @@ class SampleSchema(Schema, DumpMixin):
     )
     title = fields.Str(missing=None)
     description = fields.Str(missing=None)
+    temperature = fields.Float(missing=None)
+    measure_unit = fields.Str(missing=None)
+    adsorbate_id = fields.Integer(required=True)
+    adsorbent_id = fields.Integer(required=True)
 
     @pre_load
     def normalize_numbers(self, data, **kwargs):
