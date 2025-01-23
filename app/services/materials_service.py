@@ -68,7 +68,7 @@ def create_adsorbate(adsorbate_data):
     try:
         adsorbate = Adsorbate(id=adsorbate_data.id,
                            ion_name = adsorbate_data.ion_name,
-                           IUPAC_name = adsorbate_data.IUPAC_name,
+                           iupac_name = adsorbate_data.iupac_name,
                            formula = adsorbate_data.formula)
         db.session.add(adsorbate)
         db.session.commit()
@@ -103,7 +103,7 @@ def traslate_adsorbate(json):
     return {
         'id' : json['id'],
         'ion_name': json['nombreIon'],
-        'IUPAC_name': json['nombreIUPAC'],
+        'iupac_name': json['nombreIUPAC'],
         'formula': json['formula']
     }
 

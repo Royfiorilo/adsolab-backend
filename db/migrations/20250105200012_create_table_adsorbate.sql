@@ -2,7 +2,7 @@
 CREATE TABLE adsorbate(
     id serial primary key,
     ion_name varchar(100) not null,
-    IUPAC_name varchar(100) not null,
+    iupac_name varchar(100) not null,
     --ion_charge integer not null,
     --ionic_radius integer not null,
     --dumping_limit integer not null,

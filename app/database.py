@@ -73,5 +73,5 @@ class Adsorbate(DumpMixin, db.Model):
     __tablename__ = 'adsorbate'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     ion_name = db.Column(db.String(100), nullable=False)
-    IUPAC_name = db.Column(db.String(100), nullable=False)
+    iupac_name = db.Column(db.String(100), nullable=False)
     formula = db.Column(db.String(10), nullable=False)

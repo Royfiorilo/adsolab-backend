@@ -137,7 +137,7 @@ def format_solution_linearization(name, id, x, y, slope, intercept, vars, params
         parameters.append(
             {"name": var,
              "value": round_number(params_info[0][var]),
-             "stderr": round_number(params_info[1][var])
+             "std_err": round_number(params_info[1][var])
              })
 
     return {
@@ -150,26 +150,6 @@ def format_solution_linearization(name, id, x, y, slope, intercept, vars, params
         "statistics": statistics,
         "parameters": parameters
     }
-
-
-def format_solution_no_linear(name, description, success, vars,params, x, y_pred, stats):
-    parameters = []
-    for var in vars:
-        parameters.append(
-            {"name": var,
-             "value": round_number(params[0][var]),
-             "stderr": round_number(params[1][var]) if params[1][var] is not None else None
-             })
-
-    return {
-        "name": name,
-        "description": description,
-        "status": success,
-        "transformed": {"x": x, "y": round_list_numbers(y_pred)},
-        "statistics": stats,
-        "parameters": parameters
-    }
-
 
 
 def get_optimization_methods() -> Dict[str, str]:

@@ -6,7 +6,7 @@ from entities.adsorbate import Adsorbate
 class AdsorbateSchema(Schema, DumpMixin):
     id = fields.Integer(missing=None)
     ion_name = fields.Str(required=True)
-    IUPAC_name = fields.Str(required=True)
+    iupac_name = fields.Str(required=True)
     formula = fields.Str(required=True)
 
     @post_load
