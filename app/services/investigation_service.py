@@ -40,7 +40,7 @@ def _create_investigation_db(sample_id):
 
 
 def get_investigation(investigation_id):
-    investigation = Investigation.with_schema(None).filter_by(investigation_id=investigation_id).first()
+    investigation = Investigation.with_schema(INVESTIGATION_SCHEMA).filter_by(investigation_id=investigation_id).first()
     if investigation is None:
         raise NotFoundError(f"Investigation with ID {investigation_id} not found")
     return investigation
@@ -54,22 +54,12 @@ def run_linearization_models(request_data):
 
     for model in request_data["models"]:
         try:
-            model_result = execute_model_linearization(investigation, model, filter)
+            model_result = excecute_linearizations(investigation,model.get('linearizations', []),model["model"],filter)
             results.append(model_result)
         except LinearizationError as e:
             results.append({"model": model["model"], "error": str(e)})
 
     return results
-
-
-def execute_model_linearization(investigation, model, filter):
-    return excecute_linearizations(
-        investigation,
-        model.get('linearizations', []),
-        model["model"],
-        filter
-    )
-
 
     
 def  run_no_linear_models(request_data):

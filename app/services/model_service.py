@@ -71,11 +71,11 @@ def process_linearization(linearization_id, sample,model_id, constants):
     return linearization.run(sample, constants)
 
 
-def process_model(model_json, sample, methods):
+def process_model(model_json, sample, methods, constants):
     model = find_model(model_json['model'])
     iteration = model_json['iteration'] if 'iteration' in model_json else None
     step = model_json['step'] if 'step' in model_json else None
-    return model.run(sample,model_json['seeds'], methods, step, iteration), model
+    return model.run(sample,model_json['seeds'], methods, constants, step, iteration), model
 
 
 def exec_no_linear_models(investigation, model_json, filter: None):
@@ -84,7 +84,7 @@ def exec_no_linear_models(investigation, model_json, filter: None):
 
     filter_sample(sample,filter)
 
-    adjustments, model  = process_model(model_json, sample, methods)
+    adjustments, model  = process_model(model_json, sample, methods, investigation.constants)
     adjustments["model"] = model_json['model']
 
     return adjustments, model

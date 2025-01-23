@@ -16,7 +16,7 @@ class Linearization(Model):
             formula,
             description,
             parameters,
-            constants = None,
+            constants = [],
             model_id=None
     ):
         super().__init__(linearization_id, name, formula, description, parameters, constants)
@@ -82,11 +82,12 @@ class Linearization(Model):
         m_ecuation = equations['m']
         b_ecuation = equations['b']
         for constant in self.constants:
-            m_ecuation =equations['m']
-            b_ecuation =equations['b']
-
-            m_ecuation = m_ecuation.subs(constant, constants[constant])
-            b_ecuation = b_ecuation.subs(constant, constants[constant])
+            value = constants[constant]
+            if isinstance(value, (int, float)):
+                m_ecuation = m_ecuation.replace(constant, str(value))
+                b_ecuation = b_ecuation.replace(constant, str(value))
+            else:
+                raise ValueError(f"Constant {constant} must be int or float")
 
         eq_m = Eq(sympify(m_ecuation), result_lreg.slope)
         eq_b = Eq(sympify(b_ecuation), result_lreg.intercept)

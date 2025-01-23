@@ -25,11 +25,12 @@ class NoLinearModel(Model):
             description: str,
             parameters: List[Dict[str, Any]],
             linearizations: List[Any] = None,
-            constants: List[Any] = None
+            constants: List[Any] = []
     ):
         super().__init__(_id, name, formula, description, parameters, constants)
         self.linearizations = linearizations or []
-        self.model = lmfit.Model(self.formula.to_function())
+        self.constants = constants or []
+        self.model = None
         self.method_results = []
         self.best_method = None
 
@@ -76,11 +77,12 @@ class NoLinearModel(Model):
     def get_seeds(self, parameters: List[Dict[str, Any]]) -> Dict[str, float]:
         return {param["name"]: param["value"] for param in parameters}
 
-    def run(self, sample, seeds, methods, step: DEFAULT_STEP, iterations: DEFAULT_ITERATIONS) -> dict[str, list[Any] | Any]:
+    def run(self, sample, seeds, methods, constants: {}, step: DEFAULT_STEP, iterations: DEFAULT_ITERATIONS) -> dict[str, list[Any] | Any]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
         seeds = self.get_seeds(seeds)
 
+        self.make_model(constants)
 
         self.fit_all_methods(x, y, seeds, methods, step, iterations)
         best_method = self.determine_best_method()
@@ -107,6 +109,12 @@ class NoLinearModel(Model):
                 self.method_results.append(result)
             except Exception as e:
                 print(f"Método {method} falló: {str(e)}")
+
+    def make_model(self, constants):
+        if self.model is None:
+            if self.constants:
+                self.formula.replace_constants(constants)
+            self.model = lmfit.Model(self.formula.to_function())
 
     def _evaluate_fit(
             self,

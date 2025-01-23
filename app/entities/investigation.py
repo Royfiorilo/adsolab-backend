@@ -12,8 +12,13 @@ class InvestigationEntity:
         self.sample_id = sample_id
         self.fitted_models = fitted_models
         self.sample = sample
-        self.constants = {"t": sample.temperature, "r": R_CONSTANT}
 
     @property
     def id(self):
         return self.investigation_id
+
+    @property
+    def constants(self):
+        if not self.sample or not hasattr(self.sample, 'temperature'):
+            raise ValueError("Sample has to have temperatura and not null")
+        return {"T": self.sample.temperature, "R": R_CONSTANT}

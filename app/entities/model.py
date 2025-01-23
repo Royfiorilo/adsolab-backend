@@ -11,11 +11,13 @@ class Model(ABC):
             formula,
             description,
             parameters,
-            constants =None,
+            constants = None,
             linearizations=None
     ):
         if linearizations is None:
             linearizations = []
+        if constants is None:
+            constants = []
         self._id = _id
         self.name = name
         self.formula = Formula(formula)
