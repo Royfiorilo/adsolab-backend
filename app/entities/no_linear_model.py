@@ -114,7 +114,7 @@ class NoLinearModel(Model):
         if self.model is None:
             if self.constants:
                 self.formula.replace_constants(constants)
-            self.model = lmfit.Model(self.formula.to_function())
+            self.model = lmfit.Model(self.formula.to_function(), independent_vars=['ce'])
 
     def _evaluate_fit(
             self,
@@ -130,6 +130,7 @@ class NoLinearModel(Model):
         for param_name, param in params.items():
             param.set(min=0, max=np.inf, brute_step=step)
 
+        ce[ce == 0] = 1e-10
         result = self.model.fit(
             qe, params, ce=ce, method=method, nan_policy="omit", max_nfev=iteration)
 
@@ -148,6 +149,7 @@ class NoLinearModel(Model):
             "statistics": statistics,
             "residuals": Statistics.check_residuals(residuals),
         }
+
 
     def determine_best_method(self):
         results = []
