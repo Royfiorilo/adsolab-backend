@@ -25,7 +25,6 @@ def insert_version(version_data):
                           )
 
         db.session.add(version)
-        db.session.commit()
         return version
     except Exception as e:
         db.session.rollback()
