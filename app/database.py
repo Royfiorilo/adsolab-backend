@@ -54,6 +54,10 @@ class Sample(DumpMixin, db.Model):
     qe = db.Column(ARRAY(db.Float), nullable=False)
     title = db.Column(db.String(100))
     description = db.Column(db.String(500))
+    temperature = db.Column(db.Float)
+    measure_unit = db.Column(db.String(10))
+    adsorbate_id = db.Column(db.Integer, db.ForeignKey('adsorbate.id'), nullable=False)
+    adsorbent_id = db.Column(db.Integer, db.ForeignKey('adsorbent.id'), nullable=False)
 
 
 class Investigation(DumpMixin, db.Model):
@@ -62,7 +66,6 @@ class Investigation(DumpMixin, db.Model):
     investigation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     sample_id = db.Column(db.Integer, db.ForeignKey('sample.sample_id'), nullable=False)
     sample = db.relationship('Sample', backref='investigation', uselist=False, lazy=True)
-    #fitted_model = db.relationship('FittedModel', backref='investigation', lazy=True)
 
 
 class Linearization(DumpMixin, db.Model):
@@ -83,3 +86,18 @@ class Method(DumpMixin, db.Model):
     code = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(500), nullable=True)
     color = db.Column(db.String(10), nullable=False)
+    
+
+class Adsorbent(DumpMixin, db.Model):
+    __tablename__ = 'adsorbent'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(255), nullable=False)
+
+    
+class Adsorbate(DumpMixin, db.Model):
+    __tablename__ = 'adsorbate'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    ion_name = db.Column(db.String(100), nullable=False)
+    iupac_name = db.Column(db.String(100), nullable=False)
+    formula = db.Column(db.String(10), nullable=False)
+
