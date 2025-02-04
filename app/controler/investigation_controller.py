@@ -6,9 +6,8 @@ from flask import Blueprint, request, jsonify
 
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError
-from services.investigation_service import run_linearization_models, \
-    create_investigation_and_sample, create_investigation_with_sample_id, run_no_linear_models, \
-    get_investigations_from_db, save_investigation
+from services.investigation_service import create_investigation_and_sample, create_investigation_with_sample_id, \
+    get_investigations_from_db, save_investigation, run_linearization_models, run_no_linear_models
 from services.sample_service import find_sample
 blueprint = Blueprint('investigation', __name__)
 
