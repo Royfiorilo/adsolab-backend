@@ -20,7 +20,7 @@ class ModelResult(TypedDict):
 
 
 class FormattedResult(TypedDict):
-    adjustments_methods: list
+    adjustment_methods: list
     best_adjust: str
     model: str
 
@@ -31,8 +31,7 @@ class ErrorResult(TypedDict):
 
 
 def format_adjustment_methods(result: ModelResult) -> FormattedResult:
-    return {
-        "adjustment_methods": [
+    return { "adjustment_methods": [
             ResponseFormatter.format_fit_result(fit_result)
             for fit_result in result["adjustments"]
         ],
@@ -42,9 +41,6 @@ def format_adjustment_methods(result: ModelResult) -> FormattedResult:
 
 
 def format_results(results) -> list[FormattedResult]:
-    """
-    Format multiple model results.
-    """
     return [
         format_adjustment_methods(result)
         for result in results

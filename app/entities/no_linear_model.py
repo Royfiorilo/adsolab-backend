@@ -3,7 +3,6 @@ from typing import Dict, List, Any, Optional
 
 import lmfit
 import numpy as np
-from mpmath import extend
 from numdifftools import Hessian
 
 from entities.statistics import Statistics
@@ -70,7 +69,7 @@ class FitStrategy:
             method_name=params.method
         )
 
-    def _get_parameters_with_stderr(self, result: lmfit.model.ModelResult) -> List[Dict[str, Any]]:
+    def _get_parameters_with_stderr(self, result: lmfit.model.ModelResult):
         return [
             {
                 "name": name,
@@ -97,28 +96,12 @@ class FitStrategy:
 
 
 
-class StatisticsCalculator:
-    @staticmethod
-    def calculate(qe: np.ndarray, qe_pred: np.ndarray, fit_result: FitResult) -> Dict[str, Any]:
-        residuals = qe - qe_pred
-        return {
-            "model_stats": Statistics.all_statistics(
-                qe,
-                qe_pred,
-                len(fit_result.parameters),
-                float(fit_result.raw_result.aic),
-                float(fit_result.raw_result.bic)
-            ),
-            "residuals": Statistics.check_residuals(residuals)
-        }
-
-
 class PointsExtender:
     def __init__(self, formula):
         self.formula = formula
 
     def extend(self, ce: np.ndarray, parameters: Dict[str, float], num_points: int = 300) -> (np.ndarray, np.ndarray):
-        _min, _max = ce.min(), ce.max()
+        _min, _max = 0, ce.max()
         extended_ce = np.linspace(_min, _max, num_points)
 
         return extended_ce, np.array([
@@ -127,32 +110,15 @@ class PointsExtender:
         ])
 
 class NoLinearModel(Model):
-    def __init__(
-            self,
-            _id: str,
-            name: str,
-            formula: Any,
-            description: str,
-            parameters: List[Dict[str, Any]],
-            fit_strategy = None,
-            linearizations: List[Any] = None,
-    ):
+    def __init__(self, _id: str, name: str, formula, description: str, parameters, linearizations=None):
         super().__init__(_id, name, formula, description, parameters)
-        self.fit_strategy = fit_strategy or FitStrategy(self.formula)
-        self.stats_calculator = StatisticsCalculator()
+        self.fit_strategy =  FitStrategy(self.formula)
         self.points_extender = PointsExtender(self.formula)
-        self.linearizations = linearizations or []
+        self.linearizations = linearizations if linearizations is not None else []
         self.method_results: List[FitResult] = []
         self.best_method = None
 
-    def run(
-            self,
-            sample,
-            seeds: List[Dict[str, Any]],
-            methods: Dict[str, str],
-            step: Optional[float] ,
-            iterations: int
-    ) -> List[FitResult]:
+    def run(self, sample, seeds, methods, step, iterations) -> List[FitResult]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
 
@@ -169,25 +135,17 @@ class NoLinearModel(Model):
 
         return self.method_results
 
-    def _prepare_initial_params(self, seeds: List[Dict[str, Any]]) :
+    def _prepare_initial_params(self, seeds) :
         return {param["name"]: param["value"] for param in seeds}
 
-    def _run_method(
-            self,
-            x: np.ndarray,
-            y: np.ndarray,
-            initial_params,
-            method: str,
-            description: str,
-            step: Optional[float],
-            iterations: int
-    ) -> FitResult:
+    def _run_method( self, x: np.ndarray, y: np.ndarray, initial_params, method, description, step, iterations) -> FitResult:
         fit_params = FitParameters(x, y, initial_params, step, iterations, method)
         fit_result = self.fit_strategy.fit(fit_params)
         fit_result.method_description = description
 
         qe_pred = fit_result.raw_result.best_fit
-        statistics = self.stats_calculator.calculate(y, qe_pred, fit_result)
+        residuals = y - qe_pred
+
 
         params_dict = {p["name"]: p["value"] for p in fit_result.parameters}
         extended_ce, extended_qe = self.points_extender.extend(x, params_dict)
@@ -198,8 +156,11 @@ class NoLinearModel(Model):
             "y": round_list_numbers(extended_qe.tolist()),
             "qe_pred": round_list_numbers( qe_pred.tolist())
         }
-        fit_result.statistics = statistics["model_stats"]
-        fit_result.residuals = statistics["residuals"]
+        fit_result.statistics = Statistics.all_statistics(y, qe_pred,
+                                                          len(fit_result.parameters),
+                                                          float(fit_result.raw_result.aic),
+                                                          float(fit_result.raw_result.bic))
+        fit_result.residuals =  Statistics.check_residuals(residuals)
         fit_result.transformed = transformed_data
 
         return fit_result

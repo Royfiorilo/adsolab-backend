@@ -5,7 +5,7 @@ from utils import round_number
 
 class ModelMethod(TypedDict):
     statistics: dict
-    residuals: List[float]
+    residuals: list
     name: str
 
 
@@ -15,9 +15,6 @@ class ModelComparison(TypedDict):
 
 
 def extract_method_data(models: list, results: list):
-    """
-    Extract method data from models and results.
-    """
     compare_data = []
     qe_predictions = []
     y_predictions = []
@@ -36,9 +33,6 @@ def extract_method_data(models: list, results: list):
 
 
 def calculate_heuristic_scores(compare_data: List[ModelMethod]):
-    """
-    Calculate heuristic scores for models.
-    """
     scores = AdsorptionModelComparison.determine_heuristic_scores_models(compare_data, "name")
     best_model = max(scores, key=scores.get)
     return scores, best_model
@@ -85,17 +79,11 @@ def format_comparison_results(heuristic_scores, best_heuristic: str,
     }
 
 
-def get_comparison(results: list, models: list, y: List[float]) -> ModelComparison:
+def get_comparison(results: list, models: list, y) -> ModelComparison:
     compare_data, qe_preds, y_preds = extract_method_data(models, results)
 
     heuristic_scores, best_heuristic = calculate_heuristic_scores(compare_data)
 
-    ridge_scores, best_ridge, model_results_ridge = calculate_ridge_scores(
-        models, y, qe_preds, y_preds
-    )
+    ridge_scores, best_ridge, model_results_ridge = calculate_ridge_scores(models, y, qe_preds, y_preds)
 
-    return format_comparison_results(
-        heuristic_scores, best_heuristic,
-        ridge_scores, best_ridge,
-        model_results_ridge
-    )
+    return format_comparison_results(heuristic_scores, best_heuristic,ridge_scores, best_ridge, model_results_ridge)
