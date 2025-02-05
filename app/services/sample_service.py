@@ -34,7 +34,6 @@ def filter_sample(sample, filter):
     return sample.remove(filter)
 
 
-#TODO: se estan creando 2 samples despues del load ya se tiene la entidad
 def create_sample_db(request_json):
     try:
         sample_data = SAMPLE_SCHEMA.load(request_json)

@@ -74,7 +74,7 @@ class FitStrategy:
             {
                 "name": name,
                 "value": round_number(param.value),
-                "std_err": round_number(param.stderr) if param.stderr else self._calculate_standard_errors(result, result.params)
+                "std_err": round_number(param.stderr) if param.stderr else self._calculate_standard_errors(result)
             }
             for name, param in result.params.items()
         ]

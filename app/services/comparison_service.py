@@ -38,11 +38,8 @@ def calculate_heuristic_scores(compare_data: List[ModelMethod]):
     return scores, best_model
 
 
-def calculate_ridge_scores(models: list, y: List[float], qe_preds: List[float],
-                           y_preds: List[float]) -> tuple[dict, str, List[dict]]:
-    """
-    Calculate ridge regression scores for models.
-    """
+def calculate_ridge_scores(models, y, qe_preds, y_preds):
+
     ridge_scores = AdsorptionModelComparison.get_ml_coefs_models(y, qe_preds, y_preds)
     coefficients = ridge_scores['coefs']
 
@@ -58,8 +55,7 @@ def calculate_ridge_scores(models: list, y: List[float], qe_preds: List[float],
     return ridge_scores, best_model, model_results
 
 
-def format_comparison_results(heuristic_scores, best_heuristic: str,
-                              ridge_scores: dict, best_ridge: str,
+def format_comparison_results(heuristic_scores, best_heuristic: str, ridge_scores: dict, best_ridge: str,
                               model_results_ridge) -> ModelComparison:
     return {
         "heuristic": {

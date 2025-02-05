@@ -10,7 +10,7 @@ def create_fitted_model(request_json):
     try:
         fitted_model = FITTED_MODEL_SCHEMA.load(request_json)
     except ValidationError as e:
-        raise BadRequestError
+        raise BadRequestError(f"Error validating request data: {e}")
     return fitted_model
 
 def save_fitted_model(fitted_model):
