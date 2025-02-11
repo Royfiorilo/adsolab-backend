@@ -63,10 +63,12 @@ class NoLinearModel(Model):
 
     def _get_parameters_with_stderr(self, result):
         params = []
-
         for param, value in result.params.items():
             if value.stderr is None:
-                stderr = self._calculate_standard_errors(result, result.params)
+                try:
+                    stderr = self._calculate_standard_errors(result, result.params)
+                except Exception as e:
+                    stderr = 0
             else:
                 stderr = value.stderr
 
@@ -109,6 +111,12 @@ class NoLinearModel(Model):
                 self.method_results.append(result)
             except Exception as e:
                 print(f"Método {method} falló: {str(e)}")
+                result = {
+                    "success": False,
+                    "error": str(e)
+                }
+                result.update({"name": method, "description": description})
+                self.method_results.append(result)
 
     def make_model(self, constants):
         if self.model is None:
@@ -142,9 +150,11 @@ class NoLinearModel(Model):
         )
 
         print(f"Finalizo ejecucion del method {method} :{datetime.now()}")
+        print(f"Method: {method}: {result.success} - {result.message}")
         return {
             "transformed": {"x": ce.tolist(), "y": round_list_numbers(qe_pred.tolist())},
             "success": bool(result.success),
+            "method_message": str(result.message),
             "parameters": self._get_parameters_with_stderr(result),
             "statistics": statistics,
             "residuals": Statistics.check_residuals(residuals),
@@ -153,7 +163,9 @@ class NoLinearModel(Model):
 
     def determine_best_method(self):
         results = []
-        for method in self.method_results:
+        success_methods = [method for method in self.method_results if method["success"] == True]
+
+        for method in success_methods:
             results.append({"statistics": method["statistics"],
                             "residuals": method["residuals"],
                             "name": method["name"]
