@@ -137,7 +137,10 @@ class NoLinearModel(Model):
             "success": bool(result.success),
             "parameters": self._get_parameters_with_stderr(result),
             "statistics": statistics,
-            "residuals": Statistics.check_residuals(residuals),
+            "residuals": {
+                "values": residuals.tolist(),
+                "analysis": Statistics.check_residuals(residuals)
+            },
         }
 
     def determine_best_method(self):
