@@ -42,6 +42,12 @@ class SampleSchema(Schema, DumpMixin):
             if any(val < 0 for val in data[field]):
                 raise ValidationError(f'Numbers in {field} cannot be negative')
 
+    def _validate_non_ce_equals(self, data):
+        ce_distinct = set(data['ce'])
+        if len(data['ce']) != len(ce_distinct):
+            raise ValidationError('Ce must have different values in all the points.')
+
+
     @post_load
     def make_sample(self, data, **kwargs):
         return SampleEntity(**data)
