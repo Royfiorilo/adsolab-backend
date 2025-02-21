@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 from http import HTTPStatus
 
@@ -8,8 +7,9 @@ from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError
 from services.investigation_service import run_linearization_models, \
     create_investigation_and_sample, create_investigation_with_sample_id, run_no_linear_models, \
-    get_investigations_from_db, validate_and_save_version
+    get_investigations_from_db, validate_and_save_version, get_version
 from services.sample_service import find_sample
+
 blueprint = Blueprint('investigation', __name__)
 
 
@@ -85,6 +85,15 @@ def save():
         raise BadRequestError("investigation_id is required")
     try:
         validate_and_save_version(request_json)
+    except Exception as e:
+        raise e
+    return {"status": "ok"}, HTTPStatus.CREATED
+
+
+@blueprint.route('/investigation/<investigation_id>/version/<version_id>', methods=['GET'])
+def get_investigation_version(investigation_id, version_id):
+    try:
+        get_version(investigation_id, version_id)
     except Exception as e:
         raise e
     return {"status": "ok"}, HTTPStatus.CREATED

@@ -100,14 +100,17 @@ class PointsExtender:
     def __init__(self, formula):
         self.formula = formula
 
-    def extend(self, ce: np.ndarray, parameters: Dict[str, float], num_points: int = 300) -> (np.ndarray, np.ndarray):
+    def extend(self, ce_list: np.ndarray, parameters: Dict[str, float], num_points: int = 300) -> (np.ndarray, np.ndarray):
+        ce = np.array(ce_list)
         _min, _max = 0, ce.max()
         extended_ce = np.linspace(_min, _max, num_points)
 
-        return extended_ce, np.array([
-            self.formula.apply(**{**parameters, "ce": ce_val})
-            for ce_val in extended_ce
-        ])
+        qe_pred = np.array([])
+
+        for ce_val in extended_ce:
+            np.append(qe_pred, self.formula.apply(ce_val, parameters))
+
+        return extended_ce, qe_pred
 
 class NoLinearModel(Model):
     def __init__(self, _id: str, name: str, formula, description: str, parameters, linearizations=None):

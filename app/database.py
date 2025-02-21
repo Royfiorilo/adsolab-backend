@@ -21,7 +21,17 @@ class FittedModel(DumpMixin, db.Model):
     model_id = db.Column(db.Integer, nullable=False)
     best_adjust = db.Column(db.String(100), nullable=False)
     adjustment_methods = db.Column(ARRAY(db.JSON), nullable=False)
-    version_id = db.Column(db.Integer, db.ForeignKey('version.version_id'), nullable=False)
+    version_id = db.Column(db.Integer, nullable=False)
+    investigation_id = db.Column(db.Integer, nullable=False)
+    seeds = db.Column(ARRAY(db.JSON), nullable=False)
+
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ['version_id', 'investigation_id'],
+            ['version.version_id', 'version.investigation_id'],
+            ondelete="CASCADE"
+        ),
+    )
 
 
 class Comparison(DumpMixin, db.Model):
@@ -30,20 +40,28 @@ class Comparison(DumpMixin, db.Model):
     comparison_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     heuristic = db.Column(db.JSON, nullable=False)
     ml = db.Column(db.JSON, nullable=False)
-    version_id = db.Column(db.Integer, db.ForeignKey('version.version_id'), nullable=False)
+    version_id = db.Column(db.Integer, nullable=False)
+    investigation_id = db.Column(db.Integer, nullable=False)
+
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ['version_id', 'investigation_id'],
+            ['version.version_id', 'version.investigation_id'],
+            ondelete="CASCADE"
+        ),
+    )
 
 
 class Version(DumpMixin, db.Model):
     __tablename__ = 'version'
 
-    version_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    fitted_models = db.relationship('FittedModel', backref='fitted_model', lazy=True)
-    comparison = db.relationship('Comparison', backref='comparison', lazy=True)
+    version_id = db.Column(db.Integer, primary_key=True)
     iterations = db.Column(db.Integer, nullable=True)
     steps = db.Column(db.Integer, nullable=True)
-    seeds = db.Column(ARRAY(db.JSON), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False)
-    investigation_id = db.Column(db.Integer, db.ForeignKey('investigation.investigation_id'), nullable=False)
+    investigation_id = db.Column(db.Integer, db.ForeignKey('investigation.investigation_id'), primary_key=True)
+    fitted_models = db.relationship('FittedModel', backref='version', lazy=True)
+    comparison = db.relationship('Comparison', backref='version', lazy=True)
 
 
 class Sample(DumpMixin, db.Model):

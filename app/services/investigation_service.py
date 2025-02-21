@@ -9,8 +9,8 @@ from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundE
 from services.comparison_service import get_comparison
 from services.linearization_service import execute_linearizations
 from services.no_linear_model_service import process_models, format_results
-from services.fitted_model_service import create_version, save_version
 from services.sample_service import create_sample_db, find_sample, filter_sample
+from services.version_service import create_version, save_version, validate_and_get_version
 
 
 def create_investigation_and_sample(request_json):
@@ -40,7 +40,7 @@ def _create_investigation_db(sample_id):
 
 
 def get_investigation(investigation_id):
-    investigation = Investigation.with_schema(None).filter_by(investigation_id=investigation_id).first()
+    investigation = Investigation.with_schema(INVESTIGATION_SCHEMA).filter_by(investigation_id=investigation_id).first()
     if investigation is None:
         raise NotFoundError(f"Investigation with ID {investigation_id} not found")
     return investigation
@@ -96,5 +96,12 @@ def is_valid_investigation(investigation_id):
 def validate_and_save_version(request_json):
     if not is_valid_investigation(request_json["investigation_id"]):
         raise NotFoundError(f"Investigation with ID {request_json['investigation_id']} not found")
-    fitted_model = create_version(request_json)
-    save_version(fitted_model)
+    version = create_version(request_json)
+    save_version(version)
+
+def get_version(investigation_id, version_id):
+    if not is_valid_investigation(investigation_id):
+        raise NotFoundError(f"Investigation with ID {investigation_id} not found")
+    investigation = get_investigation(investigation_id)
+    version = validate_and_get_version(version_id, investigation)
+    return version
