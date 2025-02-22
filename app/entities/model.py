@@ -11,16 +11,20 @@ class Model(ABC):
             formula,
             description,
             parameters,
+            constants = None,
             linearizations=None
     ):
         if linearizations is None:
             linearizations = []
+        if constants is None:
+            constants = []
         self._id = _id
         self.name = name
         self.formula = Formula(formula)
         self.description = description
         self.parameters = parameters
         self.linearizations = linearizations
+        self.constants = constants
 
     @property
     def id(self):

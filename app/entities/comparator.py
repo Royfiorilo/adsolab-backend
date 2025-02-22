@@ -125,13 +125,15 @@ class AdsorptionModelComparison:
         # regresion
         ridge = Ridge(alpha=alpha)
         ridge.fit(X_scaled, y)
-        ridge_coefs = ridge.coef_
+        #To abs for comparison
+        ridge_coefs = [ abs(coef)for coef in ridge.coef_]
+
         qe_pred_ridge = ridge.predict(X_scaled)
 
 
         ridge_aic, ridge_bic = cls._manual_aic_bic_ridge(X_scaled, y, qe_pred_ridge)
         statistics_ridge = Statistics.all_statistics(np.array(y), qe_pred_ridge, len(ridge_coefs), ridge_aic, ridge_bic)
-        residuales_ridge = qe - qe_pred_ridge
+        residuals_ridge = qe - qe_pred_ridge
 
         y_pred_ridge = ridge.predict(X_extended_scaler)
         return {
@@ -139,7 +141,10 @@ class AdsorptionModelComparison:
             "y_pred": round_list_numbers(y_pred_ridge.tolist()),
             "coefs": round_list_numbers(ridge_coefs),
             "statistics": statistics_ridge,
-            "residuals": Statistics.check_residuals(residuales_ridge)
+            "residuals": {
+                "values": residuals_ridge.tolist(),
+                "analysis": Statistics.check_residuals(residuals_ridge)
+            }
         }
 
     @classmethod

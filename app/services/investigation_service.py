@@ -7,7 +7,7 @@ from database import Investigation
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
 from services.comparison_service import get_comparison
-from services.fitted_model_service import create_fitted_model, save_fitted_model
+from services.fitted_model_service import create_fitted_model, save_fitted_model, create_version, save_version
 from services.linearization_service import execute_linearizations
 from services.no_linear_model_service import process_models, format_results
 from services.sample_service import create_sample_db, find_sample, filter_sample
@@ -40,7 +40,7 @@ def _create_investigation_db(sample_id):
 
 
 def get_investigation(investigation_id):
-    investigation = Investigation.with_schema(None).filter_by(investigation_id=investigation_id).first()
+    investigation = Investigation.with_schema(INVESTIGATION_SCHEMA).filter_by(investigation_id=investigation_id).first()
     if investigation is None:
         raise NotFoundError(f"Investigation with ID {investigation_id} not found")
     return investigation
@@ -55,11 +55,11 @@ def is_valid_investigation(investigation_id):
     return Investigation.with_schema(None).filter_by(investigation_id=investigation_id).count() > 0
 
 
-def save_investigation(request_json):
+def validate_and_save_version(request_json):
     if not is_valid_investigation(request_json["investigation_id"]):
         raise NotFoundError(f"Investigation with ID {request_json['investigation_id']} not found")
-    fitted_model = create_fitted_model(request_json)
-    save_fitted_model(fitted_model)
+    fitted_model = create_version(request_json)
+    save_version(fitted_model)
 
 
 def run_linearization_models(request_data):

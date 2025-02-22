@@ -11,6 +11,7 @@ from .comparator import AdsorptionModelComparison
 from .model import Model
 
 DEFAULT_ITERATIONS = 10000
+DEFAULT_STEP = None
 
 @dataclass
 class FitParameters:
@@ -29,9 +30,10 @@ class FitResult:
     raw_result: lmfit.model.ModelResult
     method_name: str
     statistics: dict = None
-    residuals: np.ndarray = None
+    residuals: dict = None
     transformed: dict = None
     method_description: str = ""
+    method_message: str = ""
 
     def get_y(self):
         return self.transformed.get("y")
@@ -53,6 +55,8 @@ class FitStrategy:
         for param_name, param in parameters.items():
             param.set(min=0, max=np.inf, brute_step=params.step)
 
+        params.ce[params.ce == 0] = 1e-10
+
         result = self.model.fit(
             params.qe,
             parameters,
@@ -69,15 +73,20 @@ class FitStrategy:
             method_name=params.method
         )
 
-    def _get_parameters_with_stderr(self, result: lmfit.model.ModelResult):
-        return [
-            {
-                "name": name,
-                "value": round_number(param.value),
-                "std_err": round_number(param.stderr) if param.stderr else self._calculate_standard_errors(result)
-            }
-            for name, param in result.params.items()
-        ]
+    def _get_parameters_with_stderr(self, result):
+        params = []
+        for param, value in result.params.items():
+            if value.stderr is None:
+                try:
+                    stderr = self._calculate_standard_errors(result)
+                except Exception as e:
+                    stderr = None
+            else:
+                stderr = value.stderr
+
+            params.append({"name": param, "value": round_number(value.value), "std_err": round_number(stderr) if stderr else stderr})
+
+        return params
 
     def _calculate_standard_errors(self, result):
         """
@@ -110,20 +119,25 @@ class PointsExtender:
         ])
 
 class NoLinearModel(Model):
-    def __init__(self, _id: str, name: str, formula, description: str, parameters, linearizations=None):
+    def __init__(self, _id: str, name: str, formula, description: str, parameters, linearizations=None, constants: List[Any] = []):
         super().__init__(_id, name, formula, description, parameters)
         self.fit_strategy =  FitStrategy(self.formula)
         self.points_extender = PointsExtender(self.formula)
         self.linearizations = linearizations if linearizations is not None else []
         self.method_results: List[FitResult] = []
         self.best_method = None
+        self.constants = constants or []
+        self.model = None
 
-    def run(self, sample, seeds, methods, step, iterations) -> List[FitResult]:
+
+    def run(self, sample, seeds, methods, constants: {}, step: DEFAULT_STEP, iterations: DEFAULT_ITERATIONS)  -> List[FitResult]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
 
+
         iterations = DEFAULT_ITERATIONS if iterations is None else iterations
         initial_params = self._prepare_initial_params(seeds)
+        self.make_model(constants)
         self.method_results = []
 
         for method, description in methods.items():
@@ -131,9 +145,23 @@ class NoLinearModel(Model):
                 result = self._run_method(x, y, initial_params, method, description, step, iterations)
                 self.method_results.append(result)
             except Exception as e:
-                print(f"Method {method} failed: {str(e)}")
+                print(f"Método {method} falló: {str(e)}")
+                result = {
+                    "success": False,
+                    "error": str(e)
+                }
+                result.update({"name": method, "description": description})
+                self.method_results.append(result)
+
+        self._determine_best_method()
 
         return self.method_results
+
+    def make_model(self, constants):
+        if self.model is None:
+            if self.constants:
+                self.formula.replace_constants(constants)
+            self.model = lmfit.Model(self.formula.to_function(), independent_vars=['ce'])
 
     def _prepare_initial_params(self, seeds) :
         return {param["name"]: param["value"] for param in seeds}
@@ -149,7 +177,7 @@ class NoLinearModel(Model):
 
         params_dict = {p["name"]: p["value"] for p in fit_result.parameters}
         extended_ce, extended_qe = self.points_extender.extend(x, params_dict)
-        self._determine_best_method()
+
 
         transformed_data = {
             "x": round_list_numbers(extended_ce.tolist()),
@@ -159,22 +187,25 @@ class NoLinearModel(Model):
         fit_result.statistics = Statistics.all_statistics(y, qe_pred,
                                                           len(fit_result.parameters),
                                                           float(fit_result.raw_result.aic),
-                                                          float(fit_result.raw_result.bic))
-        fit_result.residuals =  Statistics.check_residuals(residuals)
+                                                       float(fit_result.raw_result.bic))
+
+        fit_result.residuals =  {"values": residuals.tolist(), "analysis": Statistics.check_residuals(residuals)}
         fit_result.transformed = transformed_data
+        fit_result.method_message = str(fit_result.raw_result.result.message)
 
         return fit_result
 
     def _determine_best_method(self):
         if not self.method_results:
             return
+        success_methods = [method for method in self.method_results if method["success"] == True]
         results = [
             {
                 "statistics": method.statistics,
                 "residuals": method.residuals,
                 "name": method.method_name
             }
-            for method in self.method_results
+            for method in success_methods
         ]
 
         scores = AdsorptionModelComparison.determine_heuristic_scores_models(
