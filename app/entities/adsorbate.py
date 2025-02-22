@@ -5,6 +5,6 @@ from dataclasses import dataclass
 class Adsorbate:
     id : int
     ion_name : str
-    IUPAC_name : str
+    iupac_name : str
     formula : str
 

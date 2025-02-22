@@ -157,7 +157,10 @@ class NoLinearModel(Model):
             "method_message": str(result.message),
             "parameters": self._get_parameters_with_stderr(result),
             "statistics": statistics,
-            "residuals": Statistics.check_residuals(residuals),
+            "residuals": {
+                "values": residuals.tolist(),
+                "analysis": Statistics.check_residuals(residuals)
+            },
         }
 
 
