@@ -34,8 +34,8 @@ def create_app():
         app.register_blueprint(auth_controller.blueprint)
         if env == 'development':
             db.create_all()
-            # Create User to test with
-            if not app.security.datastore.find_user(email="adsolab@fiuba.com"):
-                app.security.datastore.create_user(email="adsolab@fiuba.com", password=hash_password("password"))
+        # Create User to test with
+        if not app.security.datastore.find_user(email="adsolab@fiuba.com"):
+            app.security.datastore.create_user(email="adsolab@fiuba.com", password=hash_password("password"))
             db.session.commit()
     return app

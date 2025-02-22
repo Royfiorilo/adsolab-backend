@@ -1,10 +1,12 @@
 from flask_security.models import fsqla
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import ARRAY, JSON
+
 from entities.schemas.dump_mixin import DumpMixin
 
 db = SQLAlchemy()
 fsqla.FsModels.set_db_info(db)
+
 
 class Model(DumpMixin, db.Model):
     __tablename__ = 'model'
@@ -112,14 +114,14 @@ class Method(DumpMixin, db.Model):
     code = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(500), nullable=True)
     color = db.Column(db.String(10), nullable=False)
-    
+
 
 class Adsorbent(DumpMixin, db.Model):
     __tablename__ = 'adsorbent'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)
 
-    
+
 class Adsorbate(DumpMixin, db.Model):
     __tablename__ = 'adsorbate'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -127,9 +129,10 @@ class Adsorbate(DumpMixin, db.Model):
     iupac_name = db.Column(db.String(100), nullable=False)
     formula = db.Column(db.String(10), nullable=False)
 
+
 class Role(db.Model, fsqla.FsRoleMixin):
     pass
 
+
 class User(db.Model, fsqla.FsUserMixin):
     pass
-
