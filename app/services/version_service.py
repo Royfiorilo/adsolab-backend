@@ -91,5 +91,26 @@ def validate_and_get_version(version_id, investigation):
 
         return version.to_dict()
     except ValidationError as e:
-        db.session.rollback()
         logging.error("Error recover version: {}".format(e))
+
+def get_versions_by_investigation(investigation_id):
+    versions_by_investigation = Version.with_schema(VERSION_SCHEMA).filter_by(investigation_id=investigation_id)
+    versions = []
+    for version in versions_by_investigation:
+        fitted_models = []
+        comparision = version.comparison
+        for fitted_model in version.fitted_models:
+            fitted_models.append({
+                "model_id": fitted_model.model_id,
+                "best_adjust": fitted_model.best_adjust,
+                "seeds": fitted_model.seeds
+            })
+        properties = {
+            "version_id": version.version_id,
+            "created_at": version.created_at,
+            "best_model_heuristic": comparision.heuristic["best_model"],
+            "best_model_ml": comparision.ml["best_model"],
+            "fitted_models": fitted_models
+        }
+        versions.append(properties)
+    return versions

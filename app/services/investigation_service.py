@@ -10,7 +10,7 @@ from services.comparison_service import get_comparison
 from services.linearization_service import execute_linearizations
 from services.no_linear_model_service import process_models, format_results
 from services.sample_service import create_sample_db, find_sample, filter_sample
-from services.version_service import create_version, save_version, validate_and_get_version
+from services.version_service import create_version, save_version, validate_and_get_version, get_versions_by_investigation
 
 
 def create_investigation_and_sample(request_json):
@@ -100,8 +100,12 @@ def validate_and_save_version(request_json):
     save_version(version)
 
 def get_version(investigation_id, version_id):
-    if not is_valid_investigation(investigation_id):
-        raise NotFoundError(f"Investigation with ID {investigation_id} not found")
     investigation = get_investigation(investigation_id)
     version = validate_and_get_version(version_id, investigation)
     return version
+
+
+def get_versions(request_json):
+    investigation = get_investigation(request_json['investigation_id'])
+    versions = get_versions_by_investigation(investigation.id)
+    return versions
