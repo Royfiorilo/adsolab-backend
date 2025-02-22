@@ -34,8 +34,7 @@ def compare_r2_linearizations(linearization1, linearization2):
 
 
 def excecute_linearizations(investigation, linearizations, model_id, filter: None):
-    model = find_model(model_id)
-    result = {"model": model.name}
+    result = {"model": model_id}
     sample = find_sample(investigation.sample_id)
 
     filter_sample(sample,filter)

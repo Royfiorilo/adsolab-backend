@@ -1,3 +1,5 @@
+from sympy.stats import sample
+
 R_CONSTANT = 8.3144598
 
 class InvestigationEntity:
@@ -21,4 +23,7 @@ class InvestigationEntity:
     def constants(self):
         if not self.sample or not hasattr(self.sample, 'temperature'):
             raise ValueError("Sample has to have temperatura and not null")
-        return {"T": self.sample.temperature, "R": R_CONSTANT}
+        r = R_CONSTANT
+        if self.sample.measure_unit == 'mmol':
+            r =  R_CONSTANT * (10 **-3)
+        return {"T": self.sample.temperature, "R": r}
