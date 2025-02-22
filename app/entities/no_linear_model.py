@@ -25,10 +25,12 @@ class NoLinearModel(Model):
             description: str,
             parameters: List[Dict[str, Any]],
             linearizations: List[Any] = None,
+            constants: List[Any] = []
     ):
-        super().__init__(_id, name, formula, description, parameters)
+        super().__init__(_id, name, formula, description, parameters, constants)
         self.linearizations = linearizations or []
-        self.model = lmfit.Model(self.formula.to_function())
+        self.constants = constants or []
+        self.model = None
         self.method_results = []
         self.best_method = None
 
@@ -61,10 +63,12 @@ class NoLinearModel(Model):
 
     def _get_parameters_with_stderr(self, result):
         params = []
-
         for param, value in result.params.items():
             if value.stderr is None:
-                stderr = self._calculate_standard_errors(result, result.params)
+                try:
+                    stderr = self._calculate_standard_errors(result, result.params)
+                except Exception as e:
+                    stderr = 0
             else:
                 stderr = value.stderr
 
@@ -75,11 +79,12 @@ class NoLinearModel(Model):
     def get_seeds(self, parameters: List[Dict[str, Any]]) -> Dict[str, float]:
         return {param["name"]: param["value"] for param in parameters}
 
-    def run(self, sample, seeds, methods, step: DEFAULT_STEP, iterations: DEFAULT_ITERATIONS) -> dict[str, list[Any] | Any]:
+    def run(self, sample, seeds, methods, constants: {}, step: DEFAULT_STEP, iterations: DEFAULT_ITERATIONS) -> dict[str, list[Any] | Any]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
         seeds = self.get_seeds(seeds)
 
+        self.make_model(constants)
 
         self.fit_all_methods(x, y, seeds, methods, step, iterations)
         best_method = self.determine_best_method()
@@ -106,6 +111,18 @@ class NoLinearModel(Model):
                 self.method_results.append(result)
             except Exception as e:
                 print(f"Método {method} falló: {str(e)}")
+                result = {
+                    "success": False,
+                    "error": str(e)
+                }
+                result.update({"name": method, "description": description})
+                self.method_results.append(result)
+
+    def make_model(self, constants):
+        if self.model is None:
+            if self.constants:
+                self.formula.replace_constants(constants)
+            self.model = lmfit.Model(self.formula.to_function(), independent_vars=['ce'])
 
     def _evaluate_fit(
             self,
@@ -121,6 +138,7 @@ class NoLinearModel(Model):
         for param_name, param in params.items():
             param.set(min=0, max=np.inf, brute_step=step)
 
+        ce[ce == 0] = 1e-10
         result = self.model.fit(
             qe, params, ce=ce, method=method, nan_policy="omit", max_nfev=iteration)
 
@@ -132,9 +150,11 @@ class NoLinearModel(Model):
         )
 
         print(f"Finalizo ejecucion del method {method} :{datetime.now()}")
+        print(f"Method: {method}: {result.success} - {result.message}")
         return {
             "transformed": {"x": ce.tolist(), "y": round_list_numbers(qe_pred.tolist())},
             "success": bool(result.success),
+            "method_message": str(result.message),
             "parameters": self._get_parameters_with_stderr(result),
             "statistics": statistics,
             "residuals": {
@@ -143,9 +163,12 @@ class NoLinearModel(Model):
             },
         }
 
+
     def determine_best_method(self):
         results = []
-        for method in self.method_results:
+        success_methods = [method for method in self.method_results if method["success"] == True]
+
+        for method in success_methods:
             results.append({"statistics": method["statistics"],
                             "residuals": method["residuals"],
                             "name": method["name"]

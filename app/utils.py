@@ -16,18 +16,19 @@ def soft_curve(ce, qe_pred):
     #s=0 para que pase si o si por los puntos originales
     spl = UnivariateSpline(ce, qe_pred, s=0, k=3)
 
-    x_spline = np.linspace(min(ce), max(ce), 300)
+    x_spline = np.linspace(0, max(ce), 300)
     y_spline = spl(x_spline)
 
     return x_spline, y_spline
 
 def process_adjustment_methods(adjustment_methods):
     for adjustment_method in adjustment_methods:
-        x, y = soft_curve(adjustment_method["transformed"]["x"], adjustment_method["transformed"]["y"])
-        adjustment_method["transformed"] = {
-            "x": round_list_numbers(x),
-            "y": round_list_numbers(y),
-        }
+        if adjustment_method["success"]:
+            x, y = soft_curve(adjustment_method["transformed"]["x"], adjustment_method["transformed"]["y"])
+            adjustment_method["transformed"] = {
+                "x": round_list_numbers(x),
+                "y": round_list_numbers(y),
+            }
 
 def process_comparison(x_reference, comparison):
     x, y = soft_curve(x_reference, comparison["ridge"]["y_pred"])

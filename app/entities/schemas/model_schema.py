@@ -1,4 +1,4 @@
-from marshmallow import fields, post_load, Schema
+from marshmallow import fields, post_load, Schema, validates_schema
 from entities.no_linear_model import NoLinearModel
 from entities.schemas.linearization_schema import LinearizationSchema
 from entities.schemas.dump_mixin import DumpMixin
@@ -11,6 +11,11 @@ class ModelSchema(Schema, DumpMixin):
     description = fields.Str(required=True)
     parameters = fields.Dict(allow_none=False)
     linearizations = fields.List(fields.Nested(LinearizationSchema), missing=None)
+    constants = fields.List(fields.Str, allow_none=True)
+
+    @validates_schema
+    def determine_constants(self, data, **kwargs):
+        return [] if data['constants'] is None else data['constants']
 
     @post_load
     def make_model(self, data, **kwargs):
