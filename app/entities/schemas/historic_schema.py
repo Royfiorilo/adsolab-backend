@@ -62,13 +62,13 @@ class VersionSchema(Schema, DumpMixin):
     class Meta:
         unknown = EXCLUDE
 
-    _id = fields.Integer(dump_only=True)
+    version_id = fields.Integer()
     investigation_id = fields.Integer()
     iterations = fields.Integer(allow_none=True)
     steps = fields.Integer(allow_none=True)
     created_at = fields.DateTime()
     fitted_models = fields.List(fields.Nested(FittedModelSchema), allow_none=False, data_key='results')
-    comparison = fields.List(fields.Nested(ComparisonSchema), allow_none=False)
+    comparison = fields.Nested(ComparisonSchema, allow_none=False)
 
     @post_load
     def make_version(self, data, **kwargs) -> Version:

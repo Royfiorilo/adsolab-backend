@@ -40,8 +40,8 @@ class Comparison(DumpMixin, db.Model):
     comparison_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     heuristic = db.Column(db.JSON, nullable=False)
     ml = db.Column(db.JSON, nullable=False)
-    version_id = db.Column(db.Integer, nullable=False)
-    investigation_id = db.Column(db.Integer, nullable=False)
+    version_id = db.Column(db.Integer, nullable=False, unique=True)
+    investigation_id = db.Column(db.Integer, nullable=False, unique=True)
 
     __table_args__ = (
         db.ForeignKeyConstraint(
@@ -61,7 +61,7 @@ class Version(DumpMixin, db.Model):
     created_at = db.Column(db.DateTime, nullable=False)
     investigation_id = db.Column(db.Integer, db.ForeignKey('investigation.investigation_id'), primary_key=True)
     fitted_models = db.relationship('FittedModel', backref='version', lazy=True)
-    comparison = db.relationship('Comparison', backref='version', lazy=True)
+    comparison = db.relationship('Comparison', backref='version', lazy=True, uselist=False)
 
 
 class Sample(DumpMixin, db.Model):

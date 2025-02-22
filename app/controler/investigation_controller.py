@@ -93,7 +93,7 @@ def save():
 @blueprint.route('/investigation/<investigation_id>/version/<version_id>', methods=['GET'])
 def get_investigation_version(investigation_id, version_id):
     try:
-        get_version(investigation_id, version_id)
+        version = get_version(investigation_id, version_id)
     except Exception as e:
         raise e
-    return {"status": "ok"}, HTTPStatus.CREATED
+    return jsonify(version), HTTPStatus.CREATED

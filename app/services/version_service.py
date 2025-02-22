@@ -4,7 +4,8 @@ from marshmallow import ValidationError
 
 from app import db
 from database import FittedModel, Version, Comparison
-from entities.no_linear_model import PointsExtender
+from entities.comparator import AdsorptionModelComparison
+from entities.no_linear_model import  AdsorptionPredictor
 from entities.schemas.historic_schema import VERSION_SCHEMA, FITTED_METHOD_SCHEMA
 from exceptions.exceptions import NotFoundError
 from services.model_service import find_model
@@ -70,13 +71,23 @@ def validate_and_get_version(version_id, investigation):
             raise NotFoundError(f"Investigation with ID {investigation_id} not found")
         version = Version.with_schema(VERSION_SCHEMA).filter_by(investigation_id=investigation_id, version_id=version_id).first()
 
+        qe_preds = []
+        qe_preds_extended = []
         for fitted_model in version.fitted_models:
             model = find_model(model_id=fitted_model.model_id)
-            points_extender = PointsExtender(model.formula)
+            points_extender = AdsorptionPredictor(model.formula)
+
             for fitted_method in fitted_model.adjustment_methods:
                 params_dict = {p["name"]: p["value"] for p in fitted_method.params}
-                x, y = points_extender.extend(investigation.sample.ce, params_dict)
-                fitted_method.transformed = {"x": x, "y": y}
+                x, y_extended = points_extender.predict(investigation.sample.ce, params_dict)
+                _, y = points_extender.predict(investigation.sample.ce, params_dict)
+                fitted_method.transformed = {"x": list(x), "y": list(y)}
+                if fitted_method.name == fitted_model.best_adjust:
+                    _, qe_pred = points_extender.predict(investigation.sample.ce, params_dict, False)
+                    qe_preds.append(list(qe_pred))
+                    qe_preds_extended.append(list(y))
+
+        version.comparison.ml = AdsorptionModelComparison.get_ml_coefs_models(investigation.sample.qe, qe_preds, qe_preds_extended)
 
         return version.to_dict()
     except ValidationError as e:
