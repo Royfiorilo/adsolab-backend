@@ -8,7 +8,7 @@ from services.sample_service import find_sample, filter_sample
 from utils import round_list_numbers, round_number
 
 
-def process_linearization(linearization_id: str, sample) -> dict:
+def process_linearization(linearization_id: str, sample, constants) -> dict:
     linearization = Linearization.with_schema(LINEARIZATION_SCHEMA).filter_by(
         linearization_id=linearization_id
     ).first()
@@ -18,7 +18,7 @@ def process_linearization(linearization_id: str, sample) -> dict:
         logging.error(error_msg)
         raise NotFoundError(error_msg)
 
-    return linearization.run(sample)
+    return linearization.run(sample, constants)
 
 
 def format_linearization_result(*, name: str, id: str, x, y,
@@ -56,6 +56,7 @@ def execute_linearizations(investigation, linearizations,
                            model_id: str, filter_params = None) -> dict:
     model = find_model(model_id)
     sample = find_sample(investigation.sample_id)
+    constants = investigation.constants
 
     if filter_params:
         filter_sample(sample, filter_params)
@@ -65,7 +66,7 @@ def execute_linearizations(investigation, linearizations,
     result = {"model": model.name}
 
     for linearization_id in linearizations:
-        solution = process_linearization(linearization_id, sample)
+        solution = process_linearization(linearization_id, sample, constants)
         formatted_solution = format_linearization_result(**solution)
         linearization_results.append(formatted_solution)
 

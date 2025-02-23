@@ -26,9 +26,9 @@ class FitParameters:
 @dataclass
 class FitResult:
     success: bool
-    parameters: List[Dict[str, Any]]
-    raw_result: lmfit.model.ModelResult
     method_name: str
+    parameters: List[Dict[str, Any]] = None
+    raw_result: lmfit.model.ModelResult = None
     statistics: dict = None
     residuals: dict = None
     transformed: dict = None
@@ -47,7 +47,7 @@ class FitResult:
 
 class FitStrategy:
     def __init__(self, formula):
-        self.model = lmfit.Model(formula.to_function())
+        self.model = lmfit.Model(formula.to_function(), independent_vars=['ce'])
 
     def fit(self, params: FitParameters) -> FitResult:
         parameters = self.model.make_params(**params.initial_params)
@@ -56,6 +56,7 @@ class FitStrategy:
             param.set(min=0, max=np.inf, brute_step=params.step)
 
         params.ce[params.ce == 0] = 1e-10
+
 
         result = self.model.fit(
             params.qe,
@@ -70,7 +71,8 @@ class FitStrategy:
             success=bool(result.success),
             parameters=self._get_parameters_with_stderr(result),
             raw_result=result,
-            method_name=params.method
+            method_name=params.method,
+            method_message=str(result.message)
         )
 
     def _get_parameters_with_stderr(self, result):
@@ -110,7 +112,7 @@ class PointsExtender:
         self.formula = formula
 
     def extend(self, ce: np.ndarray, parameters: Dict[str, float], num_points: int = 300) -> (np.ndarray, np.ndarray):
-        _min, _max = 0, ce.max()
+        _min, _max = 1e-10, ce.max()
         extended_ce = np.linspace(_min, _max, num_points)
 
         return extended_ce, np.array([
@@ -121,13 +123,12 @@ class PointsExtender:
 class NoLinearModel(Model):
     def __init__(self, _id: str, name: str, formula, description: str, parameters, linearizations=None, constants: List[Any] = []):
         super().__init__(_id, name, formula, description, parameters)
-        self.fit_strategy =  FitStrategy(self.formula)
+        self.fit_strategy =  None
         self.points_extender = PointsExtender(self.formula)
         self.linearizations = linearizations if linearizations is not None else []
         self.method_results: List[FitResult] = []
         self.best_method = None
         self.constants = constants or []
-        self.model = None
 
 
     def run(self, sample, seeds, methods, constants: {}, step: DEFAULT_STEP, iterations: DEFAULT_ITERATIONS)  -> List[FitResult]:
@@ -137,31 +138,31 @@ class NoLinearModel(Model):
 
         iterations = DEFAULT_ITERATIONS if iterations is None else iterations
         initial_params = self._prepare_initial_params(seeds)
-        self.make_model(constants)
+        self.create_strategy(constants)
         self.method_results = []
 
         for method, description in methods.items():
             try:
                 result = self._run_method(x, y, initial_params, method, description, step, iterations)
-                self.method_results.append(result)
             except Exception as e:
                 print(f"Método {method} falló: {str(e)}")
-                result = {
-                    "success": False,
-                    "error": str(e)
-                }
-                result.update({"name": method, "description": description})
-                self.method_results.append(result)
+                result = FitResult(
+                    success = False,
+                    method_message= str(e),
+                    method_name= method,
+                    method_description= description
+                )
+            self.method_results.append(result)
 
         self._determine_best_method()
 
         return self.method_results
 
-    def make_model(self, constants):
-        if self.model is None:
+    def create_strategy(self, constants):
+        if self.fit_strategy is None:
             if self.constants:
                 self.formula.replace_constants(constants)
-            self.model = lmfit.Model(self.formula.to_function(), independent_vars=['ce'])
+            self.fit_strategy = FitStrategy(self.formula)
 
     def _prepare_initial_params(self, seeds) :
         return {param["name"]: param["value"] for param in seeds}
@@ -191,14 +192,13 @@ class NoLinearModel(Model):
 
         fit_result.residuals =  {"values": residuals.tolist(), "analysis": Statistics.check_residuals(residuals)}
         fit_result.transformed = transformed_data
-        fit_result.method_message = str(fit_result.raw_result.result.message)
 
         return fit_result
 
     def _determine_best_method(self):
         if not self.method_results:
             return
-        success_methods = [method for method in self.method_results if method["success"] == True]
+        success_methods = [method for method in self.method_results if method.success == True]
         results = [
             {
                 "statistics": method.statistics,

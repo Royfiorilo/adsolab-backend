@@ -48,13 +48,14 @@ def format_results(results) -> list[FormattedResult]:
     ]
 
 
-def process_model(model_config: ModelData,sample: object,methods: dict):
+def process_model(model_config: ModelData, sample: object, methods: dict, constants: dict):
     model = find_model(model_config['model'])
 
     results = model.run(
         sample=sample,
         seeds=model_config['seeds'],
         methods=methods,
+        constants=constants,
         step=model_config.get('step'),
         iterations=model_config.get('iterations')
     )
@@ -84,8 +85,8 @@ def exec_no_linear_model(investigation,model_data: ModelData, filter_params = No
     try:
 
         sample, methods = prepare_model_execution(investigation, filter_params)
-
-        fit_results, model = process_model(model_data, sample, methods)
+        constants = investigation.constants
+        fit_results, model = process_model(model_data, sample, methods, constants)
 
         model_result = format_model_result(model_data, fit_results, model)
 

@@ -7,7 +7,7 @@ from database import Investigation
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
 from services.comparison_service import get_comparison
-from services.fitted_model_service import create_fitted_model, save_fitted_model, create_version, save_version
+from services.fitted_model_service import  create_version, save_version
 from services.linearization_service import execute_linearizations
 from services.no_linear_model_service import process_models, format_results
 from services.sample_service import create_sample_db, find_sample, filter_sample
