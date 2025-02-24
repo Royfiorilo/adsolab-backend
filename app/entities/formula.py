@@ -25,8 +25,9 @@ class Formula:
         return self.variables
 
     def replace_constants(self, constants):
+        if not constants:
+            return
         formula_str = self.formula_str
-
         for constant in constants:
 
             if isinstance(constants[constant], (int, float)):

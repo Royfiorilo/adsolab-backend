@@ -64,34 +64,53 @@ def save_version(version_data):
         logging.error("Error saving version: {}".format(e))
         raise e
 
+
 def validate_and_get_version(version_id, investigation):
     try:
         investigation_id = investigation.investigation_id
         if not is_valid_version(investigation_id, version_id):
             raise NotFoundError(f"Investigation with ID {investigation_id} not found")
-        version = Version.with_schema(VERSION_SCHEMA).filter_by(investigation_id=investigation_id, version_id=version_id).first()
 
-        qe_preds = []
-        qe_preds_extended = []
-        for fitted_model in version.fitted_models:
-            model = find_model(model_id=fitted_model.model_id)
-            points_extender = AdsorptionPredictor(model.formula)
+        version = Version.with_schema(VERSION_SCHEMA).filter_by(
+            investigation_id=investigation_id, version_id=version_id
+        ).first()
 
-            for fitted_method in fitted_model.adjustment_methods:
-                params_dict = {p["name"]: p["value"] for p in fitted_method.params}
-                x, y_extended = points_extender.predict(investigation.sample.ce, params_dict)
-                _, y = points_extender.predict(investigation.sample.ce, params_dict)
-                fitted_method.transformed = {"x": list(x), "y": list(y)}
-                if fitted_method.name == fitted_model.best_adjust:
-                    _, qe_pred = points_extender.predict(investigation.sample.ce, params_dict, False)
-                    qe_preds.append(list(qe_pred))
-                    qe_preds_extended.append(list(y))
+        qe_preds, qe_preds_extended = process_fitted_models(version.fitted_models, investigation)
 
-        version.comparison.ml = AdsorptionModelComparison.get_ml_coefs_models(investigation.sample.qe, qe_preds, qe_preds_extended)
+        version.comparison.ml = AdsorptionModelComparison.get_ml_coefs_models(
+            investigation.sample.qe, qe_preds, qe_preds_extended
+        )
 
         return version.to_dict()
     except ValidationError as e:
-        logging.error("Error recover version: {}".format(e))
+        logging.error(f"Error recovering version: {e}")
+
+
+def process_fitted_models(fitted_models, investigation):
+    ce_values = investigation.sample.ce
+    constants = investigation.constants
+    qe_preds, qe_preds_extended = [], []
+
+    for fitted_model in fitted_models:
+        model = find_model(model_id=fitted_model.model_id)
+        if constants:
+            model.formula.replace_constants(constants)
+        points_extender = AdsorptionPredictor(model.formula)
+
+        for fitted_method in fitted_model.adjustment_methods:
+            params_dict = {p["name"]: p["value"] for p in fitted_method.params}
+            x, y_extended = points_extender.predict(ce_values, params_dict)
+            _, y = points_extender.predict(ce_values, params_dict)
+
+            fitted_method.transformed = {"x": list(x), "y": list(y)}
+
+            if fitted_method.name == fitted_model.best_adjust:
+                _, qe_pred = points_extender.predict(ce_values, params_dict, False)
+                qe_preds.append(list(qe_pred))
+                qe_preds_extended.append(list(y))
+
+    return qe_preds, qe_preds_extended
+
 
 def get_versions_by_investigation(investigation_id):
     versions_by_investigation = Version.with_schema(VERSION_SCHEMA).filter_by(investigation_id=investigation_id)

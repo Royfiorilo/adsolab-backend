@@ -96,8 +96,9 @@ def is_valid_investigation(investigation_id):
 def validate_and_save_version(request_json):
     if not is_valid_investigation(request_json["investigation_id"]):
         raise NotFoundError(f"Investigation with ID {request_json['investigation_id']} not found")
-    version = create_version(request_json)
-    save_version(version)
+    version_data = create_version(request_json)
+    version = save_version(version_data)
+    return version
 
 def get_version(investigation_id, version_id):
     investigation = get_investigation(investigation_id)

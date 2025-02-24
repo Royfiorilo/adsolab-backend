@@ -26,9 +26,13 @@ class Model(ABC):
         self.linearizations = linearizations
         self.constants = constants
 
+
     @property
     def id(self):
         return self._id
+
+    def initialize_constants(self):
+        pass
 
     @property
     def formula(self):

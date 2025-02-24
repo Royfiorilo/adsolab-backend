@@ -84,16 +84,19 @@ def save():
     if "investigation_id" not in request_json:
         raise BadRequestError("investigation_id is required")
     try:
-        validate_and_save_version(request_json)
+        version = validate_and_save_version(request_json)
     except Exception as e:
         raise e
-    return {"status": "ok"}, HTTPStatus.CREATED
+    return {"status": "ok", "version_id": version.version_id }, HTTPStatus.CREATED
 
 
-@blueprint.route('/investigation/<investigation_id>/version/<version_id>', methods=['GET'])
-def get_investigation_version(investigation_id, version_id):
+@blueprint.route('/investigation/version', methods=['GET'])
+def get_investigation_version():
+    request_json = request.get_json()
+    if "investigation_id" not in request_json or "version_id" not in request_json:
+        raise BadRequestError("investigation_id is required")
     try:
-        version = get_version(investigation_id, version_id)
+        version = get_version(request_json["investigation_id"], request_json["version_id"])
     except Exception as e:
         raise e
     return jsonify(version), HTTPStatus.OK

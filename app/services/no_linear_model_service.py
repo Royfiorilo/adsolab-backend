@@ -1,5 +1,7 @@
 from typing import TypedDict
 
+from statsmodels.genmod.families.varfuncs import constant
+
 from entities.response_formatter import ResponseFormatter
 from exceptions.exceptions import LinearizationError
 from services.model_service import find_model, get_optimization_methods

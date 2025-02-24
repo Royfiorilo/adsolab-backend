@@ -111,6 +111,7 @@ class AdsorptionPredictor:
     def __init__(self, formula):
         self.formula = formula
 
+
     def predict(self, ce_values, parameters, extend=True, num_points=300):
         if extend:
             ce_values = self._extend_ce(ce_values, num_points)
@@ -131,21 +132,21 @@ class NoLinearModel(Model):
     def __init__(self, _id: str, name: str, formula, description: str, parameters, linearizations=None, constants: List[Any] = []):
         super().__init__(_id, name, formula, description, parameters)
         self.fit_strategy =  None
-        self.points_extender = AdsorptionPredictor(self.formula)
+        self.adsorption_predictor = None
         self.linearizations = linearizations if linearizations is not None else []
         self.method_results: List[FitResult] = []
         self.best_method = None
         self.constants = constants or []
 
 
-    def run(self, sample, seeds, methods, constants: {}, step: DEFAULT_STEP, iterations: DEFAULT_ITERATIONS)  -> List[FitResult]:
+    def run(self, sample, seeds, methods, constants:{}, step: DEFAULT_STEP, iterations: DEFAULT_ITERATIONS)  -> List[FitResult]:
         x = np.array(sample.ce)
         y = np.array(sample.qe)
 
 
         iterations = DEFAULT_ITERATIONS if iterations is None else iterations
         initial_params = self._prepare_initial_params(seeds)
-        self.create_strategy(constants)
+        self.initialize_with_constants(constants=constants)
         self.method_results = []
 
         for method, description in methods.items():
@@ -165,11 +166,11 @@ class NoLinearModel(Model):
 
         return self.method_results
 
-    def create_strategy(self, constants):
-        if self.fit_strategy is None:
-            if self.constants:
-                self.formula.replace_constants(constants)
-            self.fit_strategy = FitStrategy(self.formula)
+    def initialize_with_constants(self, constants):
+        if self.constants:
+            self.formula.replace_constants(constants)
+        self.fit_strategy = FitStrategy(self.formula)
+        self.adsorption_predictor = AdsorptionPredictor(self.formula)
 
     def _prepare_initial_params(self, seeds) :
         return {param["name"]: param["value"] for param in seeds}
@@ -184,7 +185,7 @@ class NoLinearModel(Model):
         residuals = y - qe_pred
 
         params_dict = {p["name"]: p["value"] for p in fit_result.parameters}
-        extended_ce, extended_qe = self.points_extender.predict(x, params_dict)
+        extended_ce, extended_qe = self.adsorption_predictor.predict(x, params_dict)
 
 
         transformed_data = {
