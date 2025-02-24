@@ -1,6 +1,12 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from datetime import datetime
-from typing import List
+from typing import List, TypedDict
+
+@dataclass
+class Transformed:
+    x: list[float]
+    y: list[float]
+
 
 
 @dataclass
@@ -13,26 +19,30 @@ class Comparison:
 @dataclass
 class FittedMethod:
     name: str
-    params: dict
+    params: list
     statistics: dict
     residuals: dict
+    transformed: Transformed = None
 
 @dataclass
 class FittedModel:
     model_id: int
     best_adjust: str
+    seeds: List[dict]
     adjustment_methods: List[FittedMethod]
     fitted_model_id: int = None
+
 
 
 @dataclass
 class Version:
     fitted_models: List[FittedModel]
     comparison: Comparison
-    seeds: List[dict]
     investigation_id: int
     version_id:int =None
     iterations:int =None
     steps:int =None
     created_at:datetime = datetime.now()
 
+    def to_dict(self):
+        return asdict(self)

@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 
 from marshmallow import ValidationError
@@ -7,10 +6,11 @@ from app import db
 from database import Investigation
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
-from services.fitted_model_service import create_version, save_version
-from services.model_service import excecute_linearizations, exec_no_linear_models, get_comparision
+from services.comparison_service import get_comparison
+from services.linearization_service import execute_linearizations
+from services.no_linear_model_service import process_models, format_results
 from services.sample_service import create_sample_db, find_sample, filter_sample
-from utils import  soft_curves_response
+from services.version_service import create_version, save_version, validate_and_get_version, get_versions_by_investigation
 
 
 def create_investigation_and_sample(request_json):
@@ -46,6 +46,11 @@ def get_investigation(investigation_id):
     return investigation
 
 
+def get_investigations_from_db():
+    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).all()
+    return investigations
+
+
 def run_linearization_models(request_data):
     results = []
     investigation = get_investigation(request_data['investigation_id'])
@@ -54,43 +59,36 @@ def run_linearization_models(request_data):
 
     for model in request_data["models"]:
         try:
-            model_result = excecute_linearizations(investigation,model.get('linearizations', []),model["model"],filter)
+            model_result = execute_linearizations(investigation, model.get('linearizations', []), model["model"],
+                                                  filter)
             results.append(model_result)
         except LinearizationError as e:
             results.append({"model": model["model"], "error": str(e)})
 
     return results
 
-    
-def  run_no_linear_models(request_data):
-    results = []
-    models = []
+
+def run_no_linear_models(request_data):
     investigation = get_investigation(request_data['investigation_id'])
+    filter_params = request_data.get('filter')
 
-    filter = request_data['filter'] if 'filter' in request_data.keys() else None
+    results, models = process_models(
+        investigation,
+        request_data["models"],
+        filter_params
+    )
 
-    for model in request_data["models"]:
-        try:
-            print(f"Ejecuto el modelo {model['model']} :{datetime.now()}")
-            model_result, model = exec_no_linear_models(investigation, model, filter)
-            results.append(model_result)
-            models.append(model)
-        except LinearizationError as e:
-            results.append({"model": model["model"], "error": str(e)})
-
-
+    # Sample data and filter
     sample = find_sample(investigation.sample_id)
-    filter_sample(sample, filter)
+    filter_sample(sample, filter_params)
 
-    print(f"Ejecuto comparacion :{datetime.now()}")
-    comparision = get_comparision(results, models, sample.qe)
+    # comparison
+    print(f"Executing comparison: {datetime.now()}")
+    comparison = get_comparison(results, models, sample.qe)
 
-    soft_curves_response(results, comparision,sample.ce)
-    return results, comparision
+    formatted_results = format_results(results)
 
-def get_investigations_from_db():
-    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).all()
-    return investigations
+    return formatted_results, comparison
 
 def is_valid_investigation(investigation_id):
     return Investigation.with_schema(None).filter_by(investigation_id=investigation_id).count() > 0
@@ -98,5 +96,17 @@ def is_valid_investigation(investigation_id):
 def validate_and_save_version(request_json):
     if not is_valid_investigation(request_json["investigation_id"]):
         raise NotFoundError(f"Investigation with ID {request_json['investigation_id']} not found")
-    fitted_model = create_version(request_json)
-    save_version(fitted_model)
+    version_data = create_version(request_json)
+    version = save_version(version_data)
+    return version
+
+def get_version(investigation_id, version_id):
+    investigation = get_investigation(investigation_id)
+    version = validate_and_get_version(version_id, investigation)
+    return version
+
+
+def get_versions(request_json):
+    investigation = get_investigation(request_json['investigation_id'])
+    versions = get_versions_by_investigation(investigation.id)
+    return versions

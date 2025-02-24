@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.linear_model import Ridge
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
+
 from utils import round_list_numbers
 from entities.statistics import Statistics
 
@@ -50,20 +51,21 @@ class AdsorptionModelComparison:
 
         for result in results:
 
-            rmse = result['statistics'].get('RMSE', float('inf'))
-            aic = result['statistics'].get('AIC', float('inf'))
-            chi_squared = result['statistics'].get('chi_squared', float('inf'))
-            r_squared_adjusted = result['statistics'].get('r_squared_adjusted', 0)
+            statistics  = result["statistics"]
+            residuals = result["residuals"]
 
-            passes_normality = result['residuals'].get('passes_normality', False)
-            passes_homoscedasticity = result['residuals'].get('passes_homoscedasticity', False)
-            passes_independence = result['residuals'].get('passes_independence', False)
+            rmse = statistics.get('RMSE', float('inf'))
+            aic = statistics.get('AIC', float('inf'))
+            chi_squared = statistics.get('chi_squared', float('inf'))
+            r_squared_adjusted = statistics.get('r_squared_adjusted', 0)
 
+            passes_normality = residuals.get('passes_normality', False)
+            passes_homoscedasticity = residuals.get('passes_homoscedasticity', False)
+            passes_independence = residuals.get('passes_independence', False)
 
             if not math.isfinite(r_squared_adjusted) or not math.isfinite(rmse) or not math.isfinite(aic):
                 print(f"Advertencia: Datos inválidos en modelo {result[key]}. Se omitirán del cálculo.")
                 continue
-
 
             score = (
                     max(r_squared_adjusted, 0) * 0.3 +  # Asegurar que r_squared no sea negativo
@@ -71,16 +73,14 @@ class AdsorptionModelComparison:
                     (1 / max(abs(aic), 1e-9)) * 0.25 +  # Asegurar que AIC no sea 0
                     (1 / (1 + chi_squared)) * 0.1 +
                     (0.05 if passes_normality else 0) +  # Normalidad
-                    (0.05if passes_homoscedasticity else 0) +  # Homocedasticidad
+                    (0.05 if passes_homoscedasticity else 0) +  # Homocedasticidad
                     (0.05 if passes_independence else 0)  # Independencia
             )
-
 
             scores[result[key]] = score
 
         if not scores:
             raise ValueError("No se pudieron calcular puntajes válidos para ningun modelo.")
-
 
         return scores
 
@@ -109,17 +109,18 @@ class AdsorptionModelComparison:
         return aic, bic
 
     @classmethod
-    def get_ml_coefs_models(cls, qe, models_y_preds):
+    def get_ml_coefs_models(cls, qe, models_y_preds, y_pred_extended):
 
         X = np.column_stack(tuple(models_y_preds))
+        X_extended = np.column_stack(tuple(y_pred_extended))
         y = qe
 
-        # estandarizo para escalar las magnitudes
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
+        X_extended_scaler = scaler.transform(X_extended)
 
         # elijo best alpha
-        alpha = cls._best_alpha(X_scaled, y)
+        alpha = cls._best_alpha(X, y)
 
         # regresion
         ridge = Ridge(alpha=alpha)
@@ -128,13 +129,16 @@ class AdsorptionModelComparison:
         ridge_coefs = [ abs(coef)for coef in ridge.coef_]
 
         qe_pred_ridge = ridge.predict(X_scaled)
+
+
         ridge_aic, ridge_bic = cls._manual_aic_bic_ridge(X_scaled, y, qe_pred_ridge)
         statistics_ridge = Statistics.all_statistics(np.array(y), qe_pred_ridge, len(ridge_coefs), ridge_aic, ridge_bic)
         residuals_ridge = qe - qe_pred_ridge
 
+        y_pred_ridge = ridge.predict(X_extended_scaler)
         return {
             "name": "Ridge",
-            "y_pred": round_list_numbers(qe_pred_ridge.tolist()),
+            "y_pred": round_list_numbers(y_pred_ridge.tolist()),
             "coefs": round_list_numbers(ridge_coefs),
             "statistics": statistics_ridge,
             "residuals": {
@@ -142,4 +146,15 @@ class AdsorptionModelComparison:
                 "analysis": Statistics.check_residuals(residuals_ridge)
             }
         }
+
+    @classmethod
+    def _get_extended_qe_ridge(cls, ce, ridge_model):
+        min_ce = 0
+        max_ce = ce.max()
+        intermediate = np.linspace(min_ce, max_ce, 300)
+
+        extended_ce = np.concatenate((ce, intermediate))
+
+        extended_qe = ridge_model.predict(extended_ce.reshape(-1, 1))
+        return extended_qe
 

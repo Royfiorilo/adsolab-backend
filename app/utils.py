@@ -38,3 +38,4 @@ def soft_curves_response(results, comparison, ce):
     for result in results:
         process_adjustment_methods(result["adjustment_methods"])
     process_comparison(ce, comparison)
+
