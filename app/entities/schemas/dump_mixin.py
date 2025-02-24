@@ -6,7 +6,7 @@ import app
 
 class DumpMixin:
     @classmethod
-    def with_schema(cls, schema):
+    def with_schema(cls, schema) :
         class SchemaQuery(Query):
             def __init__(self, entities, session=None, schema=None):
                 super().__init__(entities, session=session)
@@ -18,7 +18,7 @@ class DumpMixin:
                     return iter(self._schema.load(self._schema.dump(results, many=True), many=True))
                 return iter(results)
 
-            def first(self):
+            def first(self) :
                 result = super().first()
                 if self._schema and result:
                     dump = self._schema.dump(result)
@@ -33,6 +33,10 @@ class DumpMixin:
 
             def count(self):
                 results = super().count()
+                return results
+
+            def delete(self):
+                results = super().delete()
                 return results
 
         return SchemaQuery(cls, session=app.db.session, schema=schema)

@@ -13,6 +13,7 @@ from .model import Model
 DEFAULT_ITERATIONS = 10000
 DEFAULT_STEP = None
 
+
 @dataclass
 class FitParameters:
     ce: np.ndarray
@@ -42,7 +43,7 @@ class FitResult:
         return self.transformed.get("qe_pred")
 
     def clean_transformed(self):
-        self.transformed = {"y":self.transformed.get("y"), "x":self.transformed.get("x")}
+        self.transformed = {"y": list(self.transformed.get("y")), "x": list(self.transformed.get("x"))}
 
 
 class FitStrategy:
@@ -106,25 +107,31 @@ class FitStrategy:
         return np.sqrt(np.diag(covariance_matrix))
 
 
-
-class PointsExtender:
+class AdsorptionPredictor:
     def __init__(self, formula):
         self.formula = formula
 
-    def extend(self, ce: np.ndarray, parameters: Dict[str, float], num_points: int = 300) -> (np.ndarray, np.ndarray):
-        _min, _max = 1e-10, ce.max()
-        extended_ce = np.linspace(_min, _max, num_points)
+    def predict(self, ce_values, parameters, extend=True, num_points=300):
+        if extend:
+            ce_values = self._extend_ce(ce_values, num_points)
 
-        return extended_ce, np.array([
-            self.formula.apply(**{**parameters, "ce": ce_val})
-            for ce_val in extended_ce
-        ])
+        qe_pred = np.array([])
+        for ce_val in ce_values:
+            parameters["ce"] = ce_val
+            qe = self.formula.apply(**parameters)
+            qe_pred = np.append(qe_pred, qe)
+        return round_list_numbers(ce_values), round_list_numbers(qe_pred)
+
+    def _extend_ce(self, ce_values, num_points):
+        min_ce, max_ce = 1e-10, max(ce_values)
+        return np.linspace(min_ce, max_ce, num_points)
+
 
 class NoLinearModel(Model):
     def __init__(self, _id: str, name: str, formula, description: str, parameters, linearizations=None, constants: List[Any] = []):
         super().__init__(_id, name, formula, description, parameters)
         self.fit_strategy =  None
-        self.points_extender = PointsExtender(self.formula)
+        self.points_extender = AdsorptionPredictor(self.formula)
         self.linearizations = linearizations if linearizations is not None else []
         self.method_results: List[FitResult] = []
         self.best_method = None
@@ -167,7 +174,8 @@ class NoLinearModel(Model):
     def _prepare_initial_params(self, seeds) :
         return {param["name"]: param["value"] for param in seeds}
 
-    def _run_method( self, x: np.ndarray, y: np.ndarray, initial_params, method, description, step, iterations) -> FitResult:
+    def _run_method(self, x: np.ndarray, y: np.ndarray, initial_params, method, description, step,
+                    iterations) -> FitResult:
         fit_params = FitParameters(x, y, initial_params, step, iterations, method)
         fit_result = self.fit_strategy.fit(fit_params)
         fit_result.method_description = description
@@ -175,15 +183,14 @@ class NoLinearModel(Model):
         qe_pred = fit_result.raw_result.best_fit
         residuals = y - qe_pred
 
-
         params_dict = {p["name"]: p["value"] for p in fit_result.parameters}
-        extended_ce, extended_qe = self.points_extender.extend(x, params_dict)
+        extended_ce, extended_qe = self.points_extender.predict(x, params_dict)
 
 
         transformed_data = {
-            "x": round_list_numbers(extended_ce.tolist()),
-            "y": round_list_numbers(extended_qe.tolist()),
-            "qe_pred": round_list_numbers( qe_pred.tolist())
+            "x": round_list_numbers(extended_ce),
+            "y": round_list_numbers(extended_qe),
+            "qe_pred": round_list_numbers(qe_pred.tolist())
         }
         fit_result.statistics = Statistics.all_statistics(y, qe_pred,
                                                           len(fit_result.parameters),
@@ -216,8 +223,6 @@ class NoLinearModel(Model):
         for method in self.method_results:
             if method.method_name == best_method:
                 self.best_method = method
-
-
 
     def get_best_method(self) -> FitResult:
         return self.best_method

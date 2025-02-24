@@ -7,10 +7,10 @@ from database import Investigation
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
 from services.comparison_service import get_comparison
-from services.fitted_model_service import  create_version, save_version
 from services.linearization_service import execute_linearizations
 from services.no_linear_model_service import process_models, format_results
 from services.sample_service import create_sample_db, find_sample, filter_sample
+from services.version_service import create_version, save_version, validate_and_get_version, get_versions_by_investigation
 
 
 def create_investigation_and_sample(request_json):
@@ -51,17 +51,6 @@ def get_investigations_from_db():
     return investigations
 
 
-def is_valid_investigation(investigation_id):
-    return Investigation.with_schema(None).filter_by(investigation_id=investigation_id).count() > 0
-
-
-def validate_and_save_version(request_json):
-    if not is_valid_investigation(request_json["investigation_id"]):
-        raise NotFoundError(f"Investigation with ID {request_json['investigation_id']} not found")
-    fitted_model = create_version(request_json)
-    save_version(fitted_model)
-
-
 def run_linearization_models(request_data):
     results = []
     investigation = get_investigation(request_data['investigation_id'])
@@ -100,3 +89,23 @@ def run_no_linear_models(request_data):
     formatted_results = format_results(results)
 
     return formatted_results, comparison
+
+def is_valid_investigation(investigation_id):
+    return Investigation.with_schema(None).filter_by(investigation_id=investigation_id).count() > 0
+
+def validate_and_save_version(request_json):
+    if not is_valid_investigation(request_json["investigation_id"]):
+        raise NotFoundError(f"Investigation with ID {request_json['investigation_id']} not found")
+    version = create_version(request_json)
+    save_version(version)
+
+def get_version(investigation_id, version_id):
+    investigation = get_investigation(investigation_id)
+    version = validate_and_get_version(version_id, investigation)
+    return version
+
+
+def get_versions(request_json):
+    investigation = get_investigation(request_json['investigation_id'])
+    versions = get_versions_by_investigation(investigation.id)
+    return versions
