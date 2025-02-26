@@ -110,3 +110,13 @@ def get_versions(request_json):
     investigation = get_investigation(request_json['investigation_id'])
     versions = get_versions_by_investigation(investigation.id)
     return versions
+
+
+def delete_investigation(investigation_id):
+    if not is_valid_investigation(investigation_id):
+        raise NotFoundError(f"Investigation with ID {investigation_id} not found")
+
+    investigation = db.session.query(Investigation).filter_by(investigation_id=investigation_id).first()
+    db.session.delete(investigation)
+    db.session.commit()
+
