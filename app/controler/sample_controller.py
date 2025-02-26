@@ -24,10 +24,9 @@ def get_samples():
     return jsonify(response), HTTPStatus.OK
 
 
-@blueprint.route('/sample', methods=['GET'])
-def get_sample_by_id():
-    request_json = request.get_json()
-    sample = find_sample(request_json['sample_id'])
+@blueprint.route('/sample/<int:sample_id>', methods=['GET'])
+def get_sample_by_id(sample_id):
+    sample = find_sample(sample_id)
     result = SAMPLE_SCHEMA.dump(sample)
     return jsonify(result), HTTPStatus.OK
 
