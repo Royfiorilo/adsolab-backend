@@ -90,28 +90,22 @@ def save():
     return {"status": "ok", "version_id": version.version_id }, HTTPStatus.CREATED
 
 
-@blueprint.route('/investigation/version', methods=['GET'])
-def get_investigation_version():
-    request_json = request.get_json()
-    if "investigation_id" not in request_json or "version_id" not in request_json:
-        raise BadRequestError("investigation_id is required")
+@blueprint.route('/investigation/<int:investigation_id>/version/<int:version_id>', methods=['GET'])
+def get_investigation_version(investigation_id, version_id):
     try:
-        version = get_version(request_json["investigation_id"], request_json["version_id"])
+        version = get_version(investigation_id, version_id)
     except Exception as e:
         raise e
     return jsonify(version), HTTPStatus.OK
 
-@blueprint.route('/investigation/versions', methods=['GET'])
-def get_investigation_versions():
-    request_json = request.get_json()
-    if "investigation_id" not in request_json:
-        raise BadRequestError("investigation_id is required")
+@blueprint.route('/investigation/<int:investigation_id>/versions', methods=['GET'])
+def get_investigation_versions(investigation_id):
     try:
-        versions = get_versions_by_investigation(request_json["investigation_id"])
+        versions = get_versions_by_investigation(investigation_id)
     except Exception as e:
         raise e
     response = {
-        "investigation_id": request_json['investigation_id'],
+        "investigation_id": investigation_id,
         "versions": versions
     }
     return response, HTTPStatus.OK
