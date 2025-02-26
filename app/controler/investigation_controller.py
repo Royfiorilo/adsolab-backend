@@ -10,6 +10,7 @@ from services.investigation_service import run_linearization_models, \
     get_investigations_from_db, validate_and_save_version, get_version, get_versions_by_investigation, \
     delete_investigation
 from services.sample_service import find_sample
+from services.version_service import delete_investigation_version
 
 blueprint = Blueprint('investigation', __name__)
 
@@ -111,12 +112,21 @@ def get_investigation_versions(investigation_id):
     }
     return response, HTTPStatus.OK
 
+@blueprint.route('/investigation/<int:investigation_id>/version/<int:version_id>', methods=['DELETE'])
+def delete_version(investigation_id, version_id):
+    try:
+        delete_investigation_version(investigation_id, version_id)
+    except Exception as e:
+        raise e
+    response = {
+        "investigation_id": investigation_id,
+        "version_id": version_id
+    }
+    return response, HTTPStatus.OK
 
 @blueprint.route('/investigation', methods=['DELETE'])
 def delete():
     request_json = request.get_json()
-
-
     if "investigation_id" not in request_json:
         raise BadRequestError("investigation_id is required")
     try:
