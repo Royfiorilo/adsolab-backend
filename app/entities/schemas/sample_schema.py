@@ -17,6 +17,7 @@ class SampleSchema(Schema, DumpMixin):
     measure_unit = fields.Str(missing=None)
     adsorbate_id = fields.Integer(required=True)
     adsorbent_id = fields.Integer(required=True)
+    deleted_at = fields.DateTime(missing=None)
 
     @pre_load
     def normalize_numbers(self, data, **kwargs):

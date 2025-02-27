@@ -77,6 +77,9 @@ class Sample(DumpMixin, db.Model):
     measure_unit = db.Column(db.String(10))
     adsorbate_id = db.Column(db.Integer, db.ForeignKey('adsorbate.id'), nullable=False)
     adsorbent_id = db.Column(db.Integer, db.ForeignKey('adsorbent.id'), nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+
+
 
 
 class Investigation(DumpMixin, db.Model):

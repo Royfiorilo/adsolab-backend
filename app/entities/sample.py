@@ -3,7 +3,8 @@ class SampleEntity:
             self,
             ce, qe, investigations=None, sample_id=None,
             title=None, description=None,
-            temperature=None, measure_unit=None, adsorbate_id=None, adsorbent_id=None
+            temperature=None, measure_unit=None, adsorbate_id=None, adsorbent_id=None,
+            deleted_at=None
     ):
         self.sample_id = sample_id
         self.ce = ce
@@ -14,6 +15,9 @@ class SampleEntity:
         self.measure_unit = measure_unit
         self.adsorbate_id = adsorbate_id
         self.adsorbent_id = adsorbent_id
+        self.deleted_at = deleted_at
+
+
     @property
     def id(self):
         return self.sample_id
