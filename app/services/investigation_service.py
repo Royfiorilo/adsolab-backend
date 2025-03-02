@@ -3,7 +3,8 @@ from datetime import datetime
 from marshmallow import ValidationError
 
 from app import db
-from database import Investigation
+from sqlalchemy import exists
+from database import Investigation, Version
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
 from services.comparison_service import get_comparison
@@ -46,7 +47,7 @@ def get_investigation(investigation_id):
 
 
 def get_investigations_from_db():
-    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).all()
+    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).all()
     return investigations
 
 
