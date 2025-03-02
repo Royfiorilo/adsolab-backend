@@ -88,7 +88,7 @@ def validate_and_get_version(version_id, investigation):
 
 def process_fitted_models(fitted_models, investigation):
     ce_values = investigation.sample.ce
-    constants = investigation.constants
+    constants = investigation.sample.constants
     qe_preds, qe_preds_extended = [], []
 
     for fitted_model in fitted_models:

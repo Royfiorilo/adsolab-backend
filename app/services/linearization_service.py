@@ -52,14 +52,9 @@ def compare_linearizations(linearization1, linearization2) -> dict:
     return linearization1 if abs(linearization1["statistics"]["r_squared"]) >= \
                              abs(linearization2["statistics"]["r_squared"]) else linearization2
 
-def execute_linearizations(investigation, linearizations,
-                           model_id: str, filter_params = None) -> dict:
+def execute_linearizations(sample, linearizations, model_id: str) -> dict:
     model = find_model(model_id)
-    sample = find_sample(investigation.sample_id)
-    constants = investigation.constants
-
-    if filter_params:
-        filter_sample(sample, filter_params)
+    constants = sample.constants
 
     linearization_results = []
     best_result = None

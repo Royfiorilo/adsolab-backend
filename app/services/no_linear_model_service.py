@@ -65,16 +65,6 @@ def process_model(model_config: ModelData, sample: object, methods: dict, consta
     return results, model
 
 
-def prepare_model_execution(investigation: object,filter_params):
-    methods = get_optimization_methods()
-
-    sample = find_sample(investigation.sample_id)
-    if filter_params:
-        filter_sample(sample, filter_params)
-
-    return sample, methods
-
-
 def format_model_result(model_config: ModelData,fit_results: list,model) -> ModelResult:
     return {
         "model": model_config['model'],
@@ -83,11 +73,10 @@ def format_model_result(model_config: ModelData,fit_results: list,model) -> Mode
     }
 
 
-def exec_no_linear_model(investigation,model_data: ModelData, filter_params = None):
+def exec_no_linear_model(sample, model_data: ModelData):
     try:
-
-        sample, methods = prepare_model_execution(investigation, filter_params)
-        constants = investigation.constants
+        methods = get_optimization_methods()
+        constants = sample.constants
         fit_results, model = process_model(model_data, sample, methods, constants)
 
         model_result = format_model_result(model_data, fit_results, model)
@@ -98,12 +87,12 @@ def exec_no_linear_model(investigation,model_data: ModelData, filter_params = No
         return error_result, None
 
 
-def process_models(investigation,models_data,filter_params):
+def process_models(sample,models_data):
     results = []
     successful_models = []
 
     for model_data in models_data:
-        result, model = exec_no_linear_model(investigation, model_data, filter_params)
+        result, model = exec_no_linear_model(sample, model_data)
         results.append(result)
         if model is not None:
             successful_models.append(model)

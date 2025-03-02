@@ -1,3 +1,6 @@
+R_CONSTANT = 8.3144598
+
+
 class SampleEntity:
     def __init__(
             self,
@@ -30,3 +33,10 @@ class SampleEntity:
 
     def len(self):
         return len(self.ce)
+
+    @property
+    def constants(self):
+        r = R_CONSTANT
+        if self.measure_unit == 'mmol':
+            r =  R_CONSTANT * (10 **-3)
+        return {"T": self.temperature, "R": r}
