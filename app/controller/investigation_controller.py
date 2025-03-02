@@ -16,6 +16,8 @@ blueprint = Blueprint('investigation', __name__)
 @blueprint.route('/investigation', methods=['POST'])
 def create_investigation():
     request_json = request.get_json()
+    if 'sample' not in request_json:
+        return jsonify({"error": "Missing sample data"}), HTTPStatus.BAD_REQUEST
     result = create_investigation_and_sample(request_json)
 
     return jsonify(result), HTTPStatus.CREATED
