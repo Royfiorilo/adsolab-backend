@@ -14,9 +14,11 @@ from services.version_service import create_version, save_version, validate_and_
 
 
 def create_investigation_and_sample(request_json):
-    sample = create_sample_db(request_json)
-    investigation = _create_investigation_db(sample.sample_id)
-
+    try:
+        sample = create_sample_db(request_json)
+        investigation = _create_investigation_db(sample.sample_id)
+    except Exception as me:
+        raise BadRequestError(f"Validation Error: {me}")
     return investigation
 
 

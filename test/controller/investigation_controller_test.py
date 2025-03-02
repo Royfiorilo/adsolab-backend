@@ -4,12 +4,12 @@ from http import HTTPStatus
 from unittest.mock import patch, MagicMock
 
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
-from exceptions.exceptions import NotFoundError
+from exceptions.exceptions import NotFoundError, BadRequestError
 
 
 @patch("controller.investigation_controller.create_investigation_and_sample")
-def test_create_investigation_missing_sample(mock_create_investigation, client, mock_investigation):
-    mock_create_investigation.return_value = mock_investigation
+def test_create_investigation_missing_sample(mock_create_investigation, client):
+    mock_create_investigation.side_effect = BadRequestError(f"Validation Error: ")
 
     response = client.post(
         "/investigation",
@@ -18,26 +18,24 @@ def test_create_investigation_missing_sample(mock_create_investigation, client, 
     )
 
     assert response.status_code == HTTPStatus.BAD_REQUEST
-    mock_create_investigation.assert_not_called()
+    mock_create_investigation.assert_called_once()
 
 
 @patch("controller.investigation_controller.create_investigation_and_sample")
 def test_create_investigation_with_sample(mock_create_investigation, client, mock_investigation):
-
     mock_create_investigation.return_value = mock_investigation
 
     request_data = {
-        "name": "Test Investigation",
-        "sample": {
-            "title": "Test",
-            "description": "Test",
-            "ce": [1.0, 2.0, 3.0],
-            "qe": [0.1, 0.2, 0.3],
-            "temperature": 280,
-            "measure_unit": "mmol",
-            "adsorbent_id": 1,
-            "adsorbate_id": 2
-        }
+
+        "title": "Test",
+        "description": "Test",
+        "ce": [1.0, 2.0, 3.0],
+        "qe": [0.1, 0.2, 0.3],
+        "temperature": 280,
+        "measure_unit": "mmol",
+        "adsorbent_id": 1,
+        "adsorbate_id": 2
+
     }
 
     response = client.post(
@@ -50,6 +48,7 @@ def test_create_investigation_with_sample(mock_create_investigation, client, moc
     mock_create_investigation.assert_called_once()
     data = json.loads(response.data)
     assert data == mock_investigation
+
 
 @patch("controller.investigation_controller.find_sample")
 @patch("controller.investigation_controller.create_investigation_with_sample_id")
@@ -86,7 +85,7 @@ def test_create_investigation_with_sample_missing_id(mock_find_sample, client):
 @patch("controller.investigation_controller.run_linearization_models")
 def test_execute_linear_models(mock_run_models, client, valid_linear_model_data):
     investigation_id = 1
-    models =  [
+    models = [
         {
             "model": 1,
             "linearizations": [
@@ -99,7 +98,7 @@ def test_execute_linear_models(mock_run_models, client, valid_linear_model_data)
                 "3"
             ]
         },
-                {
+        {
             "model": 2,
             "linearizations": [
                 "3"
@@ -154,8 +153,6 @@ def test_execute_no_linear_models(mock_run_models, client, valid_comparison_data
         }
     ]
 
-
-
     mock_run_models.return_value = ([valid_fitted_model_data], valid_comparison_data)
 
     response = client.post(
@@ -208,7 +205,7 @@ def test_save_version(mock_save_version, client, mock_version, valid_comparison_
     response = client.post(
         "/investigation/save",
         data=json.dumps({"investigation_id": investigation_id, "results": [valid_fitted_model_data],
-        "comparison": valid_comparison_data}),
+                         "comparison": valid_comparison_data}),
         content_type="application/json"
     )
 
@@ -242,8 +239,6 @@ def test_save_version_exception(mock_save_version, client):
     )
 
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-
-
 
 
 @patch('controller.investigation_controller.get_version')
@@ -314,12 +309,3 @@ def test_get_investigation_versions_not_found(mock_get_versions, client):
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
     mock_get_versions.assert_called_once_with(investigation_id)
 
-
-@patch('controller.investigation_controller.get_versions_by_investigation')
-def test_get_investigation_versions_server_error(mock_get_versions, client, investigation_id):
-    mock_get_versions.side_effect = Exception("Database connection failed")
-
-    response = client.get(f'/investigation/{investigation_id}/versions')
-
-    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-    mock_get_versions.assert_called_once_with(investigation_id)
