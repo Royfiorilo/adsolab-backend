@@ -4,19 +4,25 @@ from unittest.mock import MagicMock
 import pytest
 from flask import Flask, jsonify
 
-from controller.investigation_controller import blueprint
-from exceptions.exceptions import BadRequestError
+from controller.investigation_controller import blueprint as bp_investigation_controller
+from controller.sample_controller import  blueprint as bp_sample_controller
+from exceptions.exceptions import BadRequestError, NotFoundError
 
 
 @pytest.fixture
 def app():
     app = Flask("adsolab_test")
-    app.register_blueprint(blueprint)
+    app.register_blueprint(bp_investigation_controller)
+    app.register_blueprint(bp_sample_controller)
     app.testing = True
 
     @app.errorhandler(BadRequestError)
     def handle_bad_request(error):
         return jsonify({"status": "error", "message": str(error)}), HTTPStatus.BAD_REQUEST
+
+    @app.errorhandler(NotFoundError)
+    def handle_not_found(error):
+        return jsonify({"status": "error", "message": str(error)}), HTTPStatus.NOT_FOUND
 
     @app.errorhandler(Exception)
     def handle_generic_exception(error):
@@ -47,8 +53,32 @@ def mock_investigation(investigation_id):
 def mock_sample():
     sample = MagicMock()
     sample.sample_id = 1
+    sample.ce = [0, 0.0067763, 0.015759, 0.0316021, 0.041034, 0.1198222, 0.1371802, 0.289058, 0.36124, 0.420855]
+    sample.qe = [0, 0.0259714, 0.035572, 0.0428751, 0.068788, 0.0732422, 0.092398, 0.14434, 0.1301768, 0.161924]
+    sample.adsorbent_id = 1
+    sample.adsorbate_id = 3
     return sample
 
+@pytest.fixture
+def mock_samples():
+    sample_1 = MagicMock()
+    sample_1.sample_id = 1
+    sample_1.ce = [0, 0.0067763, 0.015759, 0.0316021, 0.041034, 0.1198222, 0.1371802, 0.289058, 0.36124, 0.420855]
+    sample_1.qe = [0, 0.0259714, 0.035572, 0.0428751, 0.068788, 0.0732422, 0.092398, 0.14434, 0.1301768, 0.161924]
+    sample_1.adsorbent_id = 1
+    sample_1.adsorbate_id = 3
+
+    sample_2 = MagicMock()
+    sample_2.sample_id = 2
+    sample_2.ce = [0, 0.0067763, 0.015759, 0.0316021, 0.041034, 0.1198222, 0.1371802, 0.289058, 0.36124, 0.420855]
+    sample_2.qe = [0, 0.0259714, 0.035572, 0.0428751, 0.068788, 0.0732422, 0.092398, 0.14434, 0.1301768, 0.161924]
+    sample_2.adsorbent_id = 4
+    sample_2.adsorbate_id = 2
+    return [sample_1, sample_2]
+
+@pytest.fixture
+def mock_zero_samples():
+    return []
 
 @pytest.fixture
 def mock_version():
