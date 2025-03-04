@@ -1,19 +1,20 @@
 from marshmallow import ValidationError
 
 from app import db
+from datetime import datetime
 from database import Sample
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
 from exceptions.exceptions import NotFoundError, FilterSampleError
 
 
 def find_sample(sample_id):
-    sample = Sample.with_schema(SAMPLE_SCHEMA).filter_by(sample_id=sample_id).first()
+    sample = Sample.with_schema(SAMPLE_SCHEMA).filter_by(sample_id=sample_id, deleted_at=None).first()
     if not sample:
         raise NotFoundError(f"Sample with {sample_id} doesn't exist")
     return sample
 
 def get_all_samples():
-    samples = Sample.with_schema(None).all()
+    samples = Sample.with_schema(None).filter_by(deleted_at=None).all()
     if not samples:
         raise NotFoundError("No samples found")
     return samples
@@ -34,7 +35,6 @@ def filter_sample(sample, filter):
     return sample.remove(filter)
 
 
-
 def create_sample_db(request_json):
     try:
         sample_data = SAMPLE_SCHEMA.load(request_json)
@@ -52,3 +52,10 @@ def create_sample_db(request_json):
     except ValidationError as me:
         db.session.rollback()
         raise me
+
+
+def delete_sample(sample_id):
+    find_sample(sample_id)
+    sample = db.session.query(Sample).filter_by(sample_id=sample_id).first()
+    sample.deleted_at = datetime.utcnow()
+    db.session.commit()
