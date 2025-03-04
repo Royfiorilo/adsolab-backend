@@ -107,13 +107,11 @@ def test_get_all_samples(mock_get_all_samples, client, mock_samples):
 
 
 @patch("controller.sample_controller.get_all_samples")
-def test_get_zero_samples(mock_get_all_samples, client, mock_zero_samples):
-    mock_get_all_samples.return_value = mock_zero_samples
+def test_get_zero_samples(mock_get_all_samples, client):
+    mock_get_all_samples.side_effect = NotFoundError("No samples found")
     response = client.get("/samples")
 
-    data = json.loads(response.data)
-    assert len(data["samples"]) == 0
-    assert response.status_code == HTTPStatus.OK
+    assert response.status_code == HTTPStatus.NOT_FOUND
     mock_get_all_samples.assert_called_once()
 
 @patch("controller.sample_controller.get_all_samples")

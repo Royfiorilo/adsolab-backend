@@ -6,6 +6,7 @@ from flask import Flask, jsonify
 
 from controller.investigation_controller import blueprint as bp_investigation_controller
 from controller.sample_controller import  blueprint as bp_sample_controller
+from controller.model_controller import blueprint as bp_model_controller
 from exceptions.exceptions import BadRequestError, NotFoundError
 
 
@@ -14,6 +15,7 @@ def app():
     app = Flask("adsolab_test")
     app.register_blueprint(bp_investigation_controller)
     app.register_blueprint(bp_sample_controller)
+    app.register_blueprint(bp_model_controller)
     app.testing = True
 
     @app.errorhandler(BadRequestError)
@@ -76,9 +78,42 @@ def mock_samples():
     sample_2.adsorbate_id = 2
     return [sample_1, sample_2]
 
+
 @pytest.fixture
-def mock_zero_samples():
-    return []
+def mock_models():
+    model_1 = MagicMock()
+    model_1.id = 1
+    model_1.name = "Langmuir"
+    model_1.formula = "qe = qmax * k * ce / (1 + (k * ce))"
+    model_1.constants = None
+    model_1.parameters = {"qmax": "es un parámetro que representa la máxima cantidad de adsorbato", "k": "es la constante de equilibrio"}
+
+    model_2 = MagicMock()
+    model_2.id = 2
+    model_2.name = "Tempkin"
+    model_2.formula = "qe = ((R * T)/btk) * ln(ktk * ce)"
+    model_2.constants = ["R","T"]
+    model_2.parameters = {"btk": "parámetro que está directamente relacionado con el calor de adsorción.", "ktk": "constante de equilibrio de adsorción del modelo."}
+
+    return [model_1, model_2]
+
+
+@pytest.fixture
+def mock_methods():
+    method_1 = MagicMock()
+    method_1.id = 1
+    method_1.name = "COBYLA"
+    method_1.code = "cobyla"
+    method_1.color = "#OOFFFF"
+
+    method_2 = MagicMock()
+    method_2.id = 2
+    method_2.name = "Nelder-Mead"
+    method_2.code = "nelder"
+    method_2.color = "#FFFF00"
+
+    return [method_1, method_2]
+
 
 @pytest.fixture
 def mock_version():
