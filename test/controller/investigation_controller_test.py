@@ -255,11 +255,11 @@ def test_get_investigation_version_success(mock_get_version, client, investigati
 @patch('controller.investigation_controller.get_version')
 def test_get_investigation_version_not_found(mock_get_version, client, investigation_id):
     version_id = 200
-    mock_get_version.side_effect = NotFoundError(f"Investigation with ID {investigation_id} not found")
+    mock_get_version.side_effect = NotFoundError(f"Investigation with ID {investigation_id} don't have version {version_id}")
 
     response = client.get(f'/investigation/{investigation_id}/version/{version_id}')
 
-    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert response.status_code == HTTPStatus.NOT_FOUND
     mock_get_version.assert_called_once_with(investigation_id, version_id)
 
 
@@ -273,7 +273,7 @@ def test_get_investigation_version_server_error(mock_get_version, client, invest
     mock_get_version.assert_called_once_with(investigation_id, version_id)
 
 
-@patch('controller.investigation_controller.get_versions_by_investigation')
+@patch('controller.investigation_controller.get_versions')
 def test_get_investigation_versions_success(mock_get_versions, client, investigation_id, versions_list):
     mock_get_versions.return_value = versions_list
 
@@ -286,7 +286,7 @@ def test_get_investigation_versions_success(mock_get_versions, client, investiga
     mock_get_versions.assert_called_once_with(investigation_id)
 
 
-@patch('controller.investigation_controller.get_versions_by_investigation')
+@patch('controller.investigation_controller.get_versions')
 def test_get_investigation_versions_empty(mock_get_versions, client, investigation_id):
     mock_get_versions.return_value = []
 
@@ -299,13 +299,84 @@ def test_get_investigation_versions_empty(mock_get_versions, client, investigati
     mock_get_versions.assert_called_once_with(investigation_id)
 
 
-@patch('controller.investigation_controller.get_versions_by_investigation')
+@patch('controller.investigation_controller.get_versions')
 def test_get_investigation_versions_not_found(mock_get_versions, client):
     investigation_id = 100
     mock_get_versions.side_effect = NotFoundError(f"Investigation with ID {investigation_id} not found")
 
     response = client.get(f'/investigation/{investigation_id}/versions')
 
-    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    assert response.status_code == HTTPStatus.NOT_FOUND
     mock_get_versions.assert_called_once_with(investigation_id)
 
+@patch('controller.investigation_controller.delete_investigation')
+def test_delete_investigation_server_error(mock_delete_investigation, client, investigation_id):
+    mock_delete_investigation.side_effect = Exception("Database connection failed")
+
+    response = client.delete(f'/investigation/{investigation_id}')
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    mock_delete_investigation.assert_called_once_with(investigation_id)
+
+
+@patch('controller.investigation_controller.delete_investigation')
+def test_delete_investigation_not_exist(mock_delete_investigation, client):
+    investigation_id = 200
+    mock_delete_investigation.side_effect = NotFoundError(f"Investigation with ID {investigation_id} not found")
+
+    response = client.delete(f'/investigation/{investigation_id}')
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    mock_delete_investigation.assert_called_once_with(investigation_id)
+
+@patch('controller.investigation_controller.delete_investigation')
+def test_delete_investigation(mock_delete_investigation, client, investigation_id):
+    mock_delete_investigation.return_value = {"investigation_id": investigation_id}
+
+    response = client.delete(f'/investigation/{investigation_id}')
+    assert response.status_code == HTTPStatus.OK
+    data = json.loads(response.data)
+    assert data['investigation_id'] == investigation_id
+    mock_delete_investigation.assert_called_once_with(investigation_id)
+
+@patch('controller.investigation_controller.delete_investigation_version')
+def test_delete_version(mock_delete_version, client, investigation_id, version_id):
+    mock_delete_version.return_value = {"investigation_id": investigation_id, "version_id": version_id}
+
+    response = client.delete(f'/investigation/{investigation_id}/version/{version_id}')
+
+    assert response.status_code == HTTPStatus.OK
+    data = json.loads(response.data)
+    assert data['investigation_id'] == investigation_id
+    assert data['version_id'] == version_id
+    mock_delete_version.assert_called_once_with(investigation_id, version_id)
+
+@patch('controller.investigation_controller.delete_investigation_version')
+def test_delete_version_server_error(mock_delete_version, client, investigation_id,version_id):
+    mock_delete_version.side_effect = Exception("Database connection failed")
+
+    response = client.delete(f'/investigation/{investigation_id}/version/{version_id}')
+
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    mock_delete_version.assert_called_once_with(investigation_id, version_id)
+
+
+@patch('controller.investigation_controller.delete_investigation_version')
+def test_delete_version_of_investigation_not_exist(mock_delete_version, client,version_id):
+    investigation_id = 200
+    mock_delete_version.side_effect = NotFoundError(f"Investigation with ID {investigation_id} not found")
+
+    response = client.delete(f'/investigation/{investigation_id}/version/{version_id}')
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    mock_delete_version.assert_called_once_with(investigation_id, version_id)
+
+@patch('controller.investigation_controller.delete_investigation_version')
+def test_delete_version_not_exist(mock_delete_version, client,investigation_id):
+    version_id = 200
+    mock_delete_version.side_effect = NotFoundError(f"Investigation with ID {investigation_id} don't have version {version_id}")
+
+    response = client.delete(f'/investigation/{investigation_id}/version/{version_id}')
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    mock_delete_version.assert_called_once_with(investigation_id, version_id)

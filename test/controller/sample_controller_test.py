@@ -28,7 +28,7 @@ def test_create_sample_without_mandatory_param(mock_create_sample, client):
 
 @patch("controller.sample_controller.create_sample_db")
 def test_create_sample_without_optional_parameters(mock_create_sample, client, mock_sample):
-    mock_create_sample.return_value = mock_sample
+    mock_create_sample.return_value = mock_sample.__dict__
 
     response = client.post(
         "/sample",
@@ -56,7 +56,7 @@ def test_get_sample_by_inexistent_sample_id(mock_find_sample, client):
 
 @patch("controller.sample_controller.find_sample")
 def test_get_sample_by_id(mock_find_sample, client, mock_sample):
-    mock_find_sample.return_value = mock_sample
+    mock_find_sample.return_value = mock_sample.__dict__
     sample_id = 1
     response = client.get(f"/sample/{sample_id}")
 
@@ -97,7 +97,7 @@ def test_create_sample_server_error(mock_create_sample, client):
 
 @patch("controller.sample_controller.get_all_samples")
 def test_get_all_samples(mock_get_all_samples, client, mock_samples):
-    mock_get_all_samples.return_value = mock_samples
+    mock_get_all_samples.return_value = [sample.__dict__ for sample in mock_samples]
     response = client.get("/samples")
 
     data = json.loads(response.data)
@@ -120,4 +120,38 @@ def test_get_samples_server_error(mock_get_all_samples, client):
     response = client.get(f"/samples")
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
     mock_get_all_samples.assert_called_once()
+
+
+@patch("controller.sample_controller.delete_sample")
+def test_delete_sample_server_error(mock_delete_sample, client):
+    sample_id = 1
+    mock_delete_sample.side_effect = Exception("Database connection failed")
+    response = client.delete("/sample", content_type="application/json", data=json.dumps({'sample_id': sample_id}))
+    assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+    mock_delete_sample.assert_called_once_with(sample_id)
+
+@patch("controller.sample_controller.delete_sample")
+def test_delete_sample(mock_delete_sample, client):
+    sample_id = 1
+    response = client.delete("/sample", content_type="application/json", data=json.dumps({'sample_id': sample_id}))
+    assert response.status_code == HTTPStatus.OK
+    mock_delete_sample.assert_called_once_with(sample_id)
+    data = json.loads(response.data)
+    assert data["sample_id"] == sample_id
+
+@patch("controller.sample_controller.delete_sample")
+def test_delete_sample_bad_request(mock_delete_sample, client):
+    sample_id = 1
+    response = client.delete("/sample", content_type="application/json", data=json.dumps({'sample': sample_id}))
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    mock_delete_sample.assert_not_called()
+
+@patch("controller.sample_controller.delete_sample")
+def test_delete_sample_doesnt_exist(mock_delete_sample, client):
+    sample_id = 1
+    mock_delete_sample.side_effect = NotFoundError(f"Sample with id {sample_id} doesn't exist")
+    response = client.delete("/sample", content_type="application/json", data=json.dumps({'sample_id': sample_id}))
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    mock_delete_sample.assert_called_once_with(sample_id)
+
 

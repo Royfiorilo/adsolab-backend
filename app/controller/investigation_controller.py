@@ -7,8 +7,7 @@ from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError
 from services.investigation_service import run_linearization_models, \
     create_investigation_and_sample, create_investigation_with_sample_id, run_no_linear_models, \
-    get_investigations_from_db, validate_and_save_version, get_version, get_versions_by_investigation, \
-    delete_investigation
+    get_investigations_from_db, validate_and_save_version, get_version, delete_investigation, get_versions
 from services.sample_service import find_sample
 from services.version_service import delete_investigation_version
 
@@ -105,7 +104,7 @@ def get_investigation_version(investigation_id, version_id):
 @blueprint.route('/investigation/<int:investigation_id>/versions', methods=['GET'])
 def get_investigation_versions(investigation_id):
     try:
-        versions = get_versions_by_investigation(investigation_id)
+        versions = get_versions(investigation_id)
     except Exception as e:
         raise e
     response = {
@@ -126,17 +125,14 @@ def delete_version(investigation_id, version_id):
     }
     return response, HTTPStatus.OK
 
-@blueprint.route('/investigation', methods=['DELETE'])
-def delete():
-    request_json = request.get_json()
-    if "investigation_id" not in request_json:
-        raise BadRequestError("investigation_id is required")
+@blueprint.route('/investigation/<int:investigation_id>', methods=['DELETE'])
+def delete(investigation_id):
     try:
-        delete_investigation(request_json['investigation_id'])
+        delete_investigation(investigation_id)
     except Exception as e:
         raise e
     response = {
-        "investigation_id": request_json['investigation_id']
+        "investigation_id": investigation_id
     }
     return response, HTTPStatus.OK
 

@@ -108,8 +108,8 @@ def get_version(investigation_id, version_id):
     return version
 
 
-def get_versions(request_json):
-    investigation = get_investigation(request_json['investigation_id'])
+def get_versions(investigation_id):
+    investigation = get_investigation(investigation_id)
     versions = get_versions_by_investigation(investigation.id)
     return versions
 
