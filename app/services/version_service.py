@@ -133,3 +133,12 @@ def get_versions_by_investigation(investigation_id):
         }
         versions.append(properties)
     return versions
+
+
+def delete_investigation_version(investigation_id, version_id):
+    if not is_valid_version(investigation_id, version_id):
+        raise NotFoundError(f"Investigation with ID {investigation_id} don't have version {version_id}")
+
+    version = db.session.query(Version).filter_by(investigation_id=investigation_id, version_id=version_id).first()
+    db.session.delete(version)
+    db.session.commit()
