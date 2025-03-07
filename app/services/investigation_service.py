@@ -3,7 +3,8 @@ from datetime import datetime
 from marshmallow import ValidationError
 
 from app import db
-from database import Investigation
+from sqlalchemy import exists
+from database import Investigation, Version
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
 from services.comparison_service import get_comparison
@@ -11,7 +12,6 @@ from services.linearization_service import execute_linearizations
 from services.no_linear_model_service import process_models, format_results
 from services.sample_service import create_sample_db, find_sample, filter_sample
 from services.version_service import create_version, save_version, validate_and_get_version, get_versions_by_investigation
-
 
 def create_investigation_and_sample(request_json):
     try:
@@ -49,7 +49,7 @@ def get_investigation(investigation_id):
 
 
 def get_investigations_from_db():
-    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).all()
+    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).all()
     return investigations
 
 
@@ -108,7 +108,17 @@ def get_version(investigation_id, version_id):
     return version
 
 
-def get_versions(request_json):
-    investigation = get_investigation(request_json['investigation_id'])
+def get_versions(investigation_id):
+    investigation = get_investigation(investigation_id)
     versions = get_versions_by_investigation(investigation.id)
     return versions
+
+
+def delete_investigation(investigation_id):
+    if not is_valid_investigation(investigation_id):
+        raise NotFoundError(f"Investigation with ID {investigation_id} not found")
+
+    investigation = db.session.query(Investigation).filter_by(investigation_id=investigation_id).first()
+    db.session.delete(investigation)
+    db.session.commit()
+

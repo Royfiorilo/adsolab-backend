@@ -4,7 +4,8 @@ from http import HTTPStatus
 from flask import Blueprint, request, jsonify
 
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
-from services.sample_service import get_all_samples, find_sample, create_sample_db
+from exceptions.exceptions import BadRequestError
+from services.sample_service import get_all_samples, find_sample, create_sample_db, delete_sample
 
 blueprint = Blueprint('sample', __name__)
 
@@ -36,4 +37,19 @@ def create_sample():
     result = SAMPLE_SCHEMA.dump(sample)
     return jsonify(result), HTTPStatus.CREATED
 
+
+@blueprint.route('/sample', methods=['DELETE'])
+def delete():
+
+    request_json = request.get_json()
+    if "sample_id" not in request_json:
+        raise BadRequestError("sample_id is required")
+    try:
+        delete_sample(request_json['sample_id'])
+    except Exception as e:
+        raise e
+    response = {
+        "sample_id": request_json['sample_id']
+    }
+    return response, HTTPStatus.OK
 

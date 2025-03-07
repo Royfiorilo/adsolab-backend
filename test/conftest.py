@@ -61,6 +61,7 @@ def mock_sample():
     sample.qe = [0, 0.0259714, 0.035572, 0.0428751, 0.068788, 0.0732422, 0.092398, 0.14434, 0.1301768, 0.161924]
     sample.adsorbent_id = 1
     sample.adsorbate_id = 3
+    sample.deleted_at = None
     return sample
 
 @pytest.fixture

@@ -10,7 +10,6 @@ from entities.schemas.historic_schema import VERSION_SCHEMA, FITTED_METHOD_SCHEM
 from exceptions.exceptions import NotFoundError
 from services.model_service import find_model
 
-
 def create_version(request_json):
     try:
         version = VERSION_SCHEMA.load(request_json)
@@ -69,7 +68,7 @@ def validate_and_get_version(version_id, investigation):
     try:
         investigation_id = investigation.investigation_id
         if not is_valid_version(investigation_id, version_id):
-            raise NotFoundError(f"Investigation with ID {investigation_id} not found")
+            raise NotFoundError(f"Investigation with ID {investigation_id} don't have version {version_id}")
 
         version = Version.with_schema(VERSION_SCHEMA).filter_by(
             investigation_id=investigation_id, version_id=version_id
@@ -133,3 +132,12 @@ def get_versions_by_investigation(investigation_id):
         }
         versions.append(properties)
     return versions
+
+
+def delete_investigation_version(investigation_id, version_id):
+    if not is_valid_version(investigation_id, version_id):
+        raise NotFoundError(f"Investigation with ID {investigation_id} don't have version {version_id}")
+
+    version = db.session.query(Version).filter_by(investigation_id=investigation_id, version_id=version_id).first()
+    db.session.delete(version)
+    db.session.commit()
