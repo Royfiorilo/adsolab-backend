@@ -7,6 +7,7 @@ from flask import Flask, jsonify
 from controller.investigation_controller import blueprint as bp_investigation_controller
 from controller.sample_controller import  blueprint as bp_sample_controller
 from controller.model_controller import blueprint as bp_model_controller
+from controller.materials_controller import blueprint as bp_materials_controller
 from exceptions.exceptions import BadRequestError, NotFoundError
 
 
@@ -16,6 +17,7 @@ def app():
     app.register_blueprint(bp_investigation_controller)
     app.register_blueprint(bp_sample_controller)
     app.register_blueprint(bp_model_controller)
+    app.register_blueprint(bp_materials_controller)
     app.testing = True
 
     @app.errorhandler(BadRequestError)
