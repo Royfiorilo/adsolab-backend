@@ -79,12 +79,9 @@ def validate_and_get_version(version_id, investigation):
 
         qe_preds, qe_preds_extended = process_fitted_models(version.fitted_models, investigation)
 
-        coefficients = AdsorptionModelComparison.get_ml_coefs_models(
+        comparison = AdsorptionModelComparison.get_ml_coefs_models(
             investigation.sample.qe, qe_preds, qe_preds_extended)
-        version.comparison.ml = [
-            {'model': model.model_id, 'coef': coef}
-            for model, coef in zip(version.fitted_models, coefficients["coefs"])
-        ]
+        version.comparison.ml["y_pred"] = comparison["y_pred"]
 
         version.sample = investigation.sample
 
