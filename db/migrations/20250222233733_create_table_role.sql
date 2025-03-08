@@ -11,8 +11,5 @@ create table role
     update_datetime timestamp default now() not null
 );
 
-alter table role
-    owner to postgres;
-
 -- migrate:down
 
