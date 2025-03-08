@@ -1,5 +1,4 @@
 import os
-import secrets
 
 from dotenv import load_dotenv
 
@@ -15,8 +14,8 @@ class Config:
     REACTORAPP_ADSORBENTS = os.getenv('REACTORAPP_ADSORBENTS')
 
     # --- Flask Security ---
-    SECRET_KEY = secrets.token_urlsafe()
-    SECURITY_PASSWORD_SALT = secrets.SystemRandom().getrandbits(128).to_bytes(128, 'big')
+    SECRET_KEY = os.getenv('SECRET_KEY')
+    SECURITY_PASSWORD_SALT = os.getenv('SECURITY_PASSWORD_SALT')
     WTF_CSRF_CHECK_DEFAULT = False
     SECURITY_CSRF_PROTECT_MECHANISMS = ["session"]
     SECURITY_CSRF_COOKIE_NAME = "XSRF-TOKEN"
