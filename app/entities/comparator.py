@@ -85,7 +85,7 @@ class AdsorptionModelComparison:
         return scores
 
     @classmethod
-    def _best_alpha(cls, X_scaled, y):
+    def _best_alpha(cls, X_scaled, y, seed):
         ridge = Ridge()
         param_grid = {'alpha': [0.001, 0.1, 0.05, 0.2, 1, 5, 10, 100, 1000]}
         grid_search = GridSearchCV(estimator=ridge, param_grid=param_grid, scoring='neg_mean_squared_error', cv=5)
@@ -110,6 +110,7 @@ class AdsorptionModelComparison:
 
     @classmethod
     def get_ml_coefs_models(cls, qe, models_y_preds, y_pred_extended):
+        seed = np.random.seed(42)
 
         X = np.column_stack(tuple(models_y_preds))
         X_extended = np.column_stack(tuple(y_pred_extended))
@@ -120,10 +121,10 @@ class AdsorptionModelComparison:
         X_extended_scaler = scaler.transform(X_extended)
 
         # elijo best alpha
-        alpha = cls._best_alpha(X, y)
+        alpha = cls._best_alpha(X, y, seed)
 
         # regresion
-        ridge = Ridge(alpha=alpha)
+        ridge = Ridge(alpha=alpha, random_state=seed)
         ridge.fit(X_scaled, y)
         #To abs for comparison
         ridge_coefs = [ abs(coef)for coef in ridge.coef_]
