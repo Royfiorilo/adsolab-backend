@@ -35,7 +35,10 @@ def create_app():
         if env == 'development':
             db.create_all()
         # Create User to test with
-        if not app.security.datastore.find_user(email="adsolab@fiuba.com"):
-            app.security.datastore.create_user(email="adsolab@fiuba.com", password=hash_password("password"))
+        test_user_email = os.getenv('TEST_USER_EMAIL')
+        test_user_password = os.getenv('TEST_USER_PASSWORD')
+        if not app.security.datastore.find_user(email=test_user_email):
+            app.security.datastore.create_user(email=test_user_email,
+                                               password=hash_password(test_user_password))
             db.session.commit()
     return app
