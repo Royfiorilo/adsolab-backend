@@ -198,6 +198,6 @@ class Statistics():
         q1 = residuals_df['residuals'].quantile(0.25)
         q3 = residuals_df['residuals'].quantile(0.75)
         iqr = q3 - q1
-        outliers = residuals_df[(residuals_df['residuals'] < (q1 - 1.5 * iqr)) | (residuals_df['residuals'] > (q3 + 1.5 * iqr))].tolist()
+        outliers = residuals_df[(residuals_df['residuals'] < (q1 - 1.5 * iqr)) | (residuals_df['residuals'] > (q3 + 1.5 * iqr))]['residuals'].tolist()
 
         return outliers
