@@ -111,12 +111,6 @@ class AdsorptionPredictor:
     def __init__(self, formula):
         self.formula = formula
 
-<<<<<<< Updated upstream
-=======
-    def extend(self, ce: np.ndarray, parameters: Dict[str, float], num_points: int = 300) -> (np.ndarray, np.ndarray):
-        _min, _max = 0, ce.max()
-        extended_ce = np.linspace(_min, _max, ce.size * 10)
->>>>>>> Stashed changes
 
     def predict(self, ce_values, parameters, extend=True, num_points=300):
         if extend:
