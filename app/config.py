@@ -24,6 +24,7 @@ class Config:
     REMEMBER_COOKIE_SAMESITE = "None"
     SESSION_COOKIE_SAMESITE = "None"
     SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_DOMAIN = os.getenv('DOMAIN', 'localhost')
     # --- Flask Security ---
 
     SQLALCHEMY_ENGINE_OPTIONS = {
