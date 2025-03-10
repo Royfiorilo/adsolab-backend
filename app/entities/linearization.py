@@ -137,7 +137,7 @@ class Linearization(Model):
             "intercept": result_lr.intercept,
             "vars": vars,
             "params_info": params_info,
-            "statistics": {"r_squared": round(Statistics.linear_r_squeared(result_lr.rvalue), ROUND_DIGIT)},
+            "statistics": {"r_squared": round(result_lr.rvalue, ROUND_DIGIT)},
         }
 
         return result

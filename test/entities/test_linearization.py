@@ -1,105 +1,262 @@
 import unittest
+from app.utils import round_list_numbers
 
 import numpy as np
-from scipy.stats import linregress
 
 from entities.sample import SampleEntity
 
 from entities.linearization import Linearization
 
+ROUND_DIGIT = 4
+R_CONSTANT = 8.3144598
 
 class LinearizationTest(unittest.TestCase):
     def setUp(self):
-        return
+        self.sample = SampleEntity(
+            ce=[0, 0.0067763, 0.015759, 0.0316021, 0.041034, 0.1198222, 0.1371802, 0.289058, 0.36124, 0.420855],
+            qe=[0, 0.0259714, 0.035572, 0.0428751, 0.068788, 0.0732422, 0.092398, 0.14434, 0.1301768, 0.161924],
+            sample_id= 1,
+            temperature=290,
+            measure_unit="mmol",
+            adsorbate_id=1,
+            adsorbent_id=3
+        )
+        self.sample_mock = SampleEntity(
+            ce=[0, 1, 2, 3 , 4],
+            qe=[0, 2, 4, 6, 8],
+            sample_id= 1,
+            temperature=290,
+            measure_unit="mmol",
+            adsorbate_id=1,
+            adsorbent_id=3
+        )
 
-    @staticmethod
-    def generate_freundlich_data(kf=0.5, nf=2, num_points=10, noise_level=0.05):
-        # Generar valores de ce espaciados logarítmicamente
-        ce = np.logspace(-1, 2, num_points)
-        qe = kf * ce ** (1 / nf)
+    def test_calculate_dots_hanesewolf(self):
+        linearization = Linearization(
+            linearization_id=1,
+            name='HaneseWoolf Linearization',
+            formula='ce/qe = (1/qmax) * ce + 1 / (qmax * k)',
+            description='Test Linearization',
+            parameters={"x": "ce", "y": "ce/qe", "m": "1/qmax", "b": "1/(qmax * k)"},
+            model_id=1
+        )
 
-        # Añadir un poco de ruido aleatorio
-        qe *= (1 + noise_level * (np.random.random(num_points) - 0.5))
+        ce_transformed = np.array(self.sample.ce)
+        qe_transformed = np.array(self.sample.ce) / np.array(self.sample.qe)
+        ce_transformed = np.nan_to_num(ce_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+        qe_transformed = np.nan_to_num(qe_transformed, nan=0.0, posinf=0.0, neginf=0.0)
 
-        return ce, qe
 
-    @staticmethod
-    def generate_langmuir_data(qmax=10, k=0.5, num_points=10, noise_level=0.05):
-        # Generar valores de ce espaciados logarítmicamente
-        ce = np.logspace(-1, 2, num_points)
-        qe = (qmax * k * ce) / (1 + k * ce)
+        ce_dots, qe_dots = linearization._calculate_dots(self.sample)
 
-        # Añadir un poco de ruido aleatorio
-        qe *= (1 + noise_level * (np.random.random(num_points) - 0.5))
+        assert ce_dots == round_list_numbers(ce_transformed.tolist(), ROUND_DIGIT)
+        assert qe_dots == round_list_numbers(qe_transformed.tolist(), ROUND_DIGIT)
 
-        return ce, qe
+    def test_calculate_dots_lineweaver(self):
+        linearization = Linearization(
+            linearization_id=1,
+            name='Lineweaver-Burk Linearization',
+            formula='1 / qe = (1 / k * qmax) * (1 / ce) + 1 / qmax',
+            description='Test Linearization',
+            parameters={"x": "1/ce", "y": "1/qe", "m": "1/(k*qmax)", "b": "1/qmax"},
+            model_id=1
+        )
+
+        ce_transformed = 1 / np.array(self.sample.ce)
+        qe_transformed = 1 / np.array(self.sample.qe)
+        ce_transformed = np.nan_to_num(ce_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+        qe_transformed = np.nan_to_num(qe_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+
+        ce_dots, qe_dots = linearization._calculate_dots(self.sample)
+
+        assert ce_dots == round_list_numbers(ce_transformed.tolist(), ROUND_DIGIT)
+        assert qe_dots == round_list_numbers(qe_transformed.tolist(), ROUND_DIGIT)
+
+    def test_calculate_dots_freundlich_linearization(self):
+        linearization = Linearization(
+            linearization_id=1,
+            name='Freundlich Linearization',
+            formula='log(qe) = log(kf) + 1/nf * log(ce)',
+            description='Test Linearization',
+            parameters={"x": "log(ce)", "y": "log(qe)", "m": "1 / nf", "b": "log(kf)"},
+            model_id=1
+        )
+
+        ce_transformed = np.log(np.array(self.sample.ce))
+        qe_transformed = np.log(np.array(self.sample.qe))
+        ce_transformed = np.nan_to_num(ce_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+        qe_transformed = np.nan_to_num(qe_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+
+        ce_dots, qe_dots = linearization._calculate_dots(self.sample)
+
+        assert ce_dots == round_list_numbers(ce_transformed.tolist(), ROUND_DIGIT)
+        assert qe_dots == round_list_numbers(qe_transformed.tolist(), ROUND_DIGIT)
+
+
+    def test_calculate_dots_tempkin_linearization(self):
+        linearization = Linearization(
+            linearization_id=1,
+            name='Tempkin Linearization',
+            formula='qe = ((R*T)/btk) * ln(ktk) + ((R*T)/btk) * ln(ce)',
+            description='Test Linearization',
+            parameters={"x": "ln(ce)", "y": "qe", "m":"((R*T)/btk)", "b":"((R*T)/btk) * ln(ktk)"},
+            model_id=1
+        )
+
+        ce_transformed = np.log(np.array(self.sample.ce))
+        qe_transformed = np.array(self.sample.qe)
+        ce_transformed = np.nan_to_num(ce_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+        qe_transformed = np.nan_to_num(qe_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+
+        ce_dots, qe_dots = linearization._calculate_dots(self.sample)
+
+        assert ce_dots == round_list_numbers(ce_transformed.tolist(), ROUND_DIGIT)
+        assert qe_dots == round_list_numbers(qe_transformed.tolist(), ROUND_DIGIT)
+
 
     def test_linearization_HaneseWoolf(self):
-        ce, qe = self.generate_langmuir_data()
+        linearization = Linearization(
+            linearization_id=1,
+            name='HaneseWoolf Linearization',
+            formula='ce/qe = (1/qmax) * ce + 1 / (qmax * k)',
+            description='Test Linearization',
+            parameters={"x": "ce", "y": "ce/qe", "m": "1/qmax", "b": "1/(qmax * k)"},
+            model_id=1
+        )
 
-        inv_ce = ce
-        inv_qe = ce / qe
+        ce_transformed = np.array(self.sample.ce)
+        qe_transformed = np.array(self.sample.ce) / np.array(self.sample.qe)
+        ce_transformed = np.nan_to_num(ce_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+        qe_transformed = np.nan_to_num(qe_transformed, nan=0.0, posinf=0.0, neginf=0.0)
 
-        slope, intercept, r_value, p_value, std_err = linregress(inv_ce, inv_qe)
+        m = 5.99
+        b = 0.4
 
-        q_max = 1 / slope
-        k = 1 / (intercept * q_max)
+        qmax = 1/ m
+        k = 1 / (b * qmax)
 
-        params = (
-            'HaneseWoolf Linearization', 'ce/qe = (1/qmax) * ce + 1 / (qmax * k)',
-            'Linealizacion del modelo de Langmuir',
-            {"x": "ce", "y": "ce/qe", "m": "1/qmax", "b": "1/(qmax * k)"}, 1)
+        result = linearization.run(self.sample, {})
+        # Validamos que se calculó correctamente la pendiente y la intersección
+        self.assertAlmostEqual(result["slope"], m, places=2)
+        self.assertAlmostEqual(result["intercept"], b, places=2)
+        self.assertAlmostEqual(result["params_info"][0]["k"], k, places=2 )
+        self.assertAlmostEqual(result["params_info"][0]["qmax"], qmax, places=2)
 
-        linearization = Linearization(1, params[0], params[1], params[2], params[3], params[4])
+        # Validamos que los puntos transformados sean correctos
+        self.assertEqual(result["x"], round_list_numbers(ce_transformed.tolist()),ROUND_DIGIT)
+        self.assertEqual(result["y"], round_list_numbers(qe_transformed.tolist()),ROUND_DIGIT)
 
-        sample = SampleEntity(ce, qe)
-        result = linearization.run(sample)
-        self.assertAlmostEqual(result['parameters'][1]['value'], q_max, places=10)
-        self.assertAlmostEqual(result['parameters'][0]['value'], k, places=4)
+        # Validamos el coeficiente de determinación R²
+        self.assertAlmostEqual(result["statistics"]["r_squared"], 0.958, places=1)
 
     def test_linearization_Lineweaver_Burk(self):
-        ce, qe = self.generate_langmuir_data()
+        linearization = Linearization(
+            linearization_id=1,
+            name='Lineweaver-Burk Linearization',
+            formula='1 / qe = (1 / k * qmax) * (1 / ce) + 1 / qmax',
+            description='Test Linearization',
+            parameters={"x": "1/ce", "y": "1/qe", "m": "1/(k*qmax)", "b": "1/qmax"},
+            model_id=1
+        )
 
-        inv_ce = 1 / ce
-        inv_qe = 1 / qe
+        ce_transformed = 1 / np.array(self.sample.ce)
+        qe_transformed = 1 / np.array(self.sample.qe)
+        ce_transformed = np.nan_to_num(ce_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+        qe_transformed = np.nan_to_num(qe_transformed, nan=0.0, posinf=0.0, neginf=0.0)
 
-        slope, intercept, r_value, p_value, std_err = linregress(inv_ce, inv_qe)
+        m = 0.233
+        b = 8.175
 
-        q_max = 1 / intercept
-        k = 1 / (slope * q_max)
+        qmax = 1 / b
+        k = 1 / (m * qmax)
 
-        params = ('Lineweaver-Burk Linearization', '1 / qe = (1 / k * qmax) * (1 / ce) + 1 / qmax',
-                  'Linealizacion del modelo de Langmuir', {"x": "1/ce", "y": "1/qe", "m": "1/(k*qmax)", "b": "1/qmax"},
-                  1)
+        result = linearization.run(self.sample, {})
+        # Validamos que se calculó correctamente la pendiente y la intersección
+        self.assertAlmostEqual(result["slope"], m, places=2)
+        self.assertAlmostEqual(result["intercept"], b, places=2)
+        self.assertAlmostEqual(result["params_info"][0]["qmax"], qmax, delta=0.05)
+        self.assertAlmostEqual(result["params_info"][0]["k"], k, delta=0.07)
 
-        linearization = Linearization(1, params[0], params[1], params[2], params[3], params[4])
+        # Validamos que los puntos transformados sean correctos
+        self.assertEqual(result["x"], round_list_numbers(ce_transformed.tolist()), ROUND_DIGIT)
+        self.assertEqual(result["y"], round_list_numbers(qe_transformed.tolist()), ROUND_DIGIT)
 
-        sample = SampleEntity(ce, qe)
-        result = linearization.run(sample)
-        self.assertAlmostEqual(result['parameters'][1]['value'], q_max, places=10)
-        self.assertAlmostEqual(result['parameters'][0]['value'], k, places=4)
+        # Validamos el coeficiente de determinación R²
+        self.assertAlmostEqual(result["statistics"]["r_squared"], 0.9171, places=4)
 
-    def test_linearization_freundlich(self):
-        ce, qe = self.generate_freundlich_data()
+    def test_linearization_Freundlich(self):
+        linearization = Linearization(
+            linearization_id=1,
+            name='Freundlich Linearization',
+            formula='log(qe) = log(kf) + 1/nf * log(ce)',
+            description='Test Linearization',
+            parameters={"x": "log(ce)", "y": "log(qe)", "m": "1 / nf", "b": "log(kf)"},
+            model_id=1
+        )
 
-        inv_ce = np.log10(ce)
-        inv_qe = np.log10(qe)
+        ce_transformed = np.log(np.array(self.sample.ce))
+        qe_transformed = np.log(np.array(self.sample.qe))
+        ce_transformed = np.nan_to_num(ce_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+        qe_transformed = np.nan_to_num(qe_transformed, nan=0.0, posinf=0.0, neginf=0.0)
 
-        slope, intercept, r_value, p_value, std_err = linregress(inv_ce, inv_qe)
 
-        nf = 1 / slope
-        kf = 10 ** intercept
+        m = 0.585
+        b = -1.013
 
-        params = (
-            'Freundlich linearization', 'log(qe) = log(kf) + 1/nf * log(ce)', 'Linealizacion del modelo de Freundlich',
-            {"x": "log(ce)", "y": "log(qe)", "m": "1 / nf", "b": "log(kf)"}, 2)
+        nf = 1 / m
+        kf = np.e ** b
 
-        linearization = Linearization(1, params[0], params[1], params[2], params[3], params[4])
+        result = linearization.run(self.sample, {})
+        # Validamos que se calculó correctamente la pendiente y la intersección
+        self.assertAlmostEqual(result["slope"], m, places=2)
+        self.assertAlmostEqual(result["intercept"], b, places=2)
+        self.assertAlmostEqual(result["params_info"][0]["nf"], nf, delta=0.02)
+        self.assertAlmostEqual(result["params_info"][0]["kf"], kf, delta=0.02)
 
-        sample = SampleEntity(ce, qe)
-        result = linearization.run(sample)
-        self.assertAlmostEqual(result['parameters'][1]['value'], nf, places=10)
-        self.assertAlmostEqual(result['parameters'][0]['value'], kf, places=4)
+        # Validamos que los puntos transformados sean correctos
+        self.assertEqual(result["x"], round_list_numbers(ce_transformed.tolist()), ROUND_DIGIT)
+        self.assertEqual(result["y"], round_list_numbers(qe_transformed.tolist()), ROUND_DIGIT)
+
+        # Validamos el coeficiente de determinación R²
+        self.assertAlmostEqual(result["statistics"]["r_squared"], 0.91, delta=0.01)
+
+    def test_linearization_Tempkin(self):
+        linearization = Linearization(
+            linearization_id=1,
+            name='Tempkin Linearization',
+            formula='qe = ((R * T)/btk) * ln(ktk) + ((R * T)/btk) * ln(ce)',
+            description='Test Linearization',
+            parameters={"x": "ln(ce)", "y": "qe", "m": "((R * T)/btk)", "b": "((R * T)/btk) * ln(ktk)"},
+            model_id=1,
+            constants={'R': R_CONSTANT * (10 **-3), 'T': self.sample.temperature}
+        )
+
+        ce_transformed = np.log(np.array(self.sample.ce))
+        qe_transformed = np.array(self.sample.qe)
+        ce_transformed = np.nan_to_num(ce_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+        qe_transformed = np.nan_to_num(qe_transformed, nan=0.0, posinf=0.0, neginf=0.0)
+
+        m = 0.1128
+        b = 0.1123
+
+        btk = (R_CONSTANT * (10 **-3) * self.sample.temperature) / m
+        ktk = np.exp(((b * btk) / (R_CONSTANT * (10 **-3) * self.sample.temperature)))
+
+        result = linearization.run(self.sample, {'R': R_CONSTANT * (10 **-3), 'T': self.sample.temperature} )
+        # Validamos que se calculó correctamente la pendiente y la intersección
+        self.assertAlmostEqual(result["slope"], m, delta=0.1)
+        self.assertAlmostEqual(result["intercept"], b, delta=0.01)
+        self.assertAlmostEqual(result["params_info"][0]["btk"], btk, delta=1.5)
+        self.assertAlmostEqual(result["params_info"][0]["ktk"], ktk, delta=1.5)
+
+        # Validamos que los puntos transformados sean correctos
+        self.assertEqual(result["x"], round_list_numbers(ce_transformed.tolist()), ROUND_DIGIT)
+        self.assertEqual(result["y"], round_list_numbers(qe_transformed.tolist()), ROUND_DIGIT)
+
+        # Validamos el coeficiente de determinación R²
+        self.assertAlmostEqual(result["statistics"]["r_squared"], 0.4483, delta=0.01)
+
+
 
 
 if __name__ == '__main__':
