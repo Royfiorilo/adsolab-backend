@@ -20,6 +20,8 @@ class Config:
     SECURITY_CSRF_PROTECT_MECHANISMS = ["session"]
     SECURITY_CSRF_COOKIE_NAME = "XSRF-TOKEN"
     WTF_CSRF_TIME_LIMIT = None
+    REMEMBER_COOKIE_SAMESITE = "none"
+    SESSION_COOKIE_SAMESITE = "none"
     # --- Flask Security ---
 
     SQLALCHEMY_ENGINE_OPTIONS = {
