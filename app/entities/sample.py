@@ -1,32 +1,28 @@
-class SampleEntity:
-    def __init__(
-            self,
-            ce, qe, investigations=None, sample_id=None,
-            title=None, description=None,
-            temperature=None, measure_unit=None, adsorbate_id=None, adsorbent_id=None,
-            deleted_at=None
-    ):
-        self.sample_id = sample_id
-        self.ce = ce
-        self.qe = qe
-        self.title = title
-        self.description = description
-        self.temperature = temperature
-        self.measure_unit = measure_unit
-        self.adsorbate_id = adsorbate_id
-        self.adsorbent_id = adsorbent_id
-        self.deleted_at = deleted_at
+from dataclasses import dataclass, field
+from typing import List, Optional
 
+@dataclass
+class SampleEntity:
+    ce: List[float]
+    qe: List[float]
+    sample_id: Optional[int] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    temperature: Optional[float] = None
+    measure_unit: Optional[str] = None
+    adsorbate_id: Optional[int] = None
+    adsorbent_id: Optional[int] = None
+    deleted_at: Optional[str] = None
 
     @property
     def id(self):
         return self.sample_id
 
-    def remove(self, indexes):
+    def remove(self, indexes: List[int]):
         if not indexes:
             return
         self.ce = [x for i, x in enumerate(self.ce) if i not in indexes]
         self.qe = [x for i, x in enumerate(self.qe) if i not in indexes]
 
-    def len(self):
+    def __len__(self):
         return len(self.ce)

@@ -131,7 +131,8 @@ class AdsorptionPredictor:
 
     def _extend_ce(self, ce_values, num_points):
         min_ce, max_ce = 1e-10, max(ce_values)
-        return np.linspace(min_ce, max_ce, num_points)
+        linspace_values = np.linspace(min_ce, max_ce, num_points - len(ce_values))
+        return np.union1d(linspace_values, ce_values)
 
 
 class NoLinearModel(Model):
