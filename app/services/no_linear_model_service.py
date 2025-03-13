@@ -1,9 +1,11 @@
 from typing import TypedDict
 
+from statsmodels.genmod.families.varfuncs import constant
 
 from entities.response_formatter import ResponseFormatter
 from exceptions.exceptions import LinearizationError
 from services.model_service import find_model, get_optimization_methods
+from services.sample_service import find_sample, filter_sample
 
 
 class ModelData(TypedDict):
@@ -96,18 +98,5 @@ def process_models(sample,models_data):
             successful_models.append(model)
 
     return results, successful_models
-
-
-def calculate_seeds_without_linearization(sample, model_id: str):
-    model = find_model(model_id)
-    seeds = model.calculate_seeds(sample)
-
-    result = {
-        "seeds": seeds,
-        "name": model.name,
-        "id": model_id,
-
-    }
-    return result
 
 
