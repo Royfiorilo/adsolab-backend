@@ -6,6 +6,7 @@ from flask_security import auth_required, roles_required
 
 from exceptions.exceptions import UsernameAlreadyTakenError, NotFoundError, BadRequestError
 from services import user_service
+from services.user_service import ADMIN_ROLE
 
 blueprint = Blueprint("user", __name__)
 
@@ -19,7 +20,7 @@ def is_valid_email(email):
 
 @blueprint.route('/users', methods=['POST'])
 @auth_required()
-@roles_required('ADMIN')
+@roles_required(ADMIN_ROLE)
 def create_user():
     data = request.get_json()
     email = data.get('email')
@@ -41,7 +42,7 @@ def create_user():
 
 @blueprint.route('/users', methods=['GET'])
 @auth_required()
-@roles_required('ADMIN')
+@roles_required(ADMIN_ROLE)
 def get_users():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
@@ -52,7 +53,7 @@ def get_users():
 @blueprint.route('/users/<int:user_id>', methods=['GET'])
 @auth_required()
 def get_user(user_id):
-    if not (current_user.id == user_id or any(role.name == 'ADMIN' for role in current_user.roles)):
+    if not (current_user.id == user_id or any(role.name == ADMIN_ROLE for role in current_user.roles)):
         return jsonify({'error': 'Unauthorized access'}), HTTPStatus.FORBIDDEN
 
     try:
@@ -65,7 +66,7 @@ def get_user(user_id):
 
 @blueprint.route('/users/<int:user_id>', methods=['PUT'])
 @auth_required()
-@roles_required('ADMIN')
+@roles_required(ADMIN_ROLE)
 def update_user(user_id):
     data = request.get_json()
 
@@ -86,7 +87,7 @@ def update_user(user_id):
 
 @blueprint.route('/users/<int:user_id>', methods=['DELETE'])
 @auth_required()
-@roles_required('ADMIN')
+@roles_required(ADMIN_ROLE)
 def delete_user(user_id):
     if current_user.id == user_id:
         return jsonify({'error': 'Cannot delete your own account'}), HTTPStatus.BAD_REQUEST

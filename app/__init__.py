@@ -7,6 +7,7 @@ from flask_security import SQLAlchemyUserDatastore, Security, hash_password
 
 from controler import user_controller
 from database import db, User, Role
+from services.user_service import RESEARCHER_ROLE, ADMIN_ROLE
 from .config import Config
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
@@ -37,14 +38,14 @@ def create_app():
         if env == 'development':
             db.create_all()
         # Create user roles
-        user_datastore.find_or_create_role('RESEARCHER', description='Researcher user role')
-        user_datastore.find_or_create_role('ADMIN', description='Administrator role')
+        user_datastore.find_or_create_role(RESEARCHER_ROLE, description='Researcher user role')
+        user_datastore.find_or_create_role(ADMIN_ROLE, description='Administrator role')
         # Create User to test with
         test_user_email = os.getenv('TEST_USER_EMAIL')
         test_user_password = os.getenv('TEST_USER_PASSWORD')
         if not app.security.datastore.find_user(email=test_user_email):
             user = app.security.datastore.create_user(email=test_user_email,
                                                       password=hash_password(test_user_password))
-            app.security.datastore.add_role_to_user(user, 'ADMIN')
+            app.security.datastore.add_role_to_user(user, ADMIN_ROLE)
             db.session.commit()
     return app

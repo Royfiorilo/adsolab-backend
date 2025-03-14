@@ -4,14 +4,17 @@ import app
 from database import db, User
 from exceptions.exceptions import UsernameAlreadyTakenError, NotFoundError, BadRequestError
 
+ADMIN_ROLE = 'ADMIN'
+RESEARCHER_ROLE = 'RESEARCHER'
+
 
 def create_user(email, password, role):
     if app.user_datastore.find_user(email=email):
         raise UsernameAlreadyTakenError(f'The username {email} is already taken.')
 
-    role_name = role or 'RESEARCHER'
-    if role_name not in ['RESEARCHER', 'ADMIN']:
-        role_name = 'RESEARCHER'
+    role_name = role or RESEARCHER_ROLE
+    if role_name not in [RESEARCHER_ROLE, ADMIN_ROLE]:
+        role_name = RESEARCHER_ROLE
 
     role = app.user_datastore.find_or_create_role(role_name)
     user = app.user_datastore.create_user(
@@ -76,8 +79,8 @@ def update_user(user_id, data, current_user):
     if 'password' in data and data['password']:
         user.password = hash_password(data['password'])
 
-    if 'role' in data and any(role.name == 'ADMIN' for role in current_user.roles):
-        if data['role'] not in ['RESEARCHER', 'ADMIN']:
+    if 'role' in data and any(role.name == ADMIN_ROLE for role in current_user.roles):
+        if data['role'] not in [RESEARCHER_ROLE, ADMIN_ROLE]:
             raise BadRequestError(f'The role {data["role"]} is not supported.')
 
         for role in user.roles:
@@ -85,7 +88,7 @@ def update_user(user_id, data, current_user):
         role = app.user_datastore.find_or_create_role(data['role'])
         app.user_datastore.add_role_to_user(user, role)
 
-    if 'active' in data and any(role.name == 'ADMIN' for role in current_user.roles):
+    if 'active' in data and any(role.name == ADMIN_ROLE for role in current_user.roles):
         if not isinstance(data['active'], bool):
             raise BadRequestError('Active status must be a boolean')
         user.active = data['active']
