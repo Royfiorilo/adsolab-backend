@@ -11,10 +11,6 @@ from .config import Config
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 
-# Create user roles
-user_datastore.find_or_create_role('DEFAULT', description='Default user role')
-user_datastore.find_or_create_role('ADMIN', description='Administrator role')
-
 
 def create_app():
     app = Flask("adsolab")
@@ -25,7 +21,7 @@ def create_app():
     flask_wtf.CSRFProtect(app)
     app.security = Security(app, user_datastore)
 
-    CORS(app, supports_credentials=True, methods=["GET", "POST", "OPTIONS"])
+    CORS(app, supports_credentials=True, methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
     env = os.getenv('env')
     with app.app_context():
@@ -40,6 +36,9 @@ def create_app():
         app.register_blueprint(user_controller.blueprint)
         if env == 'development':
             db.create_all()
+        # Create user roles
+        user_datastore.find_or_create_role('RESEARCHER', description='Researcher user role')
+        user_datastore.find_or_create_role('ADMIN', description='Administrator role')
         # Create User to test with
         test_user_email = os.getenv('TEST_USER_EMAIL')
         test_user_password = os.getenv('TEST_USER_PASSWORD')
