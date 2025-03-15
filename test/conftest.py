@@ -93,7 +93,7 @@ def mock_models():
 
     model_2 = MagicMock()
     model_2.id = 2
-    model_2.name = "Tempkin"
+    model_2.name = "Temkin"
     model_2.formula = "qe = ((R * T)/btk) * ln(ktk * ce)"
     model_2.constants = ["R","T"]
     model_2.parameters = {"btk": "parámetro que está directamente relacionado con el calor de adsorción.", "ktk": "constante de equilibrio de adsorción del modelo."}
