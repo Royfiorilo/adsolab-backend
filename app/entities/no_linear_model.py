@@ -12,7 +12,7 @@ from .model import Model
 
 DEFAULT_ITERATIONS = 10000
 DEFAULT_STEP = None
-
+N_PARAM_ESTIMATED_SEED = 1.5
 
 @dataclass
 class FitParameters:
@@ -240,18 +240,23 @@ class NoLinearModel(Model):
 
 
     def calculate_seeds(self, sample):
-        seeds = {}
+        seeds = []
         for parameter in self.parameters:
+            seed = {}
             if "q" in parameter:
-                seeds[parameter]= max(sample.qe)
+                seed['name'] = parameter
+                seed['value'] = max(sample.qe)
             elif "k" in parameter:
                 qhalf = max(sample.qe) / 2
                 qe = min(sample.qe, key=lambda x: abs(x - qhalf))
                 index = sample.qe.index(qe)
                 ce_half = sample.ce[index]
-                seeds[parameter] = round_number(1 / ce_half)
+                seed['name'] = parameter
+                seed['value'] = round_number(1 / ce_half)
             elif "n" in parameter:
-                seeds[parameter] = N_PARAM_ESTIMATED_SEED
+                seed['name'] = parameter
+                seed['value'] = N_PARAM_ESTIMATED_SEED
+            seeds.append(seed)
 
         return seeds
 
