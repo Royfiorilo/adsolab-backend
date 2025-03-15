@@ -98,7 +98,7 @@ def process_models(sample,models_data):
     return results, successful_models
 
 
-def calculate_seeds_without_linearization(sample, model_id: str):
+def calculate_predicted_seeds(sample, model_id: str):
     model = find_model(model_id)
     seeds = model.calculate_seeds(sample)
 

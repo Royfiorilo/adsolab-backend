@@ -238,8 +238,10 @@ class NoLinearModel(Model):
                 seeds[parameter]= max(sample.qe)
             elif "k" in parameter:
                 qhalf = max(sample.qe) / 2
-                ce_half = min(sample.ce, key=lambda x: abs(x - qhalf))
-                seeds[parameter] = 1 / ce_half
+                qe = min(sample.qe, key=lambda x: abs(x - qhalf))
+                index = sample.qe.index(qe)
+                ce_half = sample.ce[index]
+                seeds[parameter] = round_number(1 / ce_half)
             elif "n" in parameter:
                 seeds[parameter] = N_PARAM_ESTIMATED_SEED
 
