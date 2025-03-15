@@ -43,9 +43,15 @@ def get_investigation(investigation_id):
 def get_investigations_from_db(page, per_page):
     per_page = min(per_page, 100)
     offset = (page - 1) * per_page
+    total = Investigation.with_schema(INVESTIGATION_SCHEMA).count()
     investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).limit(per_page).offset(offset).all()
 
-    return investigations
+    return {"investigations": investigations,
+            'page': page,
+            'per_page': per_page,
+            'total': total,
+            'pages': (total // per_page) + (1 if total % per_page > 0 else 0)}
+
 
 def run_linearization_models(request_data):
     results = []
