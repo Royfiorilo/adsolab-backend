@@ -3,7 +3,8 @@ from datetime import datetime
 from marshmallow import ValidationError
 
 from app import db
-from database import Investigation
+from database import Investigation, Version
+from sqlalchemy import exists
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
 from services.comparison_service import get_comparison
@@ -43,8 +44,8 @@ def get_investigation(investigation_id):
 def get_investigations_from_db(page, per_page):
     per_page = min(per_page, 100)
     offset = (page - 1) * per_page
-    total = Investigation.with_schema(INVESTIGATION_SCHEMA).count()
-    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).limit(per_page).offset(offset).all()
+    total = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).count()
+    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).limit(per_page).offset(offset).all()
 
     return {"investigations": investigations,
             'page': page,
