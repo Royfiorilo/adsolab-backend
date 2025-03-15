@@ -23,6 +23,7 @@ class FittedMethod:
     params: list
     statistics: dict
     residuals: dict
+    success : bool
     transformed: Transformed = None
 
 @dataclass

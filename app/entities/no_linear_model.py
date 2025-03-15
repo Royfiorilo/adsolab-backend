@@ -12,7 +12,7 @@ from .model import Model
 
 DEFAULT_ITERATIONS = 10000
 DEFAULT_STEP = None
-
+N_PARAM_ESTIMATED_SEED = 1.5
 
 @dataclass
 class FitParameters:
