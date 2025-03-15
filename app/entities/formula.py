@@ -1,5 +1,6 @@
-from sympy import sympify, lambdify
+from sympy import sympify, lambdify, Function
 
+ln = Function("ln")
 
 class Formula:
 
@@ -7,7 +8,7 @@ class Formula:
         if '=' in formula_str:
             formula_str = formula_str.split('=')[1].strip()
         self.formula_str = formula_str
-        self.formula = sympify(formula_str)
+        self.formula = sympify(formula_str, locals={"ln": ln}, evaluate=False)
         self.variables = sorted(self.formula.free_symbols, key=lambda s: s.name)
         self.function = lambdify(self.variables, self.formula)
 
@@ -35,6 +36,6 @@ class Formula:
             else:
                 raise ValueError(f"Constant {constant} must be int or float")
 
-        self.formula = sympify(formula_str)
+        self.formula = sympify(formula_str,locals={"ln": ln}, evaluate=False)
         self.variables = sorted(self.formula.free_symbols, key=lambda s: s.name)
         self.function = lambdify(self.variables, self.formula)

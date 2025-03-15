@@ -5,10 +5,11 @@ from marshmallow import ValidationError
 from app import db
 from database import FittedModel, Version, Comparison
 from entities.comparator import AdsorptionModelComparison
-from entities.no_linear_model import  AdsorptionPredictor
+from entities.no_linear_model import AdsorptionPredictor
 from entities.schemas.historic_schema import VERSION_SCHEMA, FITTED_METHOD_SCHEMA
 from exceptions.exceptions import NotFoundError
 from services.model_service import find_model
+from services.sample_service import find_sample
 
 
 def create_version(request_json):
@@ -17,6 +18,7 @@ def create_version(request_json):
     except ValidationError as e:
         raise e
     return version
+
 
 def is_valid_version(investigation_id, version_id):
     return Version.with_schema(None).filter_by(version_id=version_id, investigation_id=investigation_id).count() > 0
@@ -44,14 +46,14 @@ def save_version(version_data):
 
             fitted_model = FittedModel(model_id=fitted.model_id,
                                        best_adjust=fitted.best_adjust,
-                                       adjustment_methods= fitted_methods,
-                                       seeds = fitted.seeds,
-                                       version_id= next_version_id, investigation_id=version_data.investigation_id)
+                                       adjustment_methods=fitted_methods,
+                                       seeds=fitted.seeds,
+                                       version_id=next_version_id, investigation_id=version_data.investigation_id)
             fitted_models.append(fitted_model)
 
         comparison = Comparison(heuristic=version_data.comparison.heuristic,
                                 ml=version_data.comparison.ml,
-                                version_id = next_version_id, investigation_id=version_data.investigation_id)
+                                version_id=next_version_id, investigation_id=version_data.investigation_id)
 
         db.session.add(version)
         db.session.add_all(fitted_models)
@@ -77,11 +79,14 @@ def validate_and_get_version(version_id, investigation):
 
         qe_preds, qe_preds_extended = process_fitted_models(version.fitted_models, investigation)
 
-        version.comparison.ml = AdsorptionModelComparison.get_ml_coefs_models(
-            investigation.sample.qe, qe_preds, qe_preds_extended
-        )
+        comparison = AdsorptionModelComparison.get_ml_coefs_models(
+            investigation.sample.qe, qe_preds, qe_preds_extended)
+        version.comparison.ml["y_pred"] = comparison["y_pred"]
+
+        version.sample = investigation.sample
 
         return version.to_dict()
+
     except ValidationError as e:
         logging.error(f"Error recovering version: {e}")
 

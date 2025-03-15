@@ -24,16 +24,17 @@ class Linearization(Model):
 
     def _calculate_dots(self, sample):
         x_dots, y_dots = [], []
+        x_function = Formula(self.parameters["x"])
+        y_function = Formula(self.parameters["y"])
+
         for ce, qe in zip(sample.ce, sample.qe):
             data = {"ce": ce, "qe": qe}
-            x_function = Formula(self.parameters["x"])
 
             # Si algún punto tiene algún valor en 0, no se hace la transformación.
             if data["ce"] != 0:
                 x_dots.append(round(x_function.apply(**data), ROUND_DIGIT))
             else:
                 x_dots.append(round(data["ce"], ROUND_DIGIT))
-            y_function = Formula(self.parameters["y"])
             if data["qe"] != 0:
                 y_dots.append(round(y_function.apply(**data), ROUND_DIGIT))
             else:
@@ -89,8 +90,8 @@ class Linearization(Model):
             else:
                 raise ValueError(f"Constant {constant} must be int or float")
 
-        eq_m = Eq(sympify(m_ecuation), result_lreg.slope)
-        eq_b = Eq(sympify(b_ecuation), result_lreg.intercept)
+        eq_m = Eq(sympify(m_ecuation, evaluate=False), result_lreg.slope)
+        eq_b = Eq(sympify(b_ecuation, evaluate=False), result_lreg.intercept)
         solutions = solve((eq_m, eq_b), tuple(unknown))
         params_info = [{var.name: float(sol) for var, sol in zip(unknown, sol_tuple)} for sol_tuple in solutions]
 
