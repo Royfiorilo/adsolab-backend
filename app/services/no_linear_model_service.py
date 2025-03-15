@@ -100,3 +100,14 @@ def process_models(sample,models_data):
     return results, successful_models
 
 
+def calculate_predicted_seeds(sample, model_id: str):
+    model = find_model(model_id)
+    seeds = model.calculate_seeds(sample)
+
+    result = {
+        "seeds": seeds,
+        "name": model.name,
+        "id": model_id,
+
+    }
+    return result

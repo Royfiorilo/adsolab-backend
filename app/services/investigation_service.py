@@ -9,8 +9,8 @@ from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
 from services.comparison_service import get_comparison
 from services.linearization_service import execute_linearizations
-from services.no_linear_model_service import process_models, format_results
-from services.sample_service import create_sample_db, find_sample, filter_sample
+from services.no_linear_model_service import process_models, format_results, calculate_predicted_seeds
+from services.sample_service import find_sample, filter_sample
 from services.version_service import create_version, save_version, validate_and_get_version, get_versions_by_investigation
 
 
@@ -58,6 +58,25 @@ def run_linearization_models(request_data):
         try:
             model_result = execute_linearizations(sample, model.get('linearizations', []), model["model"])
             results.append(model_result)
+        except LinearizationError as e:
+            results.append({"model": model["model"], "error": str(e)})
+
+    return results
+
+def predict_models_seeds(request_data):
+    results = []
+
+    filter = request_data['filter'] if 'filter' in request_data.keys() else None
+
+    # Sample data and filter
+    sample = find_sample(request_data['sample_id'])
+    filter_sample(sample, filter)
+
+    for model in request_data["models"]:
+        try:
+            if not model.get('linearizations'):
+                model_result = calculate_predicted_seeds(sample, model["model"])
+                results.append(model_result)
         except LinearizationError as e:
             results.append({"model": model["model"], "error": str(e)})
 

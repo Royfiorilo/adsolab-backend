@@ -7,8 +7,7 @@ from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError
 from services.investigation_service import run_linearization_models, run_no_linear_models, create_investigation_with_sample_id, \
     get_investigations_from_db, validate_and_save_version, get_version, get_versions_by_investigation, \
-    delete_investigation
-from services.sample_service import find_sample
+    delete_investigation, predict_models_seeds
 from services.version_service import delete_investigation_version
 
 blueprint = Blueprint('investigation', __name__)
@@ -41,6 +40,19 @@ def execute_no_linear_models():
         "sample_id": request_json['sample_id'],
         "results": results,
         "comparison": comparision
+    }
+    return jsonify(response), HTTPStatus.OK
+
+@blueprint.route('/investigation/predict-seeds', methods=['POST'])
+def predict_seeds():
+    request_json = request.get_json()
+    if "sample_id" not in request_json or "models" not in request_json:
+        raise BadRequestError("sample_id and models are required")
+
+    results = predict_models_seeds(request_json)
+    response = {
+        "sample_id": request_json['sample_id'],
+        "results": results
     }
     return jsonify(response), HTTPStatus.OK
 
