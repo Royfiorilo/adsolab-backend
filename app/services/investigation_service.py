@@ -13,12 +13,6 @@ from services.no_linear_model_service import process_models, format_results
 from services.sample_service import create_sample_db, find_sample, filter_sample
 from services.version_service import create_version, save_version, validate_and_get_version, get_versions_by_investigation
 
-def create_investigation_and_sample(request_json):
-    sample = create_sample_db(request_json)
-    investigation = _create_investigation_db(sample.sample_id)
-
-    return investigation
-
 
 def create_investigation_with_sample_id(sample_id):
     sample = find_sample(sample_id)
@@ -47,20 +41,22 @@ def get_investigation(investigation_id):
 
 
 def get_investigations_from_db():
-    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).all()
+    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).all()
     return investigations
 
 
 def run_linearization_models(request_data):
     results = []
-    investigation = get_investigation(request_data['investigation_id'])
 
     filter = request_data['filter'] if 'filter' in request_data.keys() else None
 
+    # Sample data and filter
+    sample = find_sample(request_data['sample_id'])
+    filter_sample(sample, filter)
+
     for model in request_data["models"]:
         try:
-            model_result = execute_linearizations(investigation, model.get('linearizations', []), model["model"],
-                                                  filter)
+            model_result = execute_linearizations(sample, model.get('linearizations', []), model["model"])
             results.append(model_result)
         except LinearizationError as e:
             results.append({"model": model["model"], "error": str(e)})
@@ -69,18 +65,16 @@ def run_linearization_models(request_data):
 
 
 def run_no_linear_models(request_data):
-    investigation = get_investigation(request_data['investigation_id'])
     filter_params = request_data.get('filter')
 
-    results, models = process_models(
-        investigation,
-        request_data["models"],
-        filter_params
-    )
-
     # Sample data and filter
-    sample = find_sample(investigation.sample_id)
+    sample = find_sample(request_data['sample_id'])
     filter_sample(sample, filter_params)
+
+    results, models = process_models(
+        sample,
+        request_data["models"]
+    )
 
     # comparison
     print(f"Executing comparison: {datetime.now()}")

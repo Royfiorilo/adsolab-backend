@@ -1,5 +1,8 @@
+R_CONSTANT = 8.3144598
+
 from dataclasses import dataclass, field
 from typing import List, Optional
+
 
 @dataclass
 class SampleEntity:
@@ -24,5 +27,12 @@ class SampleEntity:
         self.ce = [x for i, x in enumerate(self.ce) if i not in indexes]
         self.qe = [x for i, x in enumerate(self.qe) if i not in indexes]
 
-    def __len__(self):
+    def len(self):
         return len(self.ce)
+
+    @property
+    def constants(self):
+        r = R_CONSTANT
+        if self.measure_unit == 'mmol':
+            r =  R_CONSTANT * (10 **-3)
+        return {"T": self.temperature, "R": r}
