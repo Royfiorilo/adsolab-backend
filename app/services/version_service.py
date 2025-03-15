@@ -9,7 +9,7 @@ from entities.no_linear_model import AdsorptionPredictor
 from entities.schemas.historic_schema import VERSION_SCHEMA, FITTED_METHOD_SCHEMA
 from exceptions.exceptions import NotFoundError
 from services.model_service import find_model
-from services.sample_service import find_sample
+
 
 def create_version(request_json):
     try:

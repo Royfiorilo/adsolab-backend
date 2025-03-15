@@ -3,15 +3,15 @@ from datetime import datetime
 from marshmallow import ValidationError
 
 from app import db
-from sqlalchemy import exists
-from database import Investigation, Version
+from database import Investigation
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
 from services.comparison_service import get_comparison
 from services.linearization_service import execute_linearizations
 from services.no_linear_model_service import process_models, format_results, calculate_predicted_seeds
 from services.sample_service import find_sample, filter_sample
-from services.version_service import create_version, save_version, validate_and_get_version, get_versions_by_investigation
+from services.version_service import create_version, save_version, validate_and_get_version, \
+    get_versions_by_investigation
 
 
 def create_investigation_with_sample_id(sample_id):
@@ -40,10 +40,12 @@ def get_investigation(investigation_id):
     return investigation
 
 
-def get_investigations_from_db():
-    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).all()
-    return investigations
+def get_investigations_from_db(page, per_page):
+    per_page = min(per_page, 100)
+    offset = (page - 1) * per_page
+    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).limit(per_page).offset(offset).all()
 
+    return investigations
 
 def run_linearization_models(request_data):
     results = []

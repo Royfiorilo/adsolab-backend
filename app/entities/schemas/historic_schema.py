@@ -17,6 +17,7 @@ class FittedMethodSchema(Schema, DumpMixin):
     parameters = fields.List(fields.Dict)
     statistics = fields.Dict(allow_none=False)
     residuals = fields.Dict(allow_none=False)
+    success = fields.Bool(allow_none=False)
 
     def get_attribute(self, obj, attr, default):
         if attr == 'params' and hasattr(obj, 'parameters'):
