@@ -237,3 +237,21 @@ class NoLinearModel(Model):
 
     def get_best_method_name(self) -> str:
         return self.best_method.method_name
+
+
+    def calculate_seeds(self, sample):
+        seeds = {}
+        for parameter in self.parameters:
+            if "q" in parameter:
+                seeds[parameter]= max(sample.qe)
+            elif "k" in parameter:
+                qhalf = max(sample.qe) / 2
+                qe = min(sample.qe, key=lambda x: abs(x - qhalf))
+                index = sample.qe.index(qe)
+                ce_half = sample.ce[index]
+                seeds[parameter] = round_number(1 / ce_half)
+            elif "n" in parameter:
+                seeds[parameter] = N_PARAM_ESTIMATED_SEED
+
+        return seeds
+
