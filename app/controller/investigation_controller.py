@@ -62,7 +62,8 @@ def predict_seeds():
 def get_investigations():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
-    investigations_db = get_investigations_from_db(page, per_page)
+    user_id = request.args.get('user_id', None, type=int)
+    investigations_db = get_investigations_from_db(page, per_page, user_id)
 
     investigations = []
     for investigation in investigations_db:

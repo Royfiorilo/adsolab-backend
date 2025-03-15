@@ -42,10 +42,13 @@ def get_investigation(investigation_id):
     return investigation
 
 
-def get_investigations_from_db(page, per_page):
+def get_investigations_from_db(page, per_page, user_id):
     per_page = min(per_page, 100)
     offset = (page - 1) * per_page
-    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).limit(per_page).offset(offset).all()
+    if user_id:
+        investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter_by(user_id=user_id).limit(per_page).offset(offset).all()
+    else:
+        investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).limit(per_page).offset(offset).all()
 
     return investigations
 
