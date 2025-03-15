@@ -58,7 +58,9 @@ def predict_seeds():
 
 @blueprint.route('/investigations', methods=['GET'])
 def get_investigations():
-    investigations_db = get_investigations_from_db()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    investigations_db = get_investigations_from_db(page, per_page)
 
     investigations = []
     for investigation in investigations_db:
