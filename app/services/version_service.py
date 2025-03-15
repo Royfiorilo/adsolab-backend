@@ -11,7 +11,6 @@ from exceptions.exceptions import NotFoundError
 from services.model_service import find_model
 from services.sample_service import find_sample
 
-
 def create_version(request_json):
     try:
         version = VERSION_SCHEMA.load(request_json)
@@ -71,7 +70,7 @@ def validate_and_get_version(version_id, investigation):
     try:
         investigation_id = investigation.investigation_id
         if not is_valid_version(investigation_id, version_id):
-            raise NotFoundError(f"Investigation with ID {investigation_id} not found")
+            raise NotFoundError(f"Investigation with ID {investigation_id} don't have version {version_id}")
 
         version = Version.with_schema(VERSION_SCHEMA).filter_by(
             investigation_id=investigation_id, version_id=version_id

@@ -116,17 +116,14 @@ def delete_version(investigation_id, version_id):
     }
     return response, HTTPStatus.OK
 
-@blueprint.route('/investigation', methods=['DELETE'])
-def delete():
-    request_json = request.get_json()
-    if "investigation_id" not in request_json:
-        raise BadRequestError("investigation_id is required")
+@blueprint.route('/investigation/<int:investigation_id>', methods=['DELETE'])
+def delete(investigation_id):
     try:
-        delete_investigation(request_json['investigation_id'])
+        delete_investigation(investigation_id)
     except Exception as e:
         raise e
     response = {
-        "investigation_id": request_json['investigation_id']
+        "investigation_id": investigation_id
     }
     return response, HTTPStatus.OK
 
