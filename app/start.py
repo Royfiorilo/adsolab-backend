@@ -8,6 +8,7 @@ from exceptions.exceptions import BadRequestError, NotFoundError, FilterSampleEr
 
 app = create_app()
 
+
 @app.errorhandler(BadRequestError)
 @app.errorhandler(FilterSampleError)
 def handle_bad_request_error(e):
@@ -24,16 +25,18 @@ def handle_not_found_error(e):
         "message": e.message
     }), HTTPStatus.NOT_FOUND
 
+
 # Overrides flask-security's response if user is already logged in.
 @app.before_request
 def modify_get_login_response():
     if request.path == "/login" and request.method == "GET" and current_user.is_authenticated:
         return jsonify({
-                "user": {
-                    "id": current_user.id,
-                    "email": current_user.email
-                }
-            }), 200
+            "user": {
+                "id": current_user.id,
+                "email": current_user.email,
+                "roles": [role.name for role in current_user.roles]
+            }
+        }), 200
 
 
 if __name__ == '__main__':
