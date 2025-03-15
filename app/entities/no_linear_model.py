@@ -54,7 +54,10 @@ class FitStrategy:
         parameters = self.model.make_params(**params.initial_params)
 
         for param_name, param in parameters.items():
-            param.set(min=0, max=np.inf, brute_step=params.step)
+            max  = np.inf
+            if 'q' in param_name:
+                max = params.qe.max() * 1.10
+            param.set(min=0, max=max, brute_step=params.step)
 
         params.ce[params.ce == 0] = 1e-10
 
@@ -119,13 +122,17 @@ class AdsorptionPredictor:
         qe_pred = np.array([])
         for ce_val in ce_values:
             parameters["ce"] = ce_val
-            qe = self.formula.apply(**parameters)
+            if ce_val == 1e-10:
+                qe = 0
+            else:
+                qe = self.formula.apply(**parameters)
             qe_pred = np.append(qe_pred, qe)
         return round_list_numbers(ce_values), round_list_numbers(qe_pred)
 
     def _extend_ce(self, ce_values, num_points):
         min_ce, max_ce = 1e-10, max(ce_values)
-        return np.linspace(min_ce, max_ce, num_points)
+        linspace_values = np.linspace(min_ce, max_ce, num_points - len(ce_values))
+        return np.union1d(linspace_values, ce_values)
 
 
 class NoLinearModel(Model):

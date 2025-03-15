@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import List, TypedDict
+from entities.sample import SampleEntity
 
 @dataclass
 class Transformed:
@@ -43,6 +44,7 @@ class Version:
     iterations:int =None
     steps:int =None
     created_at:datetime = datetime.now()
+    sample: SampleEntity = None
 
     def to_dict(self):
         return asdict(self)

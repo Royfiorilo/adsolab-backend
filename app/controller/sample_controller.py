@@ -38,18 +38,15 @@ def create_sample():
     return jsonify(result), HTTPStatus.CREATED
 
 
-@blueprint.route('/sample', methods=['DELETE'])
-def delete():
+@blueprint.route('/sample/<int:sample_id>', methods=['DELETE'])
+def delete(sample_id):
 
-    request_json = request.get_json()
-    if "sample_id" not in request_json:
-        raise BadRequestError("sample_id is required")
     try:
-        delete_sample(request_json['sample_id'])
+        delete_sample(sample_id)
     except Exception as e:
         raise e
     response = {
-        "sample_id": request_json['sample_id']
+        "sample_id": sample_id
     }
     return response, HTTPStatus.OK
 

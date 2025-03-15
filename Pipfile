@@ -17,6 +17,8 @@ jupyter = "*"
 matplotlib = "*"
 statsmodels = "*"
 numdifftools = "*"
+flask-security = {extras = ["common", "fsqla"], version = "*"}
+flask-cors = "*"
 
 [dev-packages]
 pytest = "==6.2.2"
