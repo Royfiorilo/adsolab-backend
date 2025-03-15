@@ -5,7 +5,6 @@ from flask import Flask
 from flask_cors import CORS
 from flask_security import SQLAlchemyUserDatastore, Security, hash_password
 
-from controler import user_controller
 from database import db, User, Role
 from services.user_service import RESEARCHER_ROLE, ADMIN_ROLE
 from .config import Config
@@ -26,8 +25,8 @@ def create_app():
 
     env = os.getenv('env')
     with app.app_context():
-        from controler import model_controller, healt_check_controller, investigation_controller, sample_controller, \
-            materials_controller, auth_controller
+        from controller import model_controller, healt_check_controller, investigation_controller, sample_controller, \
+            materials_controller, auth_controller, user_controller
         app.register_blueprint(model_controller.blueprint)
         app.register_blueprint(healt_check_controller.blueprint)
         app.register_blueprint(investigation_controller.blueprint)
