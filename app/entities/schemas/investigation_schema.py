@@ -1,8 +1,7 @@
 from marshmallow import fields, post_load, Schema
 
 from entities.investigation import InvestigationEntity
-from .dump_mixin import DumpMixin
-from .sample_schema import SampleSchema
+from .sample_schema import SampleSchema, DumpMixin
 
 
 
@@ -10,6 +9,7 @@ class InvestigationSchema(Schema, DumpMixin):
     investigation_id = fields.Integer(missing=None)
     sample_id = fields.Integer()
     sample = fields.Nested(SampleSchema)
+    user_id = fields.Integer(missing=None)
     
     
     @post_load

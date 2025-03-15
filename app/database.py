@@ -83,6 +83,7 @@ class Sample(DumpMixin, db.Model):
     adsorbate_id = db.Column(db.Integer, db.ForeignKey('adsorbate.id'), nullable=False)
     adsorbent_id = db.Column(db.Integer, db.ForeignKey('adsorbent.id'), nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 
 
@@ -93,6 +94,7 @@ class Investigation(DumpMixin, db.Model):
     investigation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     sample_id = db.Column(db.Integer, db.ForeignKey('sample.sample_id'), nullable=False)
     sample = db.relationship('Sample', backref='investigation', uselist=False, lazy=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 
 class Linearization(DumpMixin, db.Model):

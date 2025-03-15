@@ -14,15 +14,17 @@ from services.sample_service import find_sample, filter_sample
 from services.version_service import create_version, save_version, validate_and_get_version, get_versions_by_investigation
 
 
-def create_investigation_with_sample_id(sample_id):
+def create_investigation_with_sample_id(request_json):
+    sample_id = request_json['sample_id']
+    user_id = request_json['user_id']
     sample = find_sample(sample_id)
-    investigation = _create_investigation_db(sample.sample_id)
+    investigation = _create_investigation_db(sample.sample_id, user_id)
     return investigation
 
 
-def _create_investigation_db(sample_id):
+def _create_investigation_db(sample_id, user_id):
     try:
-        investigation = Investigation(sample_id=sample_id)
+        investigation = Investigation(sample_id=sample_id, user_id=user_id)
         db.session.add(investigation)
         db.session.commit()
 

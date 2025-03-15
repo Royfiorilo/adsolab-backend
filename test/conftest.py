@@ -1,13 +1,13 @@
 from http import HTTPStatus
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from flask import Flask, jsonify
 
 from controller.investigation_controller import blueprint as bp_investigation_controller
-from controller.sample_controller import  blueprint as bp_sample_controller
-from controller.model_controller import blueprint as bp_model_controller
 from controller.materials_controller import blueprint as bp_materials_controller
+from controller.model_controller import blueprint as bp_model_controller
+from controller.sample_controller import blueprint as bp_sample_controller
 from exceptions.exceptions import BadRequestError, NotFoundError
 
 
@@ -19,6 +19,7 @@ def app():
     app.register_blueprint(bp_model_controller)
     app.register_blueprint(bp_materials_controller)
     app.testing = True
+    app.user_datastore = MagicMock()
 
     @app.errorhandler(BadRequestError)
     def handle_bad_request(error):
@@ -34,6 +35,19 @@ def app():
 
     return app
 
+
+@pytest.fixture
+def mock_db():
+    with patch('database.db') as mock_db:
+        mock_db.session = MagicMock()
+        yield mock_db
+
+
+@pytest.fixture
+def mock_hash_password():
+    with patch('flask_security.utils.hash_password') as mock_hash:
+        mock_hash.return_value = 'hashed_password'
+        yield mock_hash
 
 @pytest.fixture
 def client(app):

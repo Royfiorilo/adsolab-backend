@@ -46,7 +46,8 @@ def create_sample_db(request_json):
                         temperature=sample_data.temperature,
                         measure_unit=sample_data.measure_unit,
                         adsorbent_id=sample_data.adsorbent_id,
-                        adsorbate_id=sample_data.adsorbate_id)
+                        adsorbate_id=sample_data.adsorbate_id,
+                        user_id=sample_data.user_id )
         db.session.add(sample)
         db.session.commit()
         return sample
