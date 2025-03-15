@@ -7,12 +7,12 @@ ADD COLUMN constants varchar(5)[];
 
 UPDATE model
 SET constants = ARRAY['R', 'T']
-WHERE model.name = 'Tempkin';
+WHERE model.name = 'Temkin';
 
 
 UPDATE linearization
 SET constants = ARRAY['R', 'T']
-WHERE linearization.name = 'Tempkin Linearization';
+WHERE linearization.name = 'Temkin Linearization';
 
 -- migrate:down
 ALTER TABLE model
