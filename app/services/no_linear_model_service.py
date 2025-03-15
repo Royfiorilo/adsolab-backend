@@ -1,9 +1,11 @@
 from typing import TypedDict
 
+from statsmodels.genmod.families.varfuncs import constant
 
 from entities.response_formatter import ResponseFormatter
 from exceptions.exceptions import LinearizationError
 from services.model_service import find_model, get_optimization_methods
+from services.sample_service import find_sample, filter_sample
 
 
 class ModelData(TypedDict):
@@ -109,4 +111,3 @@ def calculate_predicted_seeds(sample, model_id: str):
 
     }
     return result
-

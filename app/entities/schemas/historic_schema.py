@@ -2,6 +2,7 @@ from marshmallow import fields, Schema, post_load, EXCLUDE, post_dump
 
 from entities.historic import Comparison, FittedModel, FittedMethod, Version
 from entities.schemas.dump_mixin import DumpMixin
+from entities.schemas.sample_schema import SampleSchema
 
 
 class FittedMethodSchema(Schema, DumpMixin):
@@ -69,6 +70,7 @@ class VersionSchema(Schema, DumpMixin):
     created_at = fields.DateTime()
     fitted_models = fields.List(fields.Nested(FittedModelSchema), allow_none=False, data_key='results')
     comparison = fields.Nested(ComparisonSchema, allow_none=False)
+    sample = fields.Nested(SampleSchema, allow_none=True)
 
     @post_load
     def make_version(self, data, **kwargs) -> Version:
@@ -81,4 +83,4 @@ COMPARISON_SCHEMA = ComparisonSchema()
 FITTED_MODEL_SCHEMA = FittedModelSchema()
 VERSION_SCHEMA = VersionSchema()
 
-__all__ = ["FittedMethodSchema","FittedModelSchema", "ComparisonSchema"]
+__all__ = ["FittedMethodSchema","FittedModelSchema", "ComparisonSchema", "SampleSchema"]

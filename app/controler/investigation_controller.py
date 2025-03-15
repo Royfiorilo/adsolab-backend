@@ -12,7 +12,6 @@ from services.version_service import delete_investigation_version
 
 blueprint = Blueprint('investigation', __name__)
 
-
 @blueprint.route('/investigation/run-linearization', methods=['POST'])
 def execute_linear_models():
     request_json = request.get_json()
