@@ -13,12 +13,6 @@ from services.no_linear_model_service import process_models, format_results
 from services.sample_service import create_sample_db, find_sample, filter_sample
 from services.version_service import create_version, save_version, validate_and_get_version, get_versions_by_investigation
 
-#def create_investigation_and_sample(request_json):
-#    sample = create_sample_db(request_json)
-#    investigation = _create_investigation_db(sample.sample_id)
-
-#    return investigation
-
 
 def create_investigation_with_sample_id(sample_id):
     sample = find_sample(sample_id)

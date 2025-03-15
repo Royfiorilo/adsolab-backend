@@ -13,28 +13,6 @@ from services.version_service import delete_investigation_version
 
 blueprint = Blueprint('investigation', __name__)
 
-
-#@blueprint.route('/investigation', methods=['POST'])
-#def create_investigation():
-#    request_json = request.get_json()
-#    result = create_investigation_and_sample(request_json)
-
-#   return jsonify(result), HTTPStatus.CREATED
-
-
-#@blueprint.route('/investigation/sample', methods=['POST'])
-#def create_investigation_with_sample():
-#   request_json = request.get_json()
-
-#    if 'sample_id' not in request_json:
-#        raise BadRequestError("sample_id is required")
-
-#    sample_id = find_sample(request_json['sample_id']).sample_id
-#    investigation = create_investigation_with_sample_id(sample_id)
-
-#    return jsonify(investigation), HTTPStatus.CREATED
-
-
 @blueprint.route('/investigation/run-linearization', methods=['POST'])
 def execute_linear_models():
     request_json = request.get_json()
