@@ -19,6 +19,7 @@ class Config:
     WTF_CSRF_CHECK_DEFAULT = False
     SECURITY_CSRF_PROTECT_MECHANISMS = ["session"]
     SECURITY_CSRF_COOKIE_NAME = "XSRF-TOKEN"
+    SECURITY_CSRF_COOKIE = {"samesite": "None", "httponly": False, "secure": True}
     WTF_CSRF_TIME_LIMIT = None
     # --- Flask Security ---
 
