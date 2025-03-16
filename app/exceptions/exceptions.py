@@ -9,6 +9,11 @@ class NotFoundError(Exception):
         self.message = message
         super().__init__(self.message)
 
+class ForbiddenError(Exception):
+    def __init__(self, message="Forbidden"):
+        self.message = message
+        super().__init__(self.message)
+
 
 class LinearizationError(Exception):
     def __init__(self, message="Error running linearization"):

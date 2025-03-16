@@ -2,7 +2,7 @@ from datetime import datetime
 from http import HTTPStatus
 
 from flask import Blueprint, request, jsonify
-from flask_security import auth_required
+from flask_security import auth_required, roles_required
 from flask_login import current_user
 
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
@@ -81,8 +81,8 @@ def save():
     if "sample_id" not in request_json:
         raise BadRequestError("sample_id is required")
     try:
+        request_json['user_id'] = current_user.id
         if 'investigation_id' not in request_json:
-            request_json['user_id'] = current_user.id
             investigation = create_investigation_with_sample_id(request_json)
             request_json['investigation_id'] = investigation['investigation_id']
         version = validate_and_save_version(request_json)
