@@ -2,9 +2,10 @@ from marshmallow import ValidationError
 
 from app import db
 from datetime import datetime
-from database import Sample
+from database import Sample, User
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
 from exceptions.exceptions import NotFoundError, FilterSampleError, BadRequestError
+from services.materials_service import find_adsorbent, find_adsorbate
 
 
 def find_sample(sample_id):
@@ -40,8 +41,14 @@ def create_sample_db(request_json):
     try:
         sample_data = SAMPLE_SCHEMA.load(request_json)
         x,y = order_sample(ce=sample_data.ce, qe= sample_data.qe)
+        user = User.query.filter_by(id=sample_data.user_id).first()
+        name  = user.email.split("@")[0]
+        adsobate_name = find_adsorbate(sample_data.adsorbate_id).ion_name
+        adsorbent_name = find_adsorbent(sample_data.adsorbent_id).name
+        title = sample_data.create_sample_name(name, adsobate_name, adsorbent_name)
+
         sample = Sample(ce=x, qe =y,
-                        title=sample_data.title,
+                        title=title,
                         description=sample_data.description,
                         temperature=sample_data.temperature,
                         measure_unit=sample_data.measure_unit,
