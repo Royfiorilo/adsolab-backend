@@ -93,10 +93,10 @@ class LinearizationTest(unittest.TestCase):
         assert qe_dots == round_list_numbers(qe_transformed.tolist(), ROUND_DIGIT)
 
 
-    def test_calculate_dots_tempkin_linearization(self):
+    def test_calculate_dots_temkin_linearization(self):
         linearization = Linearization(
             linearization_id=1,
-            name='Tempkin Linearization',
+            name='Temkin Linearization',
             formula='qe = ((R*T)/btk) * ln(ktk) + ((R*T)/btk) * ln(ce)',
             description='Test Linearization',
             parameters={"x": "ln(ce)", "y": "qe", "m":"((R*T)/btk)", "b":"((R*T)/btk) * ln(ktk)"},
@@ -220,10 +220,10 @@ class LinearizationTest(unittest.TestCase):
         # Validamos el coeficiente de determinación R²
         self.assertAlmostEqual(result["statistics"]["r_squared"], 0.91, delta=0.01)
 
-    def test_linearization_Tempkin(self):
+    def test_linearization_Temkin(self):
         linearization = Linearization(
             linearization_id=1,
-            name='Tempkin Linearization',
+            name='Temkin Linearization',
             formula='qe = ((R * T)/btk) * ln(ktk) + ((R * T)/btk) * ln(ce)',
             description='Test Linearization',
             parameters={"x": "ln(ce)", "y": "qe", "m": "((R * T)/btk)", "b": "((R * T)/btk) * ln(ktk)"},
