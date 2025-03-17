@@ -3,7 +3,8 @@ from datetime import datetime
 from marshmallow import ValidationError
 
 from app import db
-from database import Investigation
+from database import Investigation, Version
+from sqlalchemy import exists
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError, ForbiddenError
 from services.comparison_service import get_comparison
@@ -46,11 +47,21 @@ def get_investigations_from_db(page, per_page, user_id):
     per_page = min(per_page, 100)
     offset = (page - 1) * per_page
     if user_id:
-        investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter_by(user_id=user_id).limit(per_page).offset(offset).all()
+        total = Investigation.with_schema(INVESTIGATION_SCHEMA).filter_by(user_id=user_id).filter(
+            exists().where(Version.investigation_id == Investigation.investigation_id)).count()
+        investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter_by(user_id=user_id).filter(
+            exists().where(Version.investigation_id == Investigation.investigation_id)).limit(per_page).offset(
+            offset).all()
     else:
-        investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).limit(per_page).offset(offset).all()
+        total = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).count()
+        investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).limit(per_page).offset(offset).all()
 
-    return investigations
+    return {"investigations": investigations,
+            'page': page,
+            'per_page': per_page,
+            'total': total,
+            'pages': (total // per_page) + (1 if total % per_page > 0 else 0)}
+
 
 def run_linearization_models(request_data):
     results = []

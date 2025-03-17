@@ -238,7 +238,6 @@ class NoLinearModel(Model):
     def get_best_method_name(self) -> str:
         return self.best_method.method_name
 
-
     def calculate_seeds(self, sample):
         seeds = []
         for parameter in self.parameters:

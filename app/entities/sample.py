@@ -1,3 +1,5 @@
+from datetime import datetime
+
 R_CONSTANT = 8.3144598
 
 from dataclasses import dataclass, field
@@ -37,3 +39,9 @@ class SampleEntity:
         if self.measure_unit == 'mmol':
             r =  R_CONSTANT * (10 **-3)
         return {"T": self.temperature, "R": r}
+
+    def create_sample_name(self, name, adsobate_name, adsobent_name):
+        temperature = str(int(self.temperature))
+        date = datetime.now().strftime("%d-%m-%Y")
+
+        return f"{name}-{temperature}-{adsobate_name}-{adsobent_name}-{date}"
