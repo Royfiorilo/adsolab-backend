@@ -7,7 +7,7 @@ ADD CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES "user"(id);
 
 
 ALTER TABLE investigation
-ADD COLUMN user_id INTEGER NOT NULL;
+ADD COLUMN user_id INTEGER;
 
 ALTER TABLE investigation
 ADD CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES "user"(id);
