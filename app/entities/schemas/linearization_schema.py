@@ -11,6 +11,7 @@ class LinearizationSchema(Schema, DumpMixin):
     parameters = fields.Dict(allow_none=False)
     model_id = fields.Integer()
     constants = fields.List(fields.Str, allow_none=True)
+    latex_formula = fields.Str(required=True)
 
     @validates_schema
     def determine_constants(self, data, **kwargs):

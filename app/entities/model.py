@@ -11,6 +11,7 @@ class Model(ABC):
             formula,
             description,
             parameters,
+            latex_formula,
             constants = None,
             linearizations=None
     ):
@@ -25,6 +26,7 @@ class Model(ABC):
         self.parameters = parameters
         self.linearizations = linearizations
         self.constants = constants
+        self.latex_formula = latex_formula
 
 
     @property
