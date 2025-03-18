@@ -9,7 +9,7 @@ class InvestigationSchema(Schema, DumpMixin):
     investigation_id = fields.Integer(missing=None)
     sample_id = fields.Integer()
     sample = fields.Nested(SampleSchema)
-    user_id = fields.Integer(missing=None)
+    user_id = fields.Integer()
     
     
     @post_load
