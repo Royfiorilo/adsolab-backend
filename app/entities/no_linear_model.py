@@ -13,6 +13,9 @@ from .model import Model
 DEFAULT_ITERATIONS = 10000
 DEFAULT_STEP = None
 N_PARAM_ESTIMATED_SEED = 1.5
+LIMIT_QMAX = 1.1
+MIN_PARAM_VALUE = 0.001
+
 
 @dataclass
 class FitParameters:
@@ -21,7 +24,7 @@ class FitParameters:
     initial_params: dict
     step: Optional[float]
     iterations: int
-    method: str = None
+    method: str
 
 
 @dataclass
@@ -60,14 +63,14 @@ class FitStrategy:
 
         is_temkin = False
         for param_name, param in parameters.items():
-            min_val, max_val = 0, np.inf
+            min_val, max_val = MIN_PARAM_VALUE, np.inf
             if 'q' in param_name:
                 max_val = params.qe.max() * 1.1
             elif "ktk" in param_name:
                 min_val, max_val = 1, 10000
                 is_temkin = True
             elif "btk" in param_name:
-                min_val, max_val = 0.001, 1000
+                min_val, max_val = 0.001, LIMIT_QMAX
             param.set(min=min_val, max=max_val, brute_step=params.step)
 
         x = params.ce.copy()
@@ -77,7 +80,7 @@ class FitStrategy:
             x = x[1:]
             y = y[1:]
         else:
-            x[x == 0] = 1e-10
+            x[x == 0] = 1e-6
 
         result = self.model.fit(
             y,
@@ -85,7 +88,7 @@ class FitStrategy:
             ce=x,
             method=params.method,
             nan_policy="omit",
-            max_nfev= DEFAULT_ITERATIONS,
+            max_nfev=params.iterations
         )
 
         if is_temkin and 0 in params.ce :
@@ -163,8 +166,8 @@ class AdsorptionPredictor:
 
 
 class NoLinearModel(Model):
-    def __init__(self, _id: str, name: str, formula, description: str, parameters, linearizations=None, constants: List[Any] = []):
-        super().__init__(_id, name, formula, description, parameters)
+    def __init__(self, _id: str, name: str, formula, description: str, parameters, latex_formula, linearizations=None, constants: List[Any] = []):
+        super().__init__(_id, name, formula, description, parameters, latex_formula)
         self.fit_strategy =  None
         self.adsorption_predictor = None
         self.linearizations = linearizations if linearizations is not None else []

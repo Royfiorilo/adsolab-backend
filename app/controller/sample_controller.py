@@ -42,10 +42,11 @@ def create_sample():
 
 
 @blueprint.route('/sample/<int:sample_id>', methods=['DELETE'])
+@auth_required()
 def delete(sample_id):
 
     try:
-        delete_sample(sample_id)
+        delete_sample(sample_id,current_user.id)
     except Exception as e:
         raise e
     response = {

@@ -16,10 +16,11 @@ class Linearization(Model):
             formula,
             description,
             parameters,
+            latex_formula,
             constants = [],
             model_id=None
     ):
-        super().__init__(linearization_id, name, formula, description, parameters, constants)
+        super().__init__(linearization_id, name, formula, description, parameters, latex_formula,constants)
         self.model_id = model_id
 
     def _calculate_dots(self, sample):

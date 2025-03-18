@@ -127,7 +127,7 @@ def is_valid_investigation(investigation_id, user_id):
         raise NotFoundError(f"Investigation with ID {investigation_id} not found")
 
     if investigation.user_id != user_id:
-        raise ForbiddenError(f"User {user_id} is not authorized to modify this investigation")
+        raise ForbiddenError(f"User is not authorized to modify this investigation")
 
 
 
@@ -152,8 +152,8 @@ def get_versions(investigation_id):
     return versions
 
 
-def delete_investigation(investigation_id):
-    if not is_valid_investigation(investigation_id):
+def delete_investigation(investigation_id, user_id):
+    if not is_valid_investigation(investigation_id, user_id):
         raise NotFoundError(f"Investigation with ID {investigation_id} not found")
 
     investigation = db.session.query(Investigation).filter_by(investigation_id=investigation_id).first()

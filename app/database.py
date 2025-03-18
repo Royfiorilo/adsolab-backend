@@ -18,7 +18,7 @@ class Model(DumpMixin, db.Model):
     parameters = db.Column(JSON, nullable=False)
     constants = db.Column(ARRAY(db.String(5)), nullable=True)
     linearizations = db.relationship('Linearization', backref='model', lazy=True)
-
+    latex_formula = db.Column(db.String(255), nullable=False)
 
 class FittedModel(DumpMixin, db.Model):
     __tablename__ = 'fitted_model'
@@ -83,7 +83,7 @@ class Sample(DumpMixin, db.Model):
     adsorbate_id = db.Column(db.Integer, db.ForeignKey('adsorbate.id'), nullable=False)
     adsorbent_id = db.Column(db.Integer, db.ForeignKey('adsorbent.id'), nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 
 
@@ -94,7 +94,7 @@ class Investigation(DumpMixin, db.Model):
     investigation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     sample_id = db.Column(db.Integer, db.ForeignKey('sample.sample_id'), nullable=False)
     sample = db.relationship('Sample', backref='investigation', uselist=False, lazy=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 
 class Linearization(DumpMixin, db.Model):
@@ -107,6 +107,7 @@ class Linearization(DumpMixin, db.Model):
     parameters = db.Column(JSON, nullable=False)
     constants = db.Column(ARRAY(db.String(5)), nullable=True)
     model_id = db.Column(db.Integer, db.ForeignKey('model._id'), nullable=False)
+    latex_formula = db.Column(db.String(255), nullable=False)
 
 
 class Method(DumpMixin, db.Model):
