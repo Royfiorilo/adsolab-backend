@@ -6,7 +6,7 @@ import numpy as np
 from numdifftools import Hessian
 
 from entities.statistics import Statistics
-from utils import round_number, round_list_numbers
+from utils import round_number, round_list_numbers, filter_negative
 from .comparator import AdsorptionModelComparison
 from .model import Model
 
@@ -42,16 +42,13 @@ class FitResult:
     def get_qe_pred(self):
         return self.transformed.get("qe_pred")
 
-    def clean_transformed(self):
-        y = np.array(self.transformed.get("y"))
-        x = np.array(self.transformed.get("x"))
+    def clean_transformed(self, success: bool):
+        if success:
 
-        indices_validos = y >= 0
-
-        y = y[indices_validos]
-        x = x[indices_validos]
-
-        self.transformed = {"y": y.tolist(), "x": x.tolist()}
+            self.transformed = filter_negative(self.transformed.get("x").copy(), self.transformed.get("y").copy())
+        else:
+            if self.transformed:
+                self.transformed = {"y": list(self.transformed.get("y")), "x": list(self.transformed.get("x"))}
 
 
 class FitStrategy:
@@ -65,7 +62,7 @@ class FitStrategy:
         for param_name, param in parameters.items():
             min_val, max_val = 0, np.inf
             if 'q' in param_name:
-                max_val = params.qe.max() * 1.10
+                max_val = params.qe.max() * 1.1
             elif "ktk" in param_name:
                 min_val, max_val = 1, 10000
                 is_temkin = True
@@ -134,13 +131,13 @@ class FitStrategy:
 
 
 class AdsorptionPredictor:
-    def __init__(self, formula):
+    def __init__(self, formula=None):
         self.formula = formula
 
 
     def predict(self, ce_values, parameters, extend=True, num_points=300):
         if extend:
-            ce_values = self._extend_ce(ce_values, num_points)
+            ce_values = self.extend_ce(ce_values, num_points)
 
         qe_pred = np.array([])
         try:
@@ -159,7 +156,7 @@ class AdsorptionPredictor:
 
         return ce_values, round_list_numbers(qe_pred)
 
-    def _extend_ce(self, ce_values, num_points):
+    def extend_ce(self, ce_values, num_points):
         min_ce, max_ce = 0, max(ce_values)
         linspace_values = np.linspace(min_ce, max_ce, num_points - len(ce_values))
         return np.union1d(linspace_values, ce_values)

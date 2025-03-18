@@ -1,6 +1,10 @@
 from typing import List, Dict, TypedDict
+
+import numpy as np
+
 from entities.comparator import AdsorptionModelComparison
-from utils import round_number
+from entities.no_linear_model import AdsorptionPredictor
+from utils import round_number, filter_negative
 
 
 class ModelMethod(TypedDict):
@@ -29,6 +33,8 @@ def extract_method_data(models: list, results: list):
         qe_predictions.append(best_method.get_qe_pred())
         y_predictions.append(best_method.get_y())
 
+
+
     return compare_data, qe_predictions, y_predictions
 
 
@@ -56,7 +62,9 @@ def calculate_ridge_scores(models, y, qe_preds, y_preds):
 
 
 def format_comparison_results(heuristic_scores, best_heuristic: str, ridge_scores: dict, best_ridge: str,
-                              model_results_ridge) -> ModelComparison:
+                              model_results_ridge, ce) -> ModelComparison:
+    to_filter = ridge_scores["y_pred"].copy()
+    to_filter[0] = 0
     return {
         "heuristic": {
             "best_model": best_heuristic,
@@ -67,7 +75,7 @@ def format_comparison_results(heuristic_scores, best_heuristic: str, ridge_score
         },
         "ridge": {
             "best_model": best_ridge,
-            "y_pred": ridge_scores['y_pred'],
+            "transformed": filter_negative(ce, to_filter),
             "statistics": ridge_scores['statistics'],
             "residuals": ridge_scores['residuals'],
             "results": model_results_ridge
@@ -75,11 +83,14 @@ def format_comparison_results(heuristic_scores, best_heuristic: str, ridge_score
     }
 
 
-def get_comparison(results: list, models: list, y) -> ModelComparison:
-    compare_data, qe_preds, y_preds = extract_method_data(models, results)
+def get_comparison(results: list, models: list,  sample) -> ModelComparison:
+    y = sample.qe.copy()
+    predictor = AdsorptionPredictor()
+    x = predictor.extend_ce(sample.ce, 300)
+    compare_data, qe_preds, y_preds  = extract_method_data(models, results)
 
     heuristic_scores, best_heuristic = calculate_heuristic_scores(compare_data)
 
     ridge_scores, best_ridge, model_results_ridge = calculate_ridge_scores(models, y, qe_preds, y_preds)
 
-    return format_comparison_results(heuristic_scores, best_heuristic,ridge_scores, best_ridge, model_results_ridge)
+    return format_comparison_results(heuristic_scores, best_heuristic,ridge_scores, best_ridge, model_results_ridge, x)

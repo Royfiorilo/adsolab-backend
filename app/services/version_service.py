@@ -9,6 +9,7 @@ from entities.no_linear_model import AdsorptionPredictor
 from entities.schemas.historic_schema import VERSION_SCHEMA, FITTED_METHOD_SCHEMA
 from exceptions.exceptions import NotFoundError
 from services.model_service import find_model
+from utils import filter_negative
 
 
 def create_version(request_json):
@@ -77,10 +78,15 @@ def validate_and_get_version(version_id, investigation):
         ).first()
 
         qe_preds, qe_preds_extended = process_fitted_models(version.fitted_models, investigation)
+        predictor = AdsorptionPredictor()
+        x = predictor.extend_ce(investigation.sample.ce, 300)
 
         comparison = AdsorptionModelComparison.get_ml_coefs_models(
             investigation.sample.qe, qe_preds, qe_preds_extended)
-        version.comparison.ml["y_pred"] = comparison["y_pred"]
+        to_filter = comparison["y_pred"].copy()
+        to_filter[0] = 0
+
+        version.comparison.ml["transformed"] = filter_negative(x, to_filter),
 
         version.sample = investigation.sample
 

@@ -115,7 +115,7 @@ def run_no_linear_models(request_data):
 
     # comparison
     print(f"Executing comparison: {datetime.now()}")
-    comparison = get_comparison(results, models, sample.qe)
+    comparison = get_comparison(results, models, sample)
 
     formatted_results = format_results(results)
 
