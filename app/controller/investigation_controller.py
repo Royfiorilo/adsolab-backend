@@ -9,7 +9,7 @@ from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError
 from services.investigation_service import run_linearization_models, run_no_linear_models, create_investigation_with_sample_id, \
     get_investigations_from_db, validate_and_save_version, get_version, get_versions_by_investigation, \
-    delete_investigation, predict_models_seeds
+    delete_investigation, predict_models_seeds, is_valid_investigation
 from services.version_service import delete_investigation_version
 
 blueprint = Blueprint('investigation', __name__)
@@ -113,8 +113,10 @@ def get_investigation_versions(investigation_id):
     return response, HTTPStatus.OK
 
 @blueprint.route('/investigation/<int:investigation_id>/version/<int:version_id>', methods=['DELETE'])
+@auth_required()
 def delete_version(investigation_id, version_id):
     try:
+        is_valid_investigation(investigation_id, current_user.id)
         delete_investigation_version(investigation_id, version_id)
     except Exception as e:
         raise e
@@ -125,9 +127,10 @@ def delete_version(investigation_id, version_id):
     return response, HTTPStatus.OK
 
 @blueprint.route('/investigation/<int:investigation_id>', methods=['DELETE'])
+@auth_required()
 def delete(investigation_id):
     try:
-        delete_investigation(investigation_id)
+        delete_investigation(investigation_id, current_user.id)
     except Exception as e:
         raise e
     response = {

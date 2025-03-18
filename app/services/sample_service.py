@@ -4,7 +4,7 @@ from app import db
 from datetime import datetime
 from database import Sample, User
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
-from exceptions.exceptions import NotFoundError, FilterSampleError, BadRequestError
+from exceptions.exceptions import NotFoundError, FilterSampleError, BadRequestError, ForbiddenError
 from services.materials_service import find_adsorbent, find_adsorbate
 
 
@@ -63,8 +63,10 @@ def create_sample_db(request_json):
         raise BadRequestError(f"Validation Error: {me}")
 
 
-def delete_sample(sample_id):
-    find_sample(sample_id)
-    sample = db.session.query(Sample).filter_by(sample_id=sample_id).first()
+def delete_sample(sample_id, user_id):
+    sample = find_sample(sample_id)
+    if sample.user_id != user_id:
+        raise ForbiddenError(f"User is not authorized to modify this investigation")
+    sample = db.session.query(Sample).filter_by(sample_id=sample_id, user_id=user_id).first()
     sample.deleted_at = datetime.utcnow()
     db.session.commit()
