@@ -44,4 +44,4 @@ class SampleEntity:
         temperature = str(int(self.temperature))
         date = datetime.now().strftime("%d-%m-%Y")
 
-        return f"{name}-{temperature}-{adsobate_name}-{adsobent_name}-{date}"
+        return f"{name}-{temperature}K-{adsobate_name}-{adsobent_name}-{date}"
