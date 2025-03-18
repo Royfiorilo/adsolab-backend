@@ -18,6 +18,7 @@ class SampleEntity:
     adsorbate_id: Optional[int] = None
     adsorbent_id: Optional[int] = None
     deleted_at: Optional[str] = None
+    user_id: Optional[int] = None
 
     @property
     def id(self):

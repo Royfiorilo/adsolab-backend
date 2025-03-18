@@ -6,7 +6,7 @@ from app import db
 from database import Investigation, Version
 from sqlalchemy import exists
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
-from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError
+from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError, ForbiddenError
 from services.comparison_service import get_comparison
 from services.linearization_service import execute_linearizations
 from services.no_linear_model_service import process_models, format_results, calculate_predicted_seeds
@@ -15,15 +15,17 @@ from services.version_service import create_version, save_version, validate_and_
     get_versions_by_investigation
 
 
-def create_investigation_with_sample_id(sample_id):
+def create_investigation_with_sample_id(request_json):
+    sample_id = request_json['sample_id']
+    user_id = request_json['user_id']
     sample = find_sample(sample_id)
-    investigation = _create_investigation_db(sample.sample_id)
+    investigation = _create_investigation_db(sample.sample_id, user_id)
     return investigation
 
 
-def _create_investigation_db(sample_id):
+def _create_investigation_db(sample_id, user_id):
     try:
-        investigation = Investigation(sample_id=sample_id)
+        investigation = Investigation(sample_id=sample_id, user_id=user_id)
         db.session.add(investigation)
         db.session.commit()
 
@@ -41,11 +43,18 @@ def get_investigation(investigation_id):
     return investigation
 
 
-def get_investigations_from_db(page, per_page):
+def get_investigations_from_db(page, per_page, user_id):
     per_page = min(per_page, 100)
     offset = (page - 1) * per_page
-    total = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).count()
-    investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).limit(per_page).offset(offset).all()
+    if user_id:
+        total = Investigation.with_schema(INVESTIGATION_SCHEMA).filter_by(user_id=user_id).filter(
+            exists().where(Version.investigation_id == Investigation.investigation_id)).count()
+        investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter_by(user_id=user_id).filter(
+            exists().where(Version.investigation_id == Investigation.investigation_id)).limit(per_page).offset(
+            offset).all()
+    else:
+        total = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).count()
+        investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).limit(per_page).offset(offset).all()
 
     return {"investigations": investigations,
             'page': page,
@@ -112,12 +121,21 @@ def run_no_linear_models(request_data):
 
     return formatted_results, comparison
 
-def is_valid_investigation(investigation_id):
-    return Investigation.with_schema(None).filter_by(investigation_id=investigation_id).count() > 0
+def is_valid_investigation(investigation_id, user_id):
+    investigation =  Investigation.with_schema(None).filter_by(investigation_id=investigation_id).first()
+    if not investigation:
+        raise NotFoundError(f"Investigation with ID {investigation_id} not found")
+
+    if investigation.user_id != user_id:
+        raise ForbiddenError(f"User {user_id} is not authorized to modify this investigation")
+
+
 
 def validate_and_save_version(request_json):
-    if not is_valid_investigation(request_json["investigation_id"]):
-        raise NotFoundError(f"Investigation with ID {request_json['investigation_id']} not found")
+    try:
+        is_valid_investigation(request_json["investigation_id"], request_json["user_id"])
+    except (NotFoundError, ForbiddenError, BadRequestError):
+        raise
     version_data = create_version(request_json)
     version = save_version(version_data)
     return version

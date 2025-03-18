@@ -2,6 +2,8 @@ from datetime import datetime
 from http import HTTPStatus
 
 from flask import Blueprint, request, jsonify
+from flask_security import auth_required, roles_required
+from flask_login import current_user
 
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError
@@ -60,7 +62,8 @@ def predict_seeds():
 def get_investigations():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
-    result = get_investigations_from_db(page, per_page)
+    user_id = request.args.get('user_id', None, type=int)
+    result = get_investigations_from_db(page, per_page, user_id)
 
     investigations = []
     for investigation in result['investigations']:
@@ -73,13 +76,15 @@ def get_investigations():
     return jsonify(response), HTTPStatus.OK
 
 @blueprint.route('/investigation/save', methods=['POST'])
+@auth_required()
 def save():
     request_json = request.get_json()
     if "sample_id" not in request_json:
         raise BadRequestError("sample_id is required")
     try:
+        request_json['user_id'] = current_user.id
         if 'investigation_id' not in request_json:
-            investigation = create_investigation_with_sample_id(request_json['sample_id'])
+            investigation = create_investigation_with_sample_id(request_json)
             request_json['investigation_id'] = investigation['investigation_id']
         version = validate_and_save_version(request_json)
     except Exception as e:

@@ -4,12 +4,14 @@ class InvestigationEntity:
             sample_id,
             investigation_id=None,
             fitted_models=None,
-            sample =None
+            sample =None,
+            user_id=None
     ):
         self.investigation_id = investigation_id
         self.sample_id = sample_id
         self.fitted_models = fitted_models
         self.sample = sample
+        self.user_id = user_id
 
     @property
     def id(self):

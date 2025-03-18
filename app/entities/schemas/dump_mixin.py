@@ -1,6 +1,5 @@
-import json
-
 from sqlalchemy.orm import Query
+
 import app
 
 

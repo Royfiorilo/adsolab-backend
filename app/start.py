@@ -4,7 +4,7 @@ from flask import jsonify, request
 from flask_login import current_user
 
 from app import create_app
-from exceptions.exceptions import BadRequestError, NotFoundError, FilterSampleError
+from exceptions.exceptions import BadRequestError, NotFoundError, FilterSampleError, ForbiddenError
 
 app = create_app()
 
@@ -24,6 +24,14 @@ def handle_not_found_error(e):
         "status": "ERROR",
         "message": e.message
     }), HTTPStatus.NOT_FOUND
+
+
+@app.errorhandler(ForbiddenError)
+def handle_not_found_error(e):
+    return jsonify({
+        "status": "ERROR",
+        "message": e.message
+    }), HTTPStatus.FORBIDDEN
 
 
 # Overrides flask-security's response if user is already logged in.
