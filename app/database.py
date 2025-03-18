@@ -18,7 +18,7 @@ class Model(DumpMixin, db.Model):
     parameters = db.Column(JSON, nullable=False)
     constants = db.Column(ARRAY(db.String(5)), nullable=True)
     linearizations = db.relationship('Linearization', backref='model', lazy=True)
-
+    latex_formula = db.Column(db.String(255), nullable=False)
 
 class FittedModel(DumpMixin, db.Model):
     __tablename__ = 'fitted_model'
@@ -107,6 +107,7 @@ class Linearization(DumpMixin, db.Model):
     parameters = db.Column(JSON, nullable=False)
     constants = db.Column(ARRAY(db.String(5)), nullable=True)
     model_id = db.Column(db.Integer, db.ForeignKey('model._id'), nullable=False)
+    latex_formula = db.Column(db.String(255), nullable=False)
 
 
 class Method(DumpMixin, db.Model):

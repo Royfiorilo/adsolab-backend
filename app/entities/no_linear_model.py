@@ -13,6 +13,9 @@ from .model import Model
 DEFAULT_ITERATIONS = 10000
 DEFAULT_STEP = None
 N_PARAM_ESTIMATED_SEED = 1.5
+LIMIT_QMAX = 1.1
+MIN_PARAM_VALUE = 0.001
+
 
 @dataclass
 class FitParameters:
@@ -56,11 +59,10 @@ class FitStrategy:
         for param_name, param in parameters.items():
             max  = np.inf
             if 'q' in param_name:
-                max = params.qe.max() * 1.10
-            param.set(min=0, max=max, brute_step=params.step)
+                max = params.qe.max() * LIMIT_QMAX
+            param.set(min=MIN_PARAM_VALUE, max=max, brute_step=params.step)
 
-        params.ce[params.ce == 0] = 1e-10
-
+        params.ce[params.ce == 0] = 1e-6
 
         result = self.model.fit(
             params.qe,
@@ -136,8 +138,8 @@ class AdsorptionPredictor:
 
 
 class NoLinearModel(Model):
-    def __init__(self, _id: str, name: str, formula, description: str, parameters, linearizations=None, constants: List[Any] = []):
-        super().__init__(_id, name, formula, description, parameters)
+    def __init__(self, _id: str, name: str, formula, description: str, parameters, latex_formula, linearizations=None, constants: List[Any] = []):
+        super().__init__(_id, name, formula, description, parameters, latex_formula)
         self.fit_strategy =  None
         self.adsorption_predictor = None
         self.linearizations = linearizations if linearizations is not None else []
