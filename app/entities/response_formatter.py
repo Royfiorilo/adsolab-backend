@@ -4,7 +4,8 @@ from entities.no_linear_model import FitResult
 class ResponseFormatter:
     @staticmethod
     def format_fit_result(fit_result: FitResult) -> dict:
-        fit_result.clean_transformed()
+
+        fit_result.clean_transformed(fit_result.success)
         return {
             "name": fit_result.method_name,
             "description": fit_result.method_description,

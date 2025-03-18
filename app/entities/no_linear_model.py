@@ -6,7 +6,7 @@ import numpy as np
 from numdifftools import Hessian
 
 from entities.statistics import Statistics
-from utils import round_number, round_list_numbers
+from utils import round_number, round_list_numbers, filter_negative
 from .comparator import AdsorptionModelComparison
 from .model import Model
 
@@ -45,8 +45,13 @@ class FitResult:
     def get_qe_pred(self):
         return self.transformed.get("qe_pred")
 
-    def clean_transformed(self):
-        self.transformed = {"y": list(self.transformed.get("y")), "x": list(self.transformed.get("x"))}
+    def clean_transformed(self, success: bool):
+        if success:
+
+            self.transformed = filter_negative(self.transformed.get("x").copy(), self.transformed.get("y").copy())
+        else:
+            if self.transformed:
+                self.transformed = {"y": list(self.transformed.get("y")), "x": list(self.transformed.get("x"))}
 
 
 class FitStrategy:
@@ -56,27 +61,43 @@ class FitStrategy:
     def fit(self, params: FitParameters) -> FitResult:
         parameters = self.model.make_params(**params.initial_params)
 
+        is_temkin = False
         for param_name, param in parameters.items():
-            max  = np.inf
+            min_val, max_val = MIN_PARAM_VALUE, np.inf
             if 'q' in param_name:
-                max = params.qe.max() * LIMIT_QMAX
-            param.set(min=MIN_PARAM_VALUE, max=max, brute_step=params.step)
+                max_val = params.qe.max() * LIMIT_QMAX
+            elif "ktk" in param_name:
+                min_val, max_val = 1, 10000
+                is_temkin = True
+            elif "btk" in param_name:
+                min_val, max_val = MIN_PARAM_VALUE, 1000
+            param.set(min=min_val, max=max_val, brute_step=params.step)
 
-        params.ce[params.ce == 0] = 1e-6
+        x = params.ce.copy()
+        y = params.qe.copy()
+
+        if  0 in params.ce and is_temkin:
+            x = x[1:]
+            y = y[1:]
+        else:
+            x[x == 0] = 1e-6
 
         result = self.model.fit(
-            params.qe,
+            y,
             parameters,
-            ce=params.ce,
+            ce=x,
             method=params.method,
             nan_policy="omit",
             max_nfev=params.iterations
         )
 
+        if is_temkin and 0 in params.ce :
+            result.best_fit = np.insert(result.best_fit, 0, 0)
+
         return FitResult(
             success=bool(result.success),
             parameters=self._get_parameters_with_stderr(result),
-            raw_result=result,
+            raw_result= result,
             method_name=params.method,
             method_message=str(result.message)
         )
@@ -113,26 +134,33 @@ class FitStrategy:
 
 
 class AdsorptionPredictor:
-    def __init__(self, formula):
+    def __init__(self, formula=None):
         self.formula = formula
 
 
     def predict(self, ce_values, parameters, extend=True, num_points=300):
         if extend:
-            ce_values = self._extend_ce(ce_values, num_points)
+            ce_values = self.extend_ce(ce_values, num_points)
 
         qe_pred = np.array([])
-        for ce_val in ce_values:
-            parameters["ce"] = ce_val
-            if ce_val == 1e-10:
-                qe = 0
-            else:
-                qe = self.formula.apply(**parameters)
-            qe_pred = np.append(qe_pred, qe)
-        return round_list_numbers(ce_values), round_list_numbers(qe_pred)
+        try:
+            for ce_val in ce_values:
+                parameters["ce"] = ce_val
+                if ce_val == 1e-10 or ce_val == 0:
+                    qe = 0
+                    ce_values[ce_values == 1e-10] = 0
+                else:
+                    qe = self.formula.apply(**parameters)
+                qe_pred = np.append(qe_pred, qe)
 
-    def _extend_ce(self, ce_values, num_points):
-        min_ce, max_ce = 1e-10, max(ce_values)
+
+        except Exception as e:
+            print(e)
+
+        return ce_values, round_list_numbers(qe_pred)
+
+    def extend_ce(self, ce_values, num_points):
+        min_ce, max_ce = 0, max(ce_values)
         linspace_values = np.linspace(min_ce, max_ce, num_points - len(ce_values))
         return np.union1d(linspace_values, ce_values)
 
@@ -157,6 +185,7 @@ class NoLinearModel(Model):
         initial_params = self._prepare_initial_params(seeds)
         self.initialize_with_constants(constants=constants)
         self.method_results = []
+
 
         for method, description in methods.items():
             try:
@@ -186,6 +215,7 @@ class NoLinearModel(Model):
 
     def _run_method(self, x: np.ndarray, y: np.ndarray, initial_params, method, description, step,
                     iterations) -> FitResult:
+
         fit_params = FitParameters(x, y, initial_params, step, iterations, method)
         fit_result = self.fit_strategy.fit(fit_params)
         fit_result.method_description = description
@@ -198,7 +228,7 @@ class NoLinearModel(Model):
 
 
         transformed_data = {
-            "x": round_list_numbers(extended_ce),
+            "x": extended_ce,
             "y": round_list_numbers(extended_qe),
             "qe_pred": round_list_numbers(qe_pred.tolist())
         }

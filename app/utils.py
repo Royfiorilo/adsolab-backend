@@ -39,3 +39,13 @@ def soft_curves_response(results, comparison, ce):
         process_adjustment_methods(result["adjustment_methods"])
     process_comparison(ce, comparison)
 
+def filter_negative(x, y):
+    x = np.array(x)
+    y = np.array(y)
+
+    indices_validos = y >= 0
+
+    y = y[indices_validos]
+    x = x[indices_validos]
+
+    return {"y": y.tolist(), "x": x.tolist()}
