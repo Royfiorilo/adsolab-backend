@@ -37,7 +37,7 @@ def format_adjustment_methods(result: ModelResult) -> FormattedResult:
             ResponseFormatter.format_fit_result(fit_result)
             for fit_result in result["adjustments"]
         ],
-        "best_adjust": result["best_adjust"],
+        "best_adjust":  result["best_adjust"],
         "model": result["model"],
     }
 

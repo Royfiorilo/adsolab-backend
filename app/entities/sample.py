@@ -37,7 +37,7 @@ class SampleEntity:
     def constants(self):
         r = R_CONSTANT
         if self.measure_unit == 'mmol':
-            r =  R_CONSTANT * (10 **-3)
+            r =  R_CONSTANT / 1000
         return {"T": self.temperature, "R": r}
 
     def create_sample_name(self, name, adsobate_name, adsobent_name):
