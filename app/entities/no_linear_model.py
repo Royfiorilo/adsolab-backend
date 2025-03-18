@@ -65,12 +65,12 @@ class FitStrategy:
         for param_name, param in parameters.items():
             min_val, max_val = MIN_PARAM_VALUE, np.inf
             if 'q' in param_name:
-                max_val = params.qe.max() * 1.1
+                max_val = params.qe.max() * LIMIT_QMAX
             elif "ktk" in param_name:
                 min_val, max_val = 1, 10000
                 is_temkin = True
             elif "btk" in param_name:
-                min_val, max_val = 0.001, LIMIT_QMAX
+                min_val, max_val = MIN_PARAM_VALUE, LIMIT_QMAX
             param.set(min=min_val, max=max_val, brute_step=params.step)
 
         x = params.ce.copy()
