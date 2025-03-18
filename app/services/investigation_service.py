@@ -153,9 +153,10 @@ def get_versions(investigation_id):
 
 
 def delete_investigation(investigation_id, user_id):
-    if not is_valid_investigation(investigation_id, user_id):
-        raise NotFoundError(f"Investigation with ID {investigation_id} not found")
-
+    try:
+        is_valid_investigation(investigation_id, user_id)
+    except (NotFoundError, ForbiddenError, BadRequestError):
+        raise
     investigation = db.session.query(Investigation).filter_by(investigation_id=investigation_id).first()
     db.session.delete(investigation)
     db.session.commit()
