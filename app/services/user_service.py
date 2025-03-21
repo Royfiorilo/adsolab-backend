@@ -2,7 +2,7 @@ from flask_security.utils import hash_password
 
 import app
 from database import db, User
-from exceptions.exceptions import UsernameAlreadyTakenError, NotFoundError, BadRequestError
+from exceptions.exceptions import UsernameAlreadyTakenError, NotFoundError, BadRequestError, ForbiddenError
 
 ADMIN_ROLE = 'ADMIN'
 RESEARCHER_ROLE = 'RESEARCHER'
@@ -69,6 +69,9 @@ def update_user(user_id, data, current_user):
     if not user:
         raise NotFoundError(f'User {user_id} not found.')
 
+    if user_id != current_user.id and not any(role.name == ADMIN_ROLE for role in current_user.roles):
+        raise ForbiddenError(f'User {current_user.id} is not authorized to edit this user.')
+
     email = data['email']
     if 'email' in data and email != user.email:
         existing_user = app.user_datastore.find_user(email=email)
@@ -76,8 +79,9 @@ def update_user(user_id, data, current_user):
             raise UsernameAlreadyTakenError(f'The username {email} is already taken.')
         user.email = email
 
-    if 'password' in data and data['password']:
+    if 'password' in data and data['password'] and (any(role.name == ADMIN_ROLE for role in current_user.roles) or current_user.id == user.id):
         user.password = hash_password(data['password'])
+
 
     if 'role' in data and any(role.name == ADMIN_ROLE for role in current_user.roles):
         if data['role'] not in [RESEARCHER_ROLE, ADMIN_ROLE]:
