@@ -2,11 +2,11 @@ from http import HTTPStatus
 
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
-from flask_security import auth_required, roles_required
+from flask_security import auth_required, roles_accepted
 
 from exceptions.exceptions import UsernameAlreadyTakenError, NotFoundError, BadRequestError
 from services import user_service
-from services.user_service import ADMIN_ROLE
+from services.user_service import ADMIN_ROLE, DEV_ROLE
 
 blueprint = Blueprint("user", __name__)
 
@@ -20,7 +20,7 @@ def is_valid_email(email):
 
 @blueprint.route('/users', methods=['POST'])
 @auth_required()
-@roles_required(ADMIN_ROLE)
+@roles_accepted(ADMIN_ROLE, DEV_ROLE)
 def create_user():
     data = request.get_json()
     email = data.get('email')
@@ -42,7 +42,7 @@ def create_user():
 
 @blueprint.route('/users', methods=['GET'])
 @auth_required()
-@roles_required(ADMIN_ROLE)
+@roles_accepted(ADMIN_ROLE, DEV_ROLE)
 def get_users():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
@@ -86,7 +86,7 @@ def update_user(user_id):
 
 @blueprint.route('/users/<int:user_id>', methods=['DELETE'])
 @auth_required()
-@roles_required(ADMIN_ROLE)
+@roles_accepted(ADMIN_ROLE, DEV_ROLE)
 def delete_user(user_id):
     if current_user.id == user_id:
         return jsonify({'error': 'Cannot delete your own account'}), HTTPStatus.BAD_REQUEST
