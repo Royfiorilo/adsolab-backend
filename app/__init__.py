@@ -6,7 +6,7 @@ from flask_cors import CORS
 from flask_security import SQLAlchemyUserDatastore, Security, hash_password
 
 from database import db, User, Role
-from services.user_service import ADMIN_ROLE
+from services.user_service import ADMIN_ROLE, DEV_ROLE
 from .config import Config
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
@@ -36,6 +36,7 @@ def create_app():
         app.register_blueprint(user_controller.blueprint)
         if env == 'development':
             db.create_all()
+
         # Create User to test with
         test_user_email = os.getenv('TEST_USER_EMAIL')
         test_user_password = os.getenv('TEST_USER_PASSWORD')
@@ -44,4 +45,14 @@ def create_app():
                                                       password=hash_password(test_user_password))
             app.security.datastore.add_role_to_user(user, ADMIN_ROLE)
             db.session.commit()
+
+        # Create User Dev  Admin
+        dev_user_email = os.getenv('DEV_USER_EMAIL')
+        dev_user_password = os.getenv('DEV_USER_PASSWORD')
+        if not app.security.datastore.find_user(email=dev_user_email):
+            user = app.security.datastore.create_user(email=dev_user_email,
+                                                      password=hash_password(dev_user_password))
+            app.security.datastore.add_role_to_user(user, DEV_ROLE)
+            db.session.commit()
+
     return app
