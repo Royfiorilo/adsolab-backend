@@ -57,18 +57,19 @@ class AdsorptionModelComparison:
             rmse = statistics.get('RMSE', float('inf'))
             aic = statistics.get('AIC', float('inf'))
             chi_squared = statistics.get('chi_squared', float('inf'))
-            r_squared_adjusted = statistics.get('r_squared_adjusted', 0)
+            r_squared_adjusted = statistics.get('adjust_r_squared', float('inf'))
 
             passes_normality = residuals.get('passes_normality', False)
             passes_homoscedasticity = residuals.get('passes_homoscedasticity', False)
             passes_independence = residuals.get('passes_independence', False)
 
-            if not math.isfinite(r_squared_adjusted) or not math.isfinite(rmse) or not math.isfinite(aic):
-                print(f"Advertencia: Datos inválidos en modelo {result[key]}. Se omitirán del cálculo.")
+            if  not math.isfinite(rmse) or not math.isfinite(aic):
+                print(f"Advertencia: Datos inválidos en modelo. Se omitirán del cálculo.")
+                scores[result[key]] = float('inf')
                 continue
 
             score = (
-                    max(r_squared_adjusted, 0) * 0.3 +  # Asegurar que r_squared no sea negativo
+                    r_squared_adjusted * 0.3 +  # Asegurar que r_squared no sea negativo
                     (1 / max(rmse, 1e-9)) * 0.3 +  # Evitar división por 0
                     (1 / max(abs(aic), 1e-9)) * 0.25 +  # Asegurar que AIC no sea 0
                     (1 / (1 + chi_squared)) * 0.1 +
