@@ -138,4 +138,5 @@ class Role(db.Model, fsqla.FsRoleMixin):
 
 
 class User(db.Model, fsqla.FsUserMixin):
+    deleted_at = db.Column(db.DateTime, nullable=True)
     pass

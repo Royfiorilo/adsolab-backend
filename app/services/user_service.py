@@ -1,6 +1,7 @@
 from flask_security.utils import hash_password
 
 import app
+from datetime import datetime
 from database import db, User, Role
 from exceptions.exceptions import UsernameAlreadyTakenError, NotFoundError, BadRequestError, ForbiddenError
 
@@ -35,7 +36,7 @@ def create_user(email, password, role):
 
 def get_users(page, per_page):
     per_page = min(per_page, 100)
-    users = User.query.filter(~User.roles.any(Role.name == "DEV")).paginate(page=page, per_page=per_page)
+    users = User.query.filter(~User.roles.any(Role.name == "DEV"), User.deleted_at==None).paginate(page=page, per_page=per_page)
 
     result = [{
         'id': user.id,
@@ -54,7 +55,9 @@ def get_users(page, per_page):
 
 
 def get_user(user_id):
-    user = User.query.filter(~User.roles.any(Role.name == "DEV")).get(user_id)
+    user = User.query.filter(~User.roles.any(Role.name == "DEV"),
+                             User.deleted_at == None,
+                             User.id == user_id).first()
     if not user:
         raise NotFoundError(f'User {user_id} not found.')
 
@@ -120,7 +123,8 @@ def delete_user(user_id):
     if not user:
         raise BadRequestError(f'User {user_id} not found.')
 
-    db.session.delete(user)
+    user.active = False
+    user.deleted_at = datetime.utcnow()
     db.session.commit()
 
     return {'message': f'User {user_id} deleted successfully'}
