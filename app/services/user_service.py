@@ -1,6 +1,7 @@
 from flask_security.utils import hash_password
 
 import app
+from datetime import datetime
 from database import db, User, Role
 from exceptions.exceptions import UsernameAlreadyTakenError, NotFoundError, BadRequestError, ForbiddenError
 
@@ -9,13 +10,28 @@ RESEARCHER_ROLE = 'RESEARCHER'
 DEV_ROLE = 'DEV'
 
 
-def create_user(email, password, role):
-    if app.user_datastore.find_user(email=email):
+def create_user(email, password, role, current_user):
+    user = app.user_datastore.find_user(email=email)
+    if user and user.deleted_at is None:
         raise UsernameAlreadyTakenError(f'The username {email} is already taken.')
 
     role_name = role or RESEARCHER_ROLE
     if role_name not in [RESEARCHER_ROLE, ADMIN_ROLE, DEV_ROLE]:
         role_name = RESEARCHER_ROLE
+
+    if user and user.deleted_at is not None:
+        user = reactivate_user(email)
+        data = {
+            "email" : email,
+            "password" : password,
+            "role": role_name,
+            "active": True
+        }
+        user_updated = update_user(user.id, data, current_user)
+        return user_updated
+
+
+
 
     role = app.user_datastore.find_or_create_role(role_name)
     user = app.user_datastore.create_user(
@@ -35,7 +51,7 @@ def create_user(email, password, role):
 
 def get_users(page, per_page):
     per_page = min(per_page, 100)
-    users = User.query.filter(~User.roles.any(Role.name == "DEV")).paginate(page=page, per_page=per_page)
+    users = User.query.filter(~User.roles.any(Role.name == "DEV"), User.deleted_at==None).paginate(page=page, per_page=per_page)
 
     result = [{
         'id': user.id,
@@ -54,7 +70,9 @@ def get_users(page, per_page):
 
 
 def get_user(user_id):
-    user = User.query.filter(~User.roles.any(Role.name == "DEV")).get(user_id)
+    user = User.query.filter(~User.roles.any(Role.name == "DEV"),
+                             User.deleted_at == None,
+                             User.id == user_id).first()
     if not user:
         raise NotFoundError(f'User {user_id} not found.')
 
@@ -120,7 +138,16 @@ def delete_user(user_id):
     if not user:
         raise BadRequestError(f'User {user_id} not found.')
 
-    db.session.delete(user)
+    user.active = False
+    user.deleted_at = datetime.utcnow()
     db.session.commit()
 
     return {'message': f'User {user_id} deleted successfully'}
+
+def reactivate_user(email):
+    user = app.user_datastore.find_user(email=email)
+    if not user:
+        raise BadRequestError(f'User not found.')
+    user.deleted_at = None
+    db.session.commit()
+    return user

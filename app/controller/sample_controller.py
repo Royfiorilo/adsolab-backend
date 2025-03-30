@@ -1,11 +1,9 @@
-import logging
 from http import HTTPStatus
 
 from flask import Blueprint, request, jsonify
 from flask_security import auth_required
 
 from entities.schemas.sample_schema import SAMPLE_SCHEMA
-from exceptions.exceptions import BadRequestError
 from services.sample_service import get_all_samples, find_sample, create_sample_db, delete_sample
 from flask_login import current_user
 blueprint = Blueprint('sample', __name__)
