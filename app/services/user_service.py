@@ -10,13 +10,28 @@ RESEARCHER_ROLE = 'RESEARCHER'
 DEV_ROLE = 'DEV'
 
 
-def create_user(email, password, role):
-    if app.user_datastore.find_user(email=email):
+def create_user(email, password, role, current_user):
+    user = app.user_datastore.find_user(email=email)
+    if user and user.deleted_at is None:
         raise UsernameAlreadyTakenError(f'The username {email} is already taken.')
 
     role_name = role or RESEARCHER_ROLE
     if role_name not in [RESEARCHER_ROLE, ADMIN_ROLE, DEV_ROLE]:
         role_name = RESEARCHER_ROLE
+
+    if user and user.deleted_at is not None:
+        user = reactivate_user(email)
+        data = {
+            "email" : email,
+            "password" : password,
+            "role": role_name,
+            "active": True
+        }
+        user_updated = update_user(user.id, data, current_user)
+        return user_updated
+
+
+
 
     role = app.user_datastore.find_or_create_role(role_name)
     user = app.user_datastore.create_user(
@@ -128,3 +143,11 @@ def delete_user(user_id):
     db.session.commit()
 
     return {'message': f'User {user_id} deleted successfully'}
+
+def reactivate_user(email):
+    user = app.user_datastore.find_user(email=email)
+    if not user:
+        raise BadRequestError(f'User not found.')
+    user.deleted_at = None
+    db.session.commit()
+    return user
