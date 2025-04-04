@@ -183,13 +183,13 @@ class Statistics():
             'normality_pvalue': round_number(normality_p),
             'homoscedasticity_pvalue': round_number(homo_p),
             'durbin_watson': round_number(dw_stat),
-            'passes_normality': 0 if normality_p > 0.05 else 1,
+            'passes_normality': True if normality_p > 0.05 else False,
             # Si el valor p de la homocedasticidad es mayor a 0.05, se acepta homocedasticidad (0).
             # Si el valor p es menor o igual a 0.05, se rechaza homocedasticidad (1).
-            'passes_homoscedasticity': 0 if homo_p > 0.05 else 1,
+            'passes_homoscedasticity': True if homo_p > 0.05 else False,
             # Si el valor de Durbin-Watson está fuera del rango (1.5, 2.5), no hay autocorrelación (1).
             # cuanto mas cecano a 2 mejor
-            'passes_independence': 1 if not (1.5 < dw_stat < 2.5) else 0
+            'passes_independence':  True if 1.5 <= dw_stat <= 2.5 else False,
         }
 
     @classmethod
