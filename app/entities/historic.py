@@ -1,13 +1,14 @@
 from dataclasses import dataclass, asdict
 from datetime import datetime
-from typing import List, TypedDict
+from typing import List
+
 from entities.sample import SampleEntity
+
 
 @dataclass
 class Transformed:
     x: list[float]
     y: list[float]
-
 
 
 @dataclass
@@ -23,8 +24,9 @@ class FittedMethod:
     params: list
     statistics: dict
     residuals: dict
-    success : bool
+    success: bool
     transformed: Transformed = None
+
 
 @dataclass
 class FittedModel:
@@ -35,17 +37,17 @@ class FittedModel:
     fitted_model_id: int = None
 
 
-
 @dataclass
 class Version:
     fitted_models: List[FittedModel]
     comparison: Comparison
     investigation_id: int
-    version_id:int =None
-    iterations:int =None
-    steps:int =None
-    created_at:datetime = datetime.now()
+    version_id: int = None
+    iterations: int = None
+    steps: int = None
+    created_at: datetime = datetime.now()
     sample: SampleEntity = None
+    user: dict = None
 
     def to_dict(self):
         return asdict(self)

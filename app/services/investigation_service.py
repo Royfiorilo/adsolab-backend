@@ -1,10 +1,10 @@
 from datetime import datetime
 
 from marshmallow import ValidationError
+from sqlalchemy import exists
 
 from app import db
 from database import Investigation, Version
-from sqlalchemy import exists
 from entities.schemas.investigation_schema import INVESTIGATION_SCHEMA
 from exceptions.exceptions import BadRequestError, LinearizationError, NotFoundError, ForbiddenError
 from services.comparison_service import get_comparison
@@ -53,8 +53,11 @@ def get_investigations_from_db(page, per_page, user_id):
             exists().where(Version.investigation_id == Investigation.investigation_id)).limit(per_page).offset(
             offset).all()
     else:
-        total = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).count()
-        investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(exists().where(Version.investigation_id == Investigation.investigation_id)).limit(per_page).offset(offset).all()
+        total = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(
+            exists().where(Version.investigation_id == Investigation.investigation_id)).count()
+        investigations = Investigation.with_schema(INVESTIGATION_SCHEMA).filter(
+            exists().where(Version.investigation_id == Investigation.investigation_id)).limit(per_page).offset(
+            offset).all()
 
     return {"investigations": investigations,
             'page': page,
@@ -80,6 +83,7 @@ def run_linearization_models(request_data):
             results.append({"model": model["model"], "error": str(e)})
 
     return results
+
 
 def predict_models_seeds(request_data):
     results = []
@@ -121,14 +125,14 @@ def run_no_linear_models(request_data):
 
     return formatted_results, comparison
 
+
 def is_valid_investigation(investigation_id, user_id):
-    investigation =  Investigation.with_schema(None).filter_by(investigation_id=investigation_id).first()
+    investigation = Investigation.with_schema(None).filter_by(investigation_id=investigation_id).first()
     if not investigation:
         raise NotFoundError(f"Investigation with ID {investigation_id} not found")
 
     if investigation.user_id != user_id:
         raise ForbiddenError(f"User is not authorized to modify this investigation")
-
 
 
 def validate_and_save_version(request_json):
@@ -139,6 +143,7 @@ def validate_and_save_version(request_json):
     version_data = create_version(request_json)
     version = save_version(version_data)
     return version
+
 
 def get_version(investigation_id, version_id):
     investigation = get_investigation(investigation_id)
@@ -160,4 +165,3 @@ def delete_investigation(investigation_id, user_id):
     investigation = db.session.query(Investigation).filter_by(investigation_id=investigation_id).first()
     db.session.delete(investigation)
     db.session.commit()
-
