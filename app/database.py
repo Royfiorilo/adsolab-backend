@@ -20,6 +20,7 @@ class Model(DumpMixin, db.Model):
     linearizations = db.relationship('Linearization', backref='model', lazy=True)
     latex_formula = db.Column(db.String(255), nullable=False)
 
+
 class FittedModel(DumpMixin, db.Model):
     __tablename__ = 'fitted_model'
 
@@ -66,8 +67,9 @@ class Version(DumpMixin, db.Model):
     steps = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False)
     investigation_id = db.Column(db.Integer, db.ForeignKey('investigation.investigation_id'), primary_key=True)
-    fitted_models = db.relationship('FittedModel', backref='version', cascade="all, delete-orphan",lazy=True)
-    comparison = db.relationship('Comparison', backref='version',cascade="all, delete-orphan", lazy=True, uselist=False)
+    fitted_models = db.relationship('FittedModel', backref='version', cascade="all, delete-orphan", lazy=True)
+    comparison = db.relationship('Comparison', backref='version', cascade="all, delete-orphan", lazy=True,
+                                 uselist=False)
 
 
 class Sample(DumpMixin, db.Model):
@@ -86,8 +88,6 @@ class Sample(DumpMixin, db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 
-
-
 class Investigation(DumpMixin, db.Model):
     __tablename__ = 'investigation'
 
@@ -95,6 +95,7 @@ class Investigation(DumpMixin, db.Model):
     sample_id = db.Column(db.Integer, db.ForeignKey('sample.sample_id'), nullable=False)
     sample = db.relationship('Sample', backref='investigation', uselist=False, lazy=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user = db.relationship('User', backref='investigation', uselist=False, lazy=True)
 
 
 class Linearization(DumpMixin, db.Model):
@@ -138,4 +139,5 @@ class Role(db.Model, fsqla.FsRoleMixin):
 
 
 class User(db.Model, fsqla.FsUserMixin):
+    deleted_at = db.Column(db.DateTime, nullable=True)
     pass

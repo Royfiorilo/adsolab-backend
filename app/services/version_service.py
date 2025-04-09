@@ -89,6 +89,7 @@ def validate_and_get_version(version_id, investigation):
         version.comparison.ml["transformed"] = filter_negative(x, to_filter),
 
         version.sample = investigation.sample
+        version.user = investigation.user
 
         return version.to_dict()
 

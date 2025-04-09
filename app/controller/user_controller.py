@@ -33,7 +33,7 @@ def create_user():
         return jsonify({'error': 'Invalid email format'}), HTTPStatus.BAD_REQUEST
 
     try:
-        response = user_service.create_user(email=email, password=password, role=data.get('role'))
+        response = user_service.create_user(email=email, password=password, role=data.get('role'), current_user=current_user)
     except UsernameAlreadyTakenError as e:
         return jsonify({'error': e.message}), HTTPStatus.CONFLICT
 
