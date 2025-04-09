@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 R_CONSTANT = 0.0083144598
 
@@ -40,6 +40,7 @@ class SampleEntity:
 
     def create_sample_name(self, name, adsobate_name, adsobent_name):
         temperature = str(int(self.temperature))
-        date = datetime.now().strftime("%d-%m-%Y-%H:%M:%S")
+        gmt_minus_3 = timezone(timedelta(hours=-3))
+        date = datetime.now(gmt_minus_3).strftime("%d-%m-%Y-%H:%M:%S")
 
         return f"{name}-{temperature}K-{adsobate_name}-{adsobent_name}-{date}"
