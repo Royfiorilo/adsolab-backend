@@ -12,7 +12,8 @@ VALUES
   ('níquel', 'níquel (II)', 'Ni'),
   ('plata', 'plata (I)', 'Ag'),
   ('plomo', 'plomo (II)', 'Pb'),
-  ('zinc', 'zinc (II)', 'Zn')
+  ('zinc', 'zinc (II)', 'Zn'),
+('cadmio', 'cadmio (II)', 'Cd')
 ON CONFLICT (ion_name) DO NOTHING;
 
 ALTER TABLE public.adsorbent
