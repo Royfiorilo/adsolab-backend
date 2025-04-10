@@ -130,10 +130,16 @@ def get_versions_by_investigation(investigation_id):
         fitted_models = []
         comparision = version.comparison
         for fitted_model in version.fitted_models:
+            best_params = None
+            for fm in fitted_model.adjustment_methods:
+                if fm.name == fitted_model.best_adjust:
+                    best_params = fm.params
+                    break
+
             fitted_models.append({
                 "model_id": fitted_model.model_id,
                 "best_adjust": fitted_model.best_adjust,
-                "seeds": fitted_model.seeds
+                "params": best_params
             })
         properties = {
             "version_id": version.version_id,
