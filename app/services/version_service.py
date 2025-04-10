@@ -1,4 +1,5 @@
 import logging
+from datetime import timezone
 
 from marshmallow import ValidationError
 
@@ -28,11 +29,13 @@ def save_version(version_data):
     try:
         last_version = Version.with_schema(None).filter_by(investigation_id=version_data.investigation_id).order_by(
             Version.version_id.desc()).first()
+        dt_utc = version_data.created_at.replace(tzinfo=timezone.utc)
+        create_at = dt_utc.isoformat()
         next_version_id = (last_version.version_id + 1) if last_version else 1
         version = Version(investigation_id=version_data.investigation_id,
                           iterations=version_data.iterations,
                           steps=version_data.steps,
-                          created_at=version_data.created_at,
+                          created_at= create_at,
                           version_id=next_version_id
                           )
 
@@ -86,7 +89,11 @@ def validate_and_get_version(version_id, investigation):
         to_filter = comparison["y_pred"].copy()
         to_filter[0] = 0
 
-        version.comparison.ml["transformed"] = filter_negative(x, to_filter),
+        version.comparison.ml["transformed"] = filter_negative(x, to_filter)
+
+        dt_utc = version.created_at.replace(tzinfo=timezone.utc)
+        create_at = dt_utc.isoformat()
+        version.created_at = create_at
 
         version.sample = investigation.sample
         version.user = investigation.user
@@ -139,11 +146,13 @@ def get_versions_by_investigation(investigation_id):
             fitted_models.append({
                 "model_id": fitted_model.model_id,
                 "best_adjust": fitted_model.best_adjust,
-                "params": best_params
+                "params": best_params,
             })
+        dt_utc = version.created_at.replace(tzinfo=timezone.utc)
+        create_at = dt_utc.isoformat()
         properties = {
             "version_id": version.version_id,
-            "created_at": version.created_at,
+            "created_at": create_at,
             "best_model_heuristic": comparision.heuristic["best_model"],
             "best_model_ml": comparision.ml["best_model"],
             "fitted_models": fitted_models
