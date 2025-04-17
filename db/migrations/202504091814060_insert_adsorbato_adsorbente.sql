@@ -39,4 +39,6 @@ VALUES
   ('Ulva sativa alga patagónica')
 ON CONFLICT (name) DO NOTHING;
 
+-- migrate:down
+
 

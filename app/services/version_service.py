@@ -29,13 +29,11 @@ def save_version(version_data):
     try:
         last_version = Version.with_schema(None).filter_by(investigation_id=version_data.investigation_id).order_by(
             Version.version_id.desc()).first()
-        dt_utc = version_data.created_at.replace(tzinfo=timezone.utc)
-        create_at = dt_utc.isoformat()
         next_version_id = (last_version.version_id + 1) if last_version else 1
         version = Version(investigation_id=version_data.investigation_id,
                           iterations=version_data.iterations,
                           steps=version_data.steps,
-                          created_at= create_at,
+                          created_at=version_data.created_at,
                           version_id=next_version_id
                           )
 

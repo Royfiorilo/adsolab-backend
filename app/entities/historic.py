@@ -42,10 +42,10 @@ class Version:
     fitted_models: List[FittedModel]
     comparison: Comparison
     investigation_id: int
+    created_at: datetime = None
     version_id: int = None
     iterations: int = None
     steps: int = None
-    created_at: datetime = datetime.now()
     sample: SampleEntity = None
     user: dict = None
 
