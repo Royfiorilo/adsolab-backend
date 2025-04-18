@@ -18,7 +18,7 @@ SET latex_formula = '$q_e = \frac{q_{ms} \cdot k_s \cdot C_e^{\frac{1}{n_s}}}{1 
 WHERE model.name = 'Sips';
 
 UPDATE model
-SET latex_formula = '$q_e = \frac{_m \cdot C_e}{\left(k_t + C_e^{t_n}\right)^{\frac{1}{t_n}}}$'
+SET latex_formula = '$q_e = \frac{q_m \cdot C_e}{\left(k_t + C_e^{t_n}\right)^{\frac{1}{t_n}}}$'
 WHERE model.name = 'Toth';
 
 UPDATE model
