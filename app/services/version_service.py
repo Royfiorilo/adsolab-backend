@@ -1,4 +1,5 @@
 import logging
+from datetime import timezone
 
 from marshmallow import ValidationError
 
@@ -86,7 +87,11 @@ def validate_and_get_version(version_id, investigation):
         to_filter = comparison["y_pred"].copy()
         to_filter[0] = 0
 
-        version.comparison.ml["transformed"] = filter_negative(x, to_filter),
+        version.comparison.ml["transformed"] = filter_negative(x, to_filter)
+
+        dt_utc = version.created_at.replace(tzinfo=timezone.utc)
+        create_at = dt_utc.isoformat()
+        version.created_at = create_at
 
         version.sample = investigation.sample
         version.user = investigation.user
@@ -139,11 +144,13 @@ def get_versions_by_investigation(investigation_id):
             fitted_models.append({
                 "model_id": fitted_model.model_id,
                 "best_adjust": fitted_model.best_adjust,
-                "params": best_params
+                "params": best_params,
             })
+        dt_utc = version.created_at.replace(tzinfo=timezone.utc)
+        create_at = dt_utc.isoformat()
         properties = {
             "version_id": version.version_id,
-            "created_at": version.created_at,
+            "created_at": create_at,
             "best_model_heuristic": comparision.heuristic["best_model"],
             "best_model_ml": comparision.ml["best_model"],
             "fitted_models": fitted_models

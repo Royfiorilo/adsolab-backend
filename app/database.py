@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask_security.models import fsqla
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.dialects.postgresql import ARRAY, JSON
@@ -65,7 +67,7 @@ class Version(DumpMixin, db.Model):
     version_id = db.Column(db.Integer, primary_key=True)
     iterations = db.Column(db.Integer, nullable=True)
     steps = db.Column(db.Integer, nullable=True)
-    created_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     investigation_id = db.Column(db.Integer, db.ForeignKey('investigation.investigation_id'), primary_key=True)
     fitted_models = db.relationship('FittedModel', backref='version', cascade="all, delete-orphan", lazy=True)
     comparison = db.relationship('Comparison', backref='version', cascade="all, delete-orphan", lazy=True,
