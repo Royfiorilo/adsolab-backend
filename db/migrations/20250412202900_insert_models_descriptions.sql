@@ -46,3 +46,5 @@ WHERE linearization.name = 'Lineweaver-Burk Linearization';
 UPDATE linearization
 SET description = '{"es": "Es una transformación de la ecuación de Michaelis-Menten que también permite obtener parámetros cinéticos. A diferencia de la de Lineweaver-Burk, presenta una distribución más uniforme de los datos a lo largo del eje x.", "en": "A transformation of the Michaelis-Menten equation that also allows for kinetic parameter determination. Unlike Lineweaver-Burk, it provides a more uniform data distribution along the x-axis"}'
 WHERE linearization.name = 'HaneseWoolf Linearization';
+
+-- migrate:down
