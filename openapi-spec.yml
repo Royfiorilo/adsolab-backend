@@ -1,0 +1,1269 @@
+openapi: 3.0.3
+info:
+  title: AdsoLab API
+  version: 1.0.0
+
+servers:
+  - url: https://api.adsolab.xyz
+    description: Development server
+  # TODO: add production URL when available
+
+paths:
+
+  # Authentication
+  /auth-token:
+    post:
+      tags:
+        - Authentication
+      summary: Obtain authentication token
+      description: Authenticates a user and returns a token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ email, password ]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Token obtained successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user_id:
+                    type: integer
+                  email:
+                    type: string
+        '401':
+          description: Invalid credentials
+
+  # Users
+  /users:
+    post:
+      tags:
+        - Users
+      summary: Create a new user
+      description: Creates a new user account. Only accessible by users with ADMIN or DEV roles.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  example: mysecurepassword
+                role:
+                  type: string
+                  description: Optional user role. Defaults to RESEARCHER if not specified.
+                  example: RESEARCHER
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request (missing fields or invalid format)
+        '409':
+          description: Conflict (email already taken)
+
+    get:
+      tags:
+        - Users
+      summary: List users
+      description: Retrieves a paginated list of users. Only accessible by ADMIN or DEV roles.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            default: 20
+          description: Number of users per page (maximum 100)
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  page:
+                    type: integer
+                  per_page:
+                    type: integer
+                  total:
+                    type: integer
+                  pages:
+                    type: integer
+
+  /users/{user_id}:
+    get:
+      tags:
+        - Users
+      summary: Retrieve user details
+      description: Get details of a specific user. Only the user themselves or an ADMIN can access.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          description: Forbidden (unauthorized access)
+        '404':
+          description: User not found
+
+    put:
+      tags:
+        - Users
+      summary: Update user information
+      description: Updates email, password, role, or active status. Restrictions apply depending on the user's role.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                role:
+                  type: string
+                  enum: [ ADMIN, RESEARCHER ]
+                active:
+                  type: boolean
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad request
+        '403':
+          description: Forbidden (no permission to update)
+        '404':
+          description: User not found
+        '409':
+          description: Conflict (email already taken)
+
+    delete:
+      tags:
+        - Users
+      summary: Delete a user
+      description: Soft deletes a user. Cannot delete your own account. Only ADMIN or DEV can delete.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deleted successfully
+        '400':
+          description: Bad request (cannot delete own account)
+        '404':
+          description: User not found
+
+  # Materials
+  /adsorbates:
+    get:
+      tags:
+        - Materials
+      summary: List all adsorbates
+      description: Retrieves a list of all available adsorbates.
+      responses:
+        '200':
+          description: List of adsorbates retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  adsorbates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Adsorbate'
+        '404':
+          description: No adsorbates found.
+
+  /adsorbents:
+    get:
+      tags:
+        - Materials
+      summary: List all adsorbents
+      description: Retrieves a list of all available adsorbents.
+      responses:
+        '200':
+          description: List of adsorbents retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  adsorbents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Adsorbent'
+        '404':
+          description: No adsorbents found.
+
+  /materials_sync:
+    get:
+      tags:
+        - Materials
+      summary: Synchronize materials
+      description: Synchronizes adsorbates and adsorbents data with external sources.
+      responses:
+        '200':
+          description: Materials synchronized successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Materials synchronized
+                  status:
+                    type: string
+                    example: OK
+        '400':
+          description: Validation error during synchronization.
+
+  /adsorption-materials:
+    get:
+      tags:
+        - Materials
+      summary: Retrieve adsorbates and adsorbents
+      description: Retrieves both adsorbates and adsorbents in a single response.
+      responses:
+        '200':
+          description: List of adsorbates and adsorbents retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  adsorbates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Adsorbate'
+                  adsorbents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Adsorbent'
+
+  # Samples
+  /samples:
+    get:
+      tags:
+        - Samples
+      summary: List all samples
+      description: Retrieves all existing samples.
+      responses:
+        '200':
+          description: List of samples retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  samples:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Sample'
+        '404':
+          description: No samples found
+
+  /sample:
+    post:
+      tags:
+        - Samples
+      summary: Create a new sample
+      description: Creates a new sample associated with the authenticated user.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SampleInput'
+      responses:
+        '201':
+          description: Sample created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sample'
+        '400':
+          description: Validation error
+
+  /sample/{sample_id}:
+    get:
+      tags:
+        - Samples
+      summary: Get a sample by ID
+      description: Retrieves the details of a specific sample by its ID.
+      parameters:
+        - in: path
+          name: sample_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sample details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sample'
+        '404':
+          description: Sample not found
+
+    delete:
+      tags:
+        - Samples
+      summary: Delete a sample
+      description: Soft deletes a sample owned by the authenticated user.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: sample_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sample deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sample_id:
+                    type: integer
+        '403':
+          description: Forbidden (user not authorized to delete the sample)
+        '404':
+          description: Sample not found
+
+  # Models
+  /models:
+    get:
+      tags:
+        - Models
+      summary: List all models
+      description: Retrieves a list of available isotherm models.
+      responses:
+        '200':
+          description: List of models retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Model'
+        '404':
+          description: No models found
+
+  /models/methods:
+    get:
+      tags:
+        - Models
+      summary: List optimization methods
+      description: Retrieves a list of available methods used to optimize model fitting.
+      responses:
+        '200':
+          description: List of optimization methods retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  methods:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Method'
+        '404':
+          description: No adjust methods found
+
+  # Investigations
+  /investigation/run-linearization:
+    post:
+      tags:
+        - Investigations
+      summary: Run linearization models
+      description: Executes linearization models for a given sample and model set.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunLinearizationRequest'
+      responses:
+        '200':
+          description: Linearization models executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunLinearizationResponse'
+
+  /investigation/run-no-linear-model:
+    post:
+      tags:
+        - Investigations
+      summary: Run non-linear models
+      description: Executes non-linear optimization models for a sample.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunNoLinearModelRequest'
+      responses:
+        '200':
+          description: Non-linear models executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunNoLinearModelResponse'
+
+  /investigation/predict-seeds:
+    post:
+      tags:
+        - Investigations
+      summary: Predict initial seeds
+      description: Predicts initial seeds for models based on sample data.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictSeedsRequest'
+      responses:
+        '200':
+          description: Seeds predicted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictSeedsResponse'
+
+  /investigations:
+    get:
+      tags:
+        - Investigations
+      summary: List investigations
+      description: Retrieves a paginated list of investigations.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: Page number
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+          description: Items per page
+        - in: query
+          name: user_id
+          schema:
+            type: integer
+          description: Filter by user ID
+      responses:
+        '200':
+          description: List of investigations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetInvestigationsResponse'
+
+  /investigation/save:
+    post:
+      tags:
+        - Investigations
+      summary: Save investigation and version
+      description: Creates or updates an investigation and its version.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveInvestigationRequest'
+      responses:
+        '201':
+          description: Investigation and version saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveInvestigationResponse'
+
+  /investigation/{investigation_id}/version/{version_id}:
+    get:
+      tags:
+        - Investigations
+      summary: Get a specific version
+      description: Retrieves a specific version of an investigation.
+      parameters:
+        - in: path
+          name: investigation_id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: version_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Investigation version details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Version'
+
+    delete:
+      tags:
+        - Investigations
+      summary: Delete a version
+      description: Deletes a specific version of an investigation.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: investigation_id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: version_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Version deleted successfully
+
+  /investigation/{investigation_id}/versions:
+    get:
+      tags:
+        - Investigations
+      summary: List versions of an investigation
+      description: Retrieves all versions related to an investigation.
+      parameters:
+        - in: path
+          name: investigation_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of versions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetInvestigationVersionsResponse'
+
+  /investigation/{investigation_id}:
+    delete:
+      tags:
+        - Investigations
+      summary: Delete an investigation
+      description: Deletes an investigation and all its versions.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: investigation_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Investigation deleted successfully
+
+components:
+  schemas:
+    RunLinearizationRequest:
+      type: object
+      required:
+        - sample_id
+        - models
+      properties:
+        sample_id:
+          type: integer
+          example: 123
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              model:
+                type: string
+              linearizations:
+                type: array
+                items:
+                  type: string
+    RunLinearizationResponse:
+      type: object
+      properties:
+        sample_id:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              model:
+                type: string
+              best_result:
+                type: string
+              linearizations:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    id:
+                      type: string
+                    status:
+                      type: string
+                    transformed:
+                      type: object
+                      properties:
+                        x:
+                          type: array
+                          items:
+                            type: number
+                        y:
+                          type: array
+                          items:
+                            type: number
+                    slope:
+                      type: number
+                    intercept:
+                      type: number
+                    statistics:
+                      type: object
+                    parameters:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          value:
+                            type: number
+                          std_err:
+                            type: number
+    RunNoLinearModelRequest:
+      type: object
+      required:
+        - sample_id
+        - models
+      properties:
+        sample_id:
+          type: integer
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              model:
+                type: string
+              seeds:
+                type: array
+                items:
+                  type: number
+    RunNoLinearModelResponse:
+      type: object
+      properties:
+        sample_id:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              model:
+                type: string
+              adjustment_methods:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    statistics:
+                      type: object
+                    residuals:
+                      type: object
+                    success:
+                      type: boolean
+                    parameters:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          value:
+                            type: number
+              best_adjust:
+                type: string
+        comparison:
+          type: object
+          properties:
+            heuristic:
+              type: object
+              properties:
+                best_model:
+                  type: string
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      model:
+                        type: string
+                      score:
+                        type: number
+            ridge:
+              type: object
+              properties:
+                best_model:
+                  type: string
+                transformed:
+                  type: array
+                  items:
+                    type: number
+                statistics:
+                  type: object
+                residuals:
+                  type: object
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      model:
+                        type: string
+                      coef:
+                        type: number
+    PredictSeedsRequest:
+      type: object
+      required:
+        - sample_id
+        - models
+      properties:
+        sample_id:
+          type: integer
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              model:
+                type: string
+    PredictSeedsResponse:
+      type: object
+      properties:
+        sample_id:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              seeds:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: number
+              name:
+                type: string
+              id:
+                type: integer
+    SaveInvestigationRequest:
+      type: object
+      required:
+        - sample_id
+      properties:
+        sample_id:
+          type: integer
+        investigation_id:
+          type: integer
+    SaveInvestigationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        version_id:
+          type: integer
+        investigation_id:
+          type: integer
+    GetInvestigationsResponse:
+      type: object
+      properties:
+        investigations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Investigation'
+        total:
+          type: integer
+        pages:
+          type: integer
+        page:
+          type: integer
+        per_page:
+          type: integer
+    GetInvestigationVersionsResponse:
+      type: object
+      properties:
+        investigation_id:
+          type: integer
+        versions:
+          type: array
+          items:
+            type: object
+            properties:
+              version_id:
+                type: number
+              best_model_heuristic:
+                type: number
+              best_model_ml:
+                type: number
+              created_at:
+                type: string
+                example: "2025-04-28T23:27:02.742501+00:00"
+              fitted_models:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    best_adjust:
+                      type: string
+                    model_id:
+                      type: number
+                    params:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          value:
+                            type: number
+                          std_err:
+                            type: number
+    Adsorbate:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        ion_name:
+          type: string
+          example: Chloride
+        iupac_name:
+          type: string
+          example: Chloride Ion
+        formula:
+          type: string
+          example: Cl-
+    Adsorbent:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Activated Carbon
+    Model:
+      type: object
+      properties:
+        _id:
+          type: number
+        name:
+          type: string
+        description:
+          type: string
+        latex_formula:
+          type: string
+        linearizations:
+          type: array
+          items:
+            type: object
+            properties:
+              linearization_id:
+                type: number
+              model_id:
+                type: number
+              name:
+                type: string
+              description:
+                type: string
+              parameters:
+                type: object
+                properties:
+                  b:
+                    type: string
+                  m:
+                    type: string
+                  x:
+                    type: string
+                  y:
+                    type: string
+        parameters:
+          type: object
+    Method:
+      type: object
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+    Sample:
+      type: object
+      properties:
+        sample_id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        temperature:
+          type: number
+          format: float
+        measure_unit:
+          type: string
+        adsorbent_id:
+          type: integer
+        adsorbate_id:
+          type: integer
+        user_id:
+          type: integer
+        ce:
+          type: array
+          items:
+            type: number
+            format: float
+        qe:
+          type: array
+          items:
+            type: number
+            format: float
+    SampleInput:
+      type: object
+      required:
+        - temperature
+        - measure_unit
+        - adsorbent_id
+        - adsorbate_id
+        - ce
+        - qe
+      properties:
+        temperature:
+          type: number
+          format: float
+        measure_unit:
+          type: string
+        adsorbent_id:
+          type: integer
+        adsorbate_id:
+          type: integer
+        ce:
+          type: array
+          description: List of concentrations
+          items:
+            type: number
+            format: float
+        qe:
+          type: array
+          description: List of adsorption values
+          items:
+            type: number
+            format: float
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          items:
+            type: string
+            example: "ADMIN"
+        active:
+          type: boolean
+    Investigation:
+      type: object
+      properties:
+        investigation_id:
+          type: integer
+        sample_id:
+          type: integer
+        user_id:
+          type: integer
+        sample:
+          $ref: '#/components/schemas/Sample'
+        user:
+          type: object
+          properties:
+            id:
+              type: number
+            email:
+              type: string
+          nullable: true
+
+    Version:
+      type: object
+      properties:
+        version_id:
+          type: integer
+        investigation_id:
+          type: integer
+        iterations:
+          type: integer
+          nullable: true
+        steps:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        fitted_models:
+          type: array
+          items:
+            type: object
+            properties:
+              model_id:
+                type: number
+              best_adjust:
+                type: string
+              adjustment_methods:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    params:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                          value:
+                            type: number
+                          std_err:
+                            type: number
+                    statistics:
+                      $ref: '#/components/schemas/Statistics'
+                    residuals:
+                      type: object
+                      properties:
+                        values:
+                          type: array
+                          items:
+                            type: number
+                        analysis:
+                          $ref: '#/components/schemas/ResidualsAnalysis'
+                    success:
+                      type: boolean
+                    transformed:
+                      type: object
+                      properties:
+                        x:
+                          type: array
+                          items:
+                            type: number
+                        y:
+                          type: array
+                          items:
+                            type: number
+              seeds:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: number
+                  stderr:
+                    type: number
+        comparison:
+          type: object
+          properties:
+            comparison_id:
+              type: number
+            heuristic:
+              type: object
+              properties:
+                best_model:
+                  type: number
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      model:
+                        type: number
+                      score:
+                        type: number
+            ml:
+              type: object
+              properties:
+                best_model:
+                  type: number
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      model:
+                        type: number
+                      score:
+                        type: number
+                statistics:
+                  $ref: '#/components/schemas/Statistics'
+                residuals:
+                  $ref: '#/components/schemas/ResidualsAnalysis'
+                transformed:
+                  type: object
+                  properties:
+                    x:
+                      type: array
+                      items:
+                        type: number
+                    y:
+                      type: array
+                      items:
+                        type: number
+        sample:
+          type: object
+          nullable: true
+        user:
+          type: object
+          nullable: true
+    ResidualsAnalysis:
+      type: object
+      properties:
+        durbin_watson:
+          type: number
+        homoscedasticity_pvalue:
+          type: number
+        normality_pvalue:
+          type: number
+        passes_homoscedasticity:
+          type: boolean
+        passes_independence:
+          type: boolean
+        passes_normality:
+          type: boolean
+    Statistics:
+      type: object
+      properties:
+        AIC:
+          type: number
+        BIC:
+          type: number
+        HYBRID:
+          type: number
+        RMSE:
+          type: number
+        SSE:
+          type: number
+        adjust_chi_squeared:
+          type: number
+        adjust_r_squared:
+          type: number
+        chi_squared:
+          type: number
+        r_squared:
+          type: number
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
