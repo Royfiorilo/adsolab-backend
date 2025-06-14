@@ -1,6 +1,6 @@
 services:
   database:
-    image: postgres:13
+    image: postgres:11
     restart: always
     container_name: adsolab_postgre_db
     environment:
