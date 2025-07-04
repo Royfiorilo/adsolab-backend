@@ -76,12 +76,10 @@ REACTORAPP_AUTH=/api/auth/login
 REACTORAPP_BASE_URL=https://laquisihereactorapp.fi.uba.ar
 REACTORAPP_PASS=12345678
 REACTORAPP_USER=frossini@fi.uba.ar
-TEST_USER_EMAIL=adsolab@fiuba.com
-TEST_USER_PASSWORD=password
 DEV_USER_EMAIL=adsolab@dev.com
 DEV_USER_PASSWORD=password
-SECRET_KEY=4SUbOhgTqwF5AAzR0SLooM3jrc2Q1gt9cgqgoiKVRb8
-SECURITY_PASSWORD_SALT='146320669432092624164254231479252972359'
+SECRET_KEY=4SUbOhgTqwF5AAzR0SLooM3jrc2Q1gt9cgqgoiKVRb8 #generar una nueva con `secrets.token_urlsafe()`
+SECURITY_PASSWORD_SALT='146320669432092624164254231479252972359' #generar una nueva con `str(secrets.SystemRandom().getrandbits(128))`
 ```
 
 6. Correr la aplicación:
