@@ -37,15 +37,6 @@ def create_app():
         if env == 'development':
             db.create_all()
 
-        # Create User to test with
-        test_user_email = os.getenv('TEST_USER_EMAIL')
-        test_user_password = os.getenv('TEST_USER_PASSWORD')
-        if not app.security.datastore.find_user(email=test_user_email):
-            user = app.security.datastore.create_user(email=test_user_email,
-                                                      password=hash_password(test_user_password))
-            app.security.datastore.add_role_to_user(user, ADMIN_ROLE)
-            db.session.commit()
-
         # Create User Dev  Admin
         dev_user_email = os.getenv('DEV_USER_EMAIL')
         dev_user_password = os.getenv('DEV_USER_PASSWORD')
