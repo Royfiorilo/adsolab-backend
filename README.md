@@ -23,17 +23,15 @@ AdsoLab Backend es un servicio web desarrollado en Python utilizando Flask que p
 - Python 3.10 instalado (se recomienda usar `pyenv` o similar).
 - Docker compose https://docs.docker.com/compose/install/ (recomendado para la base de datos).
 
-### Pasos para ejecutar
+### Paso 1 — Levantar la base de datos
 
-Antes de que nada, es necesario que la base de datos esté inicializada. Para ello, se puede utilizar docker-compose:
+Esto levanta PostgreSQL y aplica las migraciones automáticamente:
 
 ```bash
 docker-compose up -d
 ```
 
-Con eso listo, podemos avanzar con el setup de la aplicación:
-
-1. Instalar las dependencias del sistema:
+### Paso 2 — Instalar dependencias del sistema
 
 - En Debian/Ubuntu:
 
@@ -48,25 +46,18 @@ sudo apt-get install libpq-dev gcc
 brew install postgresql
 ```
 
-2. Instalar pipenv:
+- En Windows: no se requieren dependencias adicionales del sistema.
+
+### Paso 3 — Instalar pipenv y dependencias del proyecto
 
 ```bash
 pip install pipenv
-```
-
-3. Instalar las dependencias del proyecto:
-
-```bash
 pipenv install
 ```
 
-4. Configurar variable de entorno del sistema:
+### Paso 4 — Crear el archivo `.env`
 
-```bash
-export PYTHONPATH=<path al repositorio>/app
-```
-
-5. Crear un archivo .env en el root del repositorio con el siguiente contenido:
+Crear un archivo `.env` en la raíz del repositorio con el siguiente contenido:
 
 ```
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/adsolab?sslmode=disable
@@ -78,15 +69,44 @@ REACTORAPP_PASS=12345678
 REACTORAPP_USER=frossini@fi.uba.ar
 DEV_USER_EMAIL=adsolab@dev.com
 DEV_USER_PASSWORD=password
-SECRET_KEY=4SUbOhgTqwF5AAzR0SLooM3jrc2Q1gt9cgqgoiKVRb8 #generar una nueva con `secrets.token_urlsafe()`
-SECURITY_PASSWORD_SALT='146320669432092624164254231479252972359' #generar una nueva con `str(secrets.SystemRandom().getrandbits(128))`
+SECRET_KEY=<generar con: python -c "import secrets; print(secrets.token_urlsafe())">
+SECURITY_PASSWORD_SALT=<generar con: python -c "import secrets; print(secrets.SystemRandom().getrandbits(128))">
+env=development
 ```
 
-6. Correr la aplicación:
+### Paso 5 — Correr la aplicación
+
+#### Linux / MacOS
+
+Activar el entorno virtual y ejecutar:
 
 ```bash
-python ./app/start.py
+source .venv/bin/activate
+python app/start.py
 ```
+
+O sin activar el entorno:
+
+```bash
+.venv/bin/python app/start.py
+```
+
+#### Windows (PowerShell)
+
+Activar el entorno virtual una vez por sesión de terminal y ejecutar:
+
+```powershell
+.venv\Scripts\Activate.ps1
+python app/start.py
+```
+
+O sin activar el entorno:
+
+```powershell
+.venv\Scripts\python.exe app/start.py
+```
+
+El servidor quedará disponible en **http://127.0.0.1:5000**.
 
 ---
 

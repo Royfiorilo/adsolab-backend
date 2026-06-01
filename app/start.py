@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from http import HTTPStatus
 
 from flask import jsonify, request
@@ -48,4 +52,4 @@ def modify_get_login_response():
 
 
 if __name__ == '__main__':
-    app.run(port=5000)
+    app.run(port=5000, use_reloader=False)
