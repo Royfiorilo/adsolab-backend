@@ -26,7 +26,7 @@ def create_app():
     env = os.getenv('env')
     with app.app_context():
         from controller import model_controller, healt_check_controller, investigation_controller, sample_controller, \
-            materials_controller, auth_controller, user_controller
+            materials_controller, auth_controller, user_controller, kinetics_controller
         app.register_blueprint(model_controller.blueprint)
         app.register_blueprint(healt_check_controller.blueprint)
         app.register_blueprint(investigation_controller.blueprint)
@@ -34,6 +34,7 @@ def create_app():
         app.register_blueprint(materials_controller.blueprint)
         app.register_blueprint(auth_controller.blueprint)
         app.register_blueprint(user_controller.blueprint)
+        app.register_blueprint(kinetics_controller.blueprint)
         if env == 'development':
             db.create_all()
 
