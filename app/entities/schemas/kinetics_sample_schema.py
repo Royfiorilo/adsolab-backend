@@ -1,4 +1,4 @@
-from marshmallow import fields, Schema, validates_schema, pre_load, ValidationError
+from marshmallow import fields, Schema, validates_schema, pre_load, post_load, ValidationError
 
 from entities.kinetics_sample import KineticsSampleEntity
 from entities.schemas.dump_mixin import DumpMixin
@@ -69,6 +69,10 @@ class KineticsSampleSchema(Schema, DumpMixin):
             raise ValidationError('time values must be non-negative.')
         if data.get('qt') is not None and any(v < 0 for v in data['qt']):
             raise ValidationError('qt values must be non-negative.')
+
+    @post_load
+    def make_sample(self, data, **kwargs):
+        return KineticsSampleEntity(**data)
 
 
 KINETICS_SAMPLE_SCHEMA = KineticsSampleSchema()

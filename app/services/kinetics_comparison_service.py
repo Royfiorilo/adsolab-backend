@@ -12,7 +12,10 @@ Responsabilidad:
     TODO: implementar la lógica de puntuación una vez que el ajuste no lineal
     cinético esté definido y los criterios estadísticos sean validados.
 """
-from typing import List, Dict
+from typing import List, Dict, Tuple
+
+from entities.comparator import AdsorptionModelComparison
+from utils import round_number
 
 
 def determine_kinetic_heuristic_scores(fitted_models: List[Dict]) -> Dict:
@@ -54,13 +57,41 @@ def get_kinetic_ml_comparison(fitted_models: List[Dict], sample_time, sample_qt)
     )
 
 
-def get_kinetic_comparison(fitted_models: List[Dict], sample) -> Dict:
+def get_kinetic_comparison(fitted_models: List[Tuple], sample) -> Dict:
     """
     Punto de entrada del servicio de comparación cinética.
     Ejecuta heurística y (opcionalmente) ML.
 
-    TODO: implementar.
+    `fitted_models` es una lista de tuplas (KineticNoLinearModel, model_id).
+    ML queda como None hasta que se valide con Jorge/Silvia.
     """
-    raise NotImplementedError(
-        "get_kinetic_comparison: pending implementation."
-    )
+    if not fitted_models:
+        return {"heuristic": None, "ml": None}
+
+    compare_data = []
+    for kinetic_model, model_id in fitted_models:
+        best = kinetic_model.get_best_method()
+        if best is None:
+            continue
+        compare_data.append({
+            "statistics": best.statistics,
+            "residuals": best.residuals,
+            "name": model_id,
+        })
+
+    if not compare_data:
+        return {"heuristic": None, "ml": None}
+
+    scores = AdsorptionModelComparison.determine_heuristic_scores_models(compare_data, "name")
+    best_model = max(scores, key=scores.get)
+
+    return {
+        "heuristic": {
+            "best_model": best_model,
+            "results": [
+                {"model": model, "score": round_number(score)}
+                for model, score in scores.items()
+            ],
+        },
+        "ml": None,
+    }
