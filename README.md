@@ -129,6 +129,29 @@ la segunda es más conveniente para cuando se ejecuta la API desde otro servicio
 Para obtener un token, se puede utilizar el servicio `POST /auth-token` cuyo body debe incluir email y password del
 usuario.
 
+**Ejemplo de autenticación con token:**
+
+```bash
+# 1. Obtener el token
+curl -X POST http://127.0.0.1:5000/auth-token \
+  -H "Content-Type: application/json" \
+  -d '{"email":"tu_email@example.com","password":"tu_password"}'
+
+# Respuesta:
+# {"token":"eyJ2ZXIiOiI1IiwidWlkIjoiNzY0MDI2Njk0YTY2NDEyZmI2YzVmMTYwZmNmYjUxNDgiLCJmc19wYWEiOjE3ODIyNzQxNDYuODgzNzA5LCJleHAiOjB9.ajtYYg.dHf8xLo3OMpm1rRizzWYaq69JCA","user_id":1,"email":"tu_email@example.com"}
+
+# 2. Usar el token en endpoints protegidos (Header Authorization)
+curl http://127.0.0.1:5000/kinetics/sample \
+  -H "Authorization: Bearer TU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{"time":[0,5,10],"qt":[0,12.5,22.3],"adsorbate_id":1,"adsorbent_id":1}'
+
+# 3. Alternativamente, usar el token como query parameter
+curl "http://127.0.0.1:5000/kinetics/sample?auth_token=TU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{"time":[0,5,10],"qt":[0,12.5,22.3],"adsorbate_id":1,"adsorbent_id":1}'
+```
+
 ### Migraciones de base de datos
 
 Para el manejo de las migraciones se utilizó la herramienta [dbmate](https://github.com/amacneil/dbmate). Las mismas se
