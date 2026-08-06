@@ -1,6 +1,18 @@
+import numpy as np
 from sympy import sympify, lambdify, Function
 
 ln = Function("ln")
+
+
+def _log(value, base=None):
+    """`numpy.log` toma el 2do argumento posicional como array de salida, no como base."""
+    if base is None:
+        return np.log(value)
+    return np.log(value) / np.log(base)
+
+
+LAMBDIFY_MODULES = [{"log": _log, "ln": _log}, "numpy"]
+
 
 class Formula:
 
@@ -10,7 +22,7 @@ class Formula:
         self.formula_str = formula_str
         self.formula = sympify(formula_str, locals={"ln": ln}, evaluate=False)
         self.variables = sorted(self.formula.free_symbols, key=lambda s: s.name)
-        self.function = lambdify(self.variables, self.formula)
+        self.function = lambdify(self.variables, self.formula, modules=LAMBDIFY_MODULES)
 
     def to_function(self):
         return self.function
@@ -38,4 +50,4 @@ class Formula:
 
         self.formula = sympify(formula_str,locals={"ln": ln}, evaluate=False)
         self.variables = sorted(self.formula.free_symbols, key=lambda s: s.name)
-        self.function = lambdify(self.variables, self.formula)
+        self.function = lambdify(self.variables, self.formula, modules=LAMBDIFY_MODULES)

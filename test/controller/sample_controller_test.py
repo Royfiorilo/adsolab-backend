@@ -2,6 +2,7 @@ import json
 from http import HTTPStatus
 from unittest.mock import patch
 
+from conftest import TEST_USER_ID
 from exceptions.exceptions import NotFoundError, BadRequestError
 
 
@@ -126,32 +127,32 @@ def test_get_samples_server_error(mock_get_all_samples, client):
 def test_delete_sample_server_error(mock_delete_sample, client):
     sample_id = 1
     mock_delete_sample.side_effect = Exception("Database connection failed")
-    response = client.delete("/sample", content_type="application/json", data=json.dumps({'sample_id': sample_id}))
+    response = client.delete(f"/sample/{sample_id}", content_type="application/json")
     assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-    mock_delete_sample.assert_called_once_with(sample_id)
+    mock_delete_sample.assert_called_once_with(sample_id, TEST_USER_ID)
 
 @patch("controller.sample_controller.delete_sample")
 def test_delete_sample(mock_delete_sample, client):
     sample_id = 1
-    response = client.delete("/sample", content_type="application/json", data=json.dumps({'sample_id': sample_id}))
+    response = client.delete(f"/sample/{sample_id}", content_type="application/json")
     assert response.status_code == HTTPStatus.OK
-    mock_delete_sample.assert_called_once_with(sample_id)
+    mock_delete_sample.assert_called_once_with(sample_id, TEST_USER_ID)
     data = json.loads(response.data)
     assert data["sample_id"] == sample_id
 
 @patch("controller.sample_controller.delete_sample")
-def test_delete_sample_bad_request(mock_delete_sample, client):
+def test_delete_sample_with_non_numeric_id(mock_delete_sample, client):
     sample_id = 1
-    response = client.delete("/sample", content_type="application/json", data=json.dumps({'sample': sample_id}))
-    assert response.status_code == HTTPStatus.BAD_REQUEST
+    response = client.delete("/sample/not-a-number", content_type="application/json")
+    assert response.status_code == HTTPStatus.NOT_FOUND
     mock_delete_sample.assert_not_called()
 
 @patch("controller.sample_controller.delete_sample")
 def test_delete_sample_doesnt_exist(mock_delete_sample, client):
     sample_id = 1
     mock_delete_sample.side_effect = NotFoundError(f"Sample with id {sample_id} doesn't exist")
-    response = client.delete("/sample", content_type="application/json", data=json.dumps({'sample_id': sample_id}))
+    response = client.delete(f"/sample/{sample_id}", content_type="application/json")
     assert response.status_code == HTTPStatus.NOT_FOUND
-    mock_delete_sample.assert_called_once_with(sample_id)
+    mock_delete_sample.assert_called_once_with(sample_id, TEST_USER_ID)
 
 
