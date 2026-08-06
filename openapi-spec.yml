@@ -2465,6 +2465,16 @@ components:
                 type: array
                 items:
                   $ref: '#/components/schemas/KineticFittedMethod'
+              seeds:
+                type: array
+                description: Semillas iniciales con las que se corrió el ajuste, tal como llegaron en el request.
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    value:
+                      type: number
         comparison:
           type: object
           properties:
@@ -2486,7 +2496,45 @@ components:
             ml:
               type: object
               nullable: true
-              description: "Pendiente de implementación"
+              description: >
+                Comparación por regresión Ridge sobre las predicciones combinadas de todos los
+                modelos ajustados. Es `null` si ningún modelo logró ajustar.
+              properties:
+                best_model:
+                  type: integer
+                  description: Modelo con el coeficiente Ridge de mayor valor absoluto.
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      model:
+                        type: integer
+                      coef:
+                        type: number
+                statistics:
+                  $ref: '#/components/schemas/Statistics'
+                residuals:
+                  type: object
+                  properties:
+                    values:
+                      type: array
+                      items:
+                        type: number
+                    analysis:
+                      $ref: '#/components/schemas/ResidualsAnalysis'
+                transformed:
+                  type: object
+                  description: Curva combinada lista para graficar, sin puntos negativos.
+                  properties:
+                    x:
+                      type: array
+                      items:
+                        type: number
+                    y:
+                      type: array
+                      items:
+                        type: number
 
     KineticFittedMethod:
       type: object

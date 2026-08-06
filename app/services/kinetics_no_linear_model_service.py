@@ -292,6 +292,7 @@ def run_kinetic_no_linear_models(request_json: dict):
                 "model": model_id,
                 "adjustments": fit_results,
                 "best_adjust": kinetic_model.get_best_method_name(),
+                "seeds": model_config['seeds'],
             })
             successful_models.append((kinetic_model, model_id))
         except Exception as e:
@@ -307,6 +308,7 @@ def run_kinetic_no_linear_models(request_json: dict):
             ],
             "best_adjust": r["best_adjust"],
             "model": r["model"],
+            "seeds": r["seeds"],
         }
         for r in raw_results
         if "error" not in r

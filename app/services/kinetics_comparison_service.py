@@ -2,96 +2,94 @@
 kinetics_comparison_service.py
 
 Responsabilidad:
-    Comparar los modelos cinéticos ajustados usando criterios estadísticos
-    (puntaje heurístico) y opcionalmente regresión Ridge (ML).
+    Comparar los modelos cinéticos ajustados por puntaje heurístico y por
+    regresión Ridge sobre las predicciones combinadas.
 
-    Espejo de `comparison_service.py` del módulo de equilibrio, adaptado al
-    contexto cinético. Los pesos y criterios de comparación pueden diferir
-    de los del módulo de equilibrio según decisión de Jorge/Silvia.
-
-    TODO: implementar la lógica de puntuación una vez que el ajuste no lineal
-    cinético esté definido y los criterios estadísticos sean validados.
+    Espejo de `comparison_service.py` del módulo de equilibrio. La matemática es
+    la misma (`AdsorptionModelComparison`), sólo cambian las variables: `time`/`qt`
+    en lugar de `ce`/`qe`.
 """
-from typing import List, Dict, Tuple
+from typing import Dict, List, Tuple
 
 from entities.comparator import AdsorptionModelComparison
-from utils import round_number
+from utils import filter_negative, round_number
 
 
-def determine_kinetic_heuristic_scores(fitted_models: List[Dict]) -> Dict:
+def _extract_best_methods(fitted_models: List[Tuple]) -> List[Dict]:
+    """Descarta los modelos que no lograron ningún ajuste exitoso."""
+    extracted = []
+    for kinetic_model, model_id in fitted_models:
+        best = kinetic_model.get_best_method()
+        if best is None:
+            continue
+        extracted.append({"model_id": model_id, "best": best})
+    return extracted
+
+
+def determine_kinetic_heuristic_scores(best_methods: List[Dict]) -> Tuple[Dict, int]:
+    compare_data = [
+        {"statistics": item["best"].statistics, "residuals": item["best"].residuals, "name": item["model_id"]}
+        for item in best_methods
+    ]
+    scores = AdsorptionModelComparison.determine_heuristic_scores_models(compare_data, "name")
+    return scores, max(scores, key=scores.get)
+
+
+def get_kinetic_ml_comparison(best_methods: List[Dict], sample) -> Dict:
     """
-    Calcula un puntaje heurístico para cada modelo cinético ajustado.
+    Combina las predicciones de los modelos ajustados mediante Ridge para estimar
+    pesos relativos.
 
-    Criterios preliminares (idénticos al módulo de equilibrio, sujetos a ajuste):
-      - R² Ajustado : 30 %
-      - RMSE        : 30 %
-      - AIC         : 25 %
-      - Chi²        : 10 %
-      - Bonos por análisis de residuos (normalidad, homocedasticidad,
-        independencia): 5 % c/u
-
-    TODO: implementar cálculo real.
-
-    Returns:
-        Dict con 'best_model' y 'scores' por modelo.
+    Se lee `transformed["qt_pred"]` directamente en lugar de `FitResult.get_qe_pred()`,
+    que busca la clave `qe_pred` del módulo de equilibrio. Depende de correr antes de
+    `ResponseFormatter.format_fit_result`, que descarta `qt_pred`.
     """
-    raise NotImplementedError(
-        "determine_kinetic_heuristic_scores: pending implementation."
-    )
+    qt_preds = [item["best"].transformed["qt_pred"] for item in best_methods]
+    extended_preds = [item["best"].transformed["y"] for item in best_methods]
+    extended_time = best_methods[0]["best"].transformed["x"]
 
+    ridge_scores = AdsorptionModelComparison.get_ml_coefs_models(sample.qt, qt_preds, extended_preds)
+    coefficients = ridge_scores["coefs"]
 
-def get_kinetic_ml_comparison(fitted_models: List[Dict], sample_time, sample_qt) -> Dict:
-    """
-    Combina las predicciones de todos los modelos cinéticos ajustados mediante
-    Ridge Regression para estimar pesos relativos.
+    results = [
+        {"model": item["model_id"], "coef": coef}
+        for item, coef in zip(best_methods, coefficients)
+    ]
+    best_model = results[coefficients.index(max(coefficients))]["model"]
 
-    Equivalente a `get_ml_coefs_models` de `comparison_service.py`.
+    # En t = 0 no hay adsorción, así que la curva combinada arranca en 0 (misma
+    # convención que equilibrio con ce = 0).
+    curve = list(ridge_scores["y_pred"])
+    curve[0] = 0
 
-    TODO: implementar una vez que el ajuste no lineal cinético esté disponible.
-
-    Returns:
-        Dict con coeficientes Ridge por modelo.
-    """
-    raise NotImplementedError(
-        "get_kinetic_ml_comparison: pending implementation."
-    )
+    return {
+        "best_model": best_model,
+        "transformed": filter_negative(extended_time, curve),
+        "statistics": ridge_scores["statistics"],
+        "residuals": ridge_scores["residuals"],
+        "results": results,
+    }
 
 
 def get_kinetic_comparison(fitted_models: List[Tuple], sample) -> Dict:
     """
     Punto de entrada del servicio de comparación cinética.
-    Ejecuta heurística y (opcionalmente) ML.
 
     `fitted_models` es una lista de tuplas (KineticNoLinearModel, model_id).
-    ML queda como None hasta que se valide con Jorge/Silvia.
     """
-    if not fitted_models:
+    best_methods = _extract_best_methods(fitted_models)
+    if not best_methods:
         return {"heuristic": None, "ml": None}
 
-    compare_data = []
-    for kinetic_model, model_id in fitted_models:
-        best = kinetic_model.get_best_method()
-        if best is None:
-            continue
-        compare_data.append({
-            "statistics": best.statistics,
-            "residuals": best.residuals,
-            "name": model_id,
-        })
-
-    if not compare_data:
-        return {"heuristic": None, "ml": None}
-
-    scores = AdsorptionModelComparison.determine_heuristic_scores_models(compare_data, "name")
-    best_model = max(scores, key=scores.get)
+    scores, best_heuristic = determine_kinetic_heuristic_scores(best_methods)
 
     return {
         "heuristic": {
-            "best_model": best_model,
+            "best_model": best_heuristic,
             "results": [
                 {"model": model, "score": round_number(score)}
                 for model, score in scores.items()
             ],
         },
-        "ml": None,
+        "ml": get_kinetic_ml_comparison(best_methods, sample),
     }
