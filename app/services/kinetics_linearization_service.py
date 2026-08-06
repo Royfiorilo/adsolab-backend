@@ -2,35 +2,90 @@
 kinetics_linearization_service.py
 
 Responsabilidad:
-    Ejecutar las linealizaciones de modelos cinéticos cuando estén definidas.
+    Ejecutar las linealizaciones de modelos cinéticos usando `time` / `qt` como
+    variables, en lugar de `ce` / `qe` como el módulo de equilibrio.
 
-    Equivalente a `linearization_service.py` del módulo de equilibrio, pero
-    usando `time` / `qt` como variables en lugar de `ce` / `qe`.
-
-    Este servicio es opcional en el primer alcance del módulo cinético;
-    puede implementarse en una iteración posterior si Jorge/Silvia confirman
-    que se requieren linealizaciones cinéticas (e.g. ln(qe - qt) vs t para PFO,
-    t/qt vs t para PSO).
-
-    TODO: implementar una vez que las linealizaciones cinéticas sean validadas.
+    Diferencias con `linearization_service.py`:
+      - Algunas linealizaciones cinéticas necesitan parámetros que no son datos
+        medidos. La de PFO (Lagergren) transforma `y = ln(qe - qt)`, donde `qe`
+        es justamente uno de los parámetros a despejar. Esos parámetros se
+        resuelven en `_resolve_known_params`: se toman del request si vienen, y
+        si no se estiman desde la muestra.
+      - Los puntos que no se pueden transformar se descartan en lugar de
+        sustituirse por el valor crudo (`linearization.py:35-42`). Sustituir
+        inyecta un punto falso: sobre datos PSO sintéticos exactos, el (0, 0)
+        que genera `t=0` degrada k2 de 0.020 a 0.034.
 """
+import math
+
 from scipy.stats import linregress
 from sympy import Eq, solve, sympify, symbols, diff
 import numpy as np
 
 from entities.formula import Formula
+from exceptions.exceptions import LinearizationError
 from utils import round_number, round_list_numbers
 
 ROUND_DIGIT = 4
+MIN_VALID_POINTS = 2
+MEASURED_VARIABLES = ("time", "qt")
+DEFAULT_PARAM_ESTIMATORS = {
+    "qe": lambda sample: max(sample.qt),
+}
 
 
-def _transform_points(sample, x_formula: Formula, y_formula: Formula):
-    x_dots, y_dots = [], []
+def _resolve_known_params(sample, x_formula: Formula, y_formula: Formula, provided: dict = None) -> dict:
+    required = {
+        variable.name
+        for formula in (x_formula, y_formula)
+        for variable in formula.get_variables()
+    } - set(MEASURED_VARIABLES)
+
+    known = {}
+    for name in sorted(required):
+        if provided and name in provided:
+            known[name] = float(provided[name])
+        elif name in DEFAULT_PARAM_ESTIMATORS:
+            known[name] = float(DEFAULT_PARAM_ESTIMATORS[name](sample))
+        else:
+            raise LinearizationError(
+                f"Parameter '{name}' is needed to transform this linearization "
+                f"and has no default estimator. Send it in 'known_params'."
+            )
+    return known
+
+
+def _apply_formula(formula: Formula, data: dict):
+    try:
+        with np.errstate(divide='ignore', invalid='ignore'):
+            value = float(formula.apply(**data))
+    except (ZeroDivisionError, ValueError, TypeError):
+        return None
+    return value if math.isfinite(value) else None
+
+
+def _transform_points(sample, x_formula: Formula, y_formula: Formula, known_params: dict = None):
+    x_dots, y_dots, dropped = [], [], 0
+
     for t, q in zip(sample.time, sample.qt):
-        data = {"time": float(t), "qt": float(q)}
-        x_dots.append(round(float(x_formula.apply(**data)), ROUND_DIGIT))
-        y_dots.append(round(float(y_formula.apply(**data)), ROUND_DIGIT))
-    return x_dots, y_dots
+        data = {**(known_params or {}), "time": float(t), "qt": float(q)}
+        x = _apply_formula(x_formula, data)
+        y = _apply_formula(y_formula, data)
+
+        if x is None or y is None:
+            dropped += 1
+            continue
+
+        x_dots.append(round(x, ROUND_DIGIT))
+        y_dots.append(round(y, ROUND_DIGIT))
+
+    if len(x_dots) < MIN_VALID_POINTS:
+        raise LinearizationError(
+            f"Not enough valid points to linearize: only {len(x_dots)} of "
+            f"{sample.len()} could be transformed."
+        )
+
+    return x_dots, y_dots, dropped
 
 
 def _solve_params(equations: dict, result_lr) -> tuple:
@@ -69,29 +124,30 @@ def _solve_params(equations: dict, result_lr) -> tuple:
     return params_values, params_stderr
 
 
-def _run_single_linearization(sample, lin_data: dict) -> dict:
+def _run_single_linearization(sample, lin_data: dict, provided_params: dict = None) -> dict:
+    identity = {"name": lin_data['name'], "id": lin_data['linearization_id']}
     parameters = lin_data.get('parameters', {})
-    x_formula = Formula(parameters['x'])
-    y_formula = Formula(parameters['y'])
-
-    x_dots, y_dots = _transform_points(sample, x_formula, y_formula)
 
     try:
+        x_formula = Formula(parameters['x'])
+        y_formula = Formula(parameters['y'])
+        known_params = _resolve_known_params(sample, x_formula, y_formula, provided_params)
+        x_dots, y_dots, dropped = _transform_points(sample, x_formula, y_formula, known_params)
         result_lr = linregress(x_dots, y_dots)
-    except ValueError as e:
-        return {"name": lin_data['name'], "id": lin_data['linearization_id'], "status": "ERROR", "reason": str(e)}
-
-    equations = {k: v for k, v in parameters.items() if k not in ('x', 'y')}
-    params_values, params_stderr = _solve_params(equations, result_lr)
+        equations = {k: v for k, v in parameters.items() if k not in ('x', 'y')}
+        params_values, params_stderr = _solve_params(equations, result_lr)
+    except (LinearizationError, ValueError, KeyError) as e:
+        return {**identity, "status": "ERROR", "reason": str(e)}
 
     return {
-        "name": lin_data['name'],
-        "id": lin_data['linearization_id'],
+        **identity,
         "status": "OK",
         "transformed": {"x": x_dots, "y": round_list_numbers(y_dots)},
         "slope": round_number(result_lr.slope),
         "intercept": round_number(result_lr.intercept),
         "statistics": {"r_squared": round(result_lr.rvalue ** 2, ROUND_DIGIT)},
+        "assumed_params": known_params,
+        "dropped_points": dropped,
         "parameters": [
             {
                 "name": name,
@@ -114,7 +170,9 @@ def run_kinetic_linearization(request_json: dict):
       4. Resolver sistema de ecuaciones con SymPy para recuperar parámetros.
       5. Propagar incertidumbres mediante Jacobiano.
 
-    TODO: implementar.
+    Cada modelo del request acepta un `known_params` opcional con los valores de
+    los parámetros que la transformación necesita conocer de antemano (e.g. `qe`
+    para PFO). Si no viene, se estima desde la muestra.
     """
     from app import db
     from database import KineticLinearization
@@ -130,6 +188,7 @@ def run_kinetic_linearization(request_json: dict):
     for model_request in request_json['models']:
         model_id = model_request['model']
         linearization_ids = model_request.get('linearizations', [])
+        provided_params = model_request.get('known_params', {})
 
         linearization_results = []
         best_result = None
@@ -142,7 +201,7 @@ def run_kinetic_linearization(request_json: dict):
                 continue
 
             lin_data = KINETICS_LINEARIZATION_SCHEMA.dump(lin_db)
-            result = _run_single_linearization(sample, lin_data)
+            result = _run_single_linearization(sample, lin_data, provided_params)
             linearization_results.append(result)
 
             if result['status'] == 'OK':

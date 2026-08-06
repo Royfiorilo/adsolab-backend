@@ -1008,13 +1008,36 @@ paths:
         - Cinética - Análisis
       summary: Ejecutar linealización cinética
       description: |
-        Ejecuta la linealización del modelo cinético seleccionado.
+        Ejecuta las linealizaciones de los modelos cinéticos seleccionados.
 
-        **Linealización disponible — Difusión Intraparticular:**
+        En todos los casos: se transforman los puntos, se ajusta una regresión lineal
+        `y = m·x + b`, se despejan los parámetros resolviendo el sistema con SymPy y se
+        propagan las incertidumbres mediante Jacobiano.
+
+        **Difusión Intraparticular (Weber-Morris):**
         - Transforma: `x = √t`, `y = qt`
-        - Regresión lineal: `y = m·x + b`
         - Recupera: `kid = m`, `C = b`
-        - Propaga incertidumbres mediante Jacobiano
+
+        **Pseudo-Segundo Orden (Ho y McKay):**
+        - Transforma: `x = t`, `y = t/qt`
+        - Recupera: `qe = 1/m`, `k2 = 1/(b·qe²)`
+        - El punto `t = 0` no es transformable y se descarta.
+
+        **Pseudo-Primer Orden (Lagergren):**
+        - Transforma: `x = t`, `y = ln(qe - qt)`
+        - Recupera: `k1 = -m`, `qe = e^b`
+        - Esta transformación necesita conocer `qe` de antemano, que es a la vez uno de
+          los parámetros a despejar. Se toma de `known_params.qe` si viene en el request;
+          si no, se estima como `max(qt)`. El valor efectivamente usado se devuelve en
+          `assumed_params`.
+        - **Limitación:** si la muestra no alcanzó el equilibrio, `max(qt)` subestima `qe`
+          y la linealización pierde precisión. Conviene enviar `qe` explícito cuando se
+          lo conoce.
+
+        Los puntos que no se pueden transformar (división por cero, logaritmo de un valor
+        no positivo) se descartan; la cantidad se informa en `dropped_points`. Si quedan
+        menos de 2 puntos válidos, esa linealización devuelve `status: ERROR` con el motivo,
+        sin abortar el resto de la respuesta.
 
         Devuelve los datos transformados listos para graficar en Plotly.
       requestBody:
@@ -2298,6 +2321,15 @@ components:
                 items:
                   type: integer
                 description: IDs de linealizaciones a ejecutar
+              known_params:
+                type: object
+                additionalProperties:
+                  type: number
+                description: >
+                  Valores de los parámetros que la transformación necesita conocer de
+                  antemano (e.g. `qe` para PFO). Si se omite, se estiman desde la muestra.
+                example:
+                  qe: 7.4
         filter:
           type: array
           items:
@@ -2356,6 +2388,25 @@ components:
                       type: array
                       items:
                         $ref: '#/components/schemas/FittedParameter'
+                    assumed_params:
+                      type: object
+                      additionalProperties:
+                        type: number
+                      description: >
+                        Parámetros que se dieron por conocidos para construir la
+                        transformación, ya sea provistos en el request o estimados.
+                        Sólo presente cuando `status` es `OK`.
+                      example:
+                        qe: 7.4
+                    dropped_points:
+                      type: integer
+                      description: >
+                        Cantidad de puntos experimentales descartados por no ser
+                        transformables (e.g. `t=0` en PSO, o `qt = qe` en PFO).
+                        Sólo presente cuando `status` es `OK`.
+                    reason:
+                      type: string
+                      description: Motivo del fallo. Sólo presente cuando `status` es `ERROR`.
 
     KineticRunNoLinearRequest:
       type: object

@@ -1,3 +1,5 @@
+import app  # noqa: F401  debe ir primero: rompe el ciclo dump_mixin -> app -> database
+
 from http import HTTPStatus
 from unittest.mock import MagicMock, patch
 
