@@ -15,12 +15,12 @@ services:
     image: "ghcr.io/amacneil/dbmate:1"
     container_name: db_migrations_adsolab
     volumes:
-      - "./db:/db"
+      - "./db:/db:z"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@database:5432/adsolab?sslmode=disable
     depends_on:
       - "database"
-    command: "--wait up"
+    command: "--wait --migrations-dir /db/migrations up"
 
 
 #  pgadmin:

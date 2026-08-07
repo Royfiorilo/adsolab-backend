@@ -1,22 +1,99 @@
 openapi: 3.0.3
 info:
   title: AdsoLab API
-  version: 1.0.0
+  version: 2.0.0
+  description: |
+    API del backend de AdsoLab. Permite modelar el equilibrio de adsorción
+    (módulo de isotermas) y la cinética de adsorción (módulo cinético).
+
+    ## Autenticación
+    Los endpoints marcados con 🔒 requieren un Bearer token obtenido desde `POST /auth-token`.
+    
+    **Método recomendado (Producción):**
+    ```
+    Authorization: Bearer <token>
+    ```
+    
+    **Método alternativo (Solo para testing local):**
+    ```
+    ?auth_token=<token>
+    ```
+    
+    ⚠️ **ADVERTENCIA DE SEGURIDAD:** El método de query parameter (`?auth_token=`) 
+    NO es seguro para producción. El token queda expuesto en:
+    - Logs del servidor web (Nginx, Apache, etc.)
+    - Historial del navegador
+    - Headers Referer al visitar sitios externos
+    - Proxies corporativos y firewalls
+    
+    **Siempre usa Bearer token en el header `Authorization` para integraciones reales.**
+
+    ## Módulos
+    - **Equilibrio (isotermas):** `/sample`, `/samples`, `/models`, `/investigation/*`, `/investigations`
+    - **Cinética:** `/kinetics/*`
+    - **Materiales:** `/adsorbates`, `/adsorbents`, `/adsorption-materials`
+    - **Usuarios:** `/users`
 
 servers:
+  - url: http://127.0.0.1:5000
+    description: Local development server
   - url: https://api.adsolab.xyz
-    description: Development server
-  # TODO: add production URL when available
+    description: Production server
+
+tags:
+  - name: Autenticación
+    description: Obtención de token JWT
+  - name: Usuarios
+    description: Gestión de usuarios y roles
+  - name: Materiales
+    description: Adsorbatos y adsorbentes disponibles
+  - name: "Equilibrio - Muestras"
+    description: Muestras de isotermas (ce/qe)
+  - name: "Equilibrio - Modelos"
+    description: Modelos de isotermas y métodos de optimización
+  - name: "Equilibrio - Investigaciones"
+    description: Flujo de análisis de isotermas (linealización, ajuste no lineal, histórico)
+  - name: "Cinética - Modelos"
+    description: Modelos cinéticos disponibles
+  - name: "Cinética - Muestras"
+    description: Muestras cinéticas (time/qt)
+  - name: "Cinética - Análisis"
+    description: Seeds, linealización y ajuste no lineal cinético
+  - name: "Cinética - Investigaciones"
+    description: Guardar y recuperar resultados cinéticos
 
 paths:
+
+  /health-check:
+    get:
+      tags:
+        - Autenticación
+      summary: Health check
+      description: Verifica que el servidor está corriendo.
+      responses:
+        '200':
+          description: Servidor activo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
 
   # Authentication
   /auth-token:
     post:
       tags:
-        - Authentication
+        - Autenticación
       summary: Obtain authentication token
-      description: Authenticates a user and returns a token.
+      description: |
+        Authenticates a user and returns a token valid for 24 hours.
+        
+        **Uso del token:**
+        - ✅ **Recomendado:** `Authorization: Bearer <token>` (seguro, no se loguea)
+        - ⚠️ **Solo testing:** `?auth_token=<token>` (inseguro, se expone en logs)
       requestBody:
         required: true
         content:
@@ -28,9 +105,11 @@ paths:
                 email:
                   type: string
                   format: email
+                  example: adsolab@dev.com
                 password:
                   type: string
                   format: password
+                  example: password
       responses:
         '200':
           description: Token obtained successfully
@@ -41,19 +120,39 @@ paths:
                 properties:
                   token:
                     type: string
+                    description: Bearer token válido por 24 horas
                   user_id:
                     type: integer
                   email:
                     type: string
+              examples:
+                success:
+                  summary: Autenticación exitosa
+                  value:
+                    token: ".eJwNykEKgCAQBdC7zFrCEf06XibUHGgnRRFEd8_dW7yX7n5Qp..."
+                    user_id: 1
+                    email: "adsolab@dev.com"
         '401':
           description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+              examples:
+                invalid:
+                  summary: Credenciales inválidas
+                  value:
+                    error: "Invalid email or password"
 
   # Users
   /users:
     post:
       tags:
-        - Users
-      summary: Create a new user
+        - Usuarios
+      summary: Crear usuario
       description: Creates a new user account. Only accessible by users with ADMIN or DEV roles.
       security:
         - bearerAuth: [ ]
@@ -93,8 +192,8 @@ paths:
 
     get:
       tags:
-        - Users
-      summary: List users
+        - Usuarios
+      summary: Listar usuarios
       description: Retrieves a paginated list of users. Only accessible by ADMIN or DEV roles.
       security:
         - bearerAuth: [ ]
@@ -135,8 +234,8 @@ paths:
   /users/{user_id}:
     get:
       tags:
-        - Users
-      summary: Retrieve user details
+        - Usuarios
+      summary: Obtener usuario
       description: Get details of a specific user. Only the user themselves or an ADMIN can access.
       security:
         - bearerAuth: [ ]
@@ -160,8 +259,8 @@ paths:
 
     put:
       tags:
-        - Users
-      summary: Update user information
+        - Usuarios
+      summary: Actualizar usuario
       description: Updates email, password, role, or active status. Restrictions apply depending on the user's role.
       security:
         - bearerAuth: [ ]
@@ -207,8 +306,8 @@ paths:
 
     delete:
       tags:
-        - Users
-      summary: Delete a user
+        - Usuarios
+      summary: Eliminar usuario
       description: Soft deletes a user. Cannot delete your own account. Only ADMIN or DEV can delete.
       security:
         - bearerAuth: [ ]
@@ -230,7 +329,7 @@ paths:
   /adsorbates:
     get:
       tags:
-        - Materials
+        - Materiales
       summary: List all adsorbates
       description: Retrieves a list of all available adsorbates.
       responses:
@@ -251,7 +350,7 @@ paths:
   /adsorbents:
     get:
       tags:
-        - Materials
+        - Materiales
       summary: List all adsorbents
       description: Retrieves a list of all available adsorbents.
       responses:
@@ -272,7 +371,7 @@ paths:
   /materials_sync:
     get:
       tags:
-        - Materials
+        - Materiales
       summary: Synchronize materials
       description: Synchronizes adsorbates and adsorbents data with external sources.
       responses:
@@ -295,7 +394,7 @@ paths:
   /adsorption-materials:
     get:
       tags:
-        - Materials
+        - Materiales
       summary: Retrieve adsorbates and adsorbents
       description: Retrieves both adsorbates and adsorbents in a single response.
       responses:
@@ -319,7 +418,7 @@ paths:
   /samples:
     get:
       tags:
-        - Samples
+        - "Equilibrio - Muestras"
       summary: List all samples
       description: Retrieves all existing samples.
       responses:
@@ -340,7 +439,7 @@ paths:
   /sample:
     post:
       tags:
-        - Samples
+        - "Equilibrio - Muestras"
       summary: Create a new sample
       description: Creates a new sample associated with the authenticated user.
       security:
@@ -364,7 +463,7 @@ paths:
   /sample/{sample_id}:
     get:
       tags:
-        - Samples
+        - "Equilibrio - Muestras"
       summary: Get a sample by ID
       description: Retrieves the details of a specific sample by its ID.
       parameters:
@@ -385,8 +484,8 @@ paths:
 
     delete:
       tags:
-        - Samples
-      summary: Delete a sample
+        - "Equilibrio - Muestras"
+      summary: Eliminar muestra de equilibrio
       description: Soft deletes a sample owned by the authenticated user.
       security:
         - bearerAuth: [ ]
@@ -415,8 +514,8 @@ paths:
   /models:
     get:
       tags:
-        - Models
-      summary: List all models
+        - "Equilibrio - Modelos"
+      summary: Listar modelos de isotermas
       description: Retrieves a list of available isotherm models.
       responses:
         '200':
@@ -436,8 +535,8 @@ paths:
   /models/methods:
     get:
       tags:
-        - Models
-      summary: List optimization methods
+        - "Equilibrio - Modelos"
+      summary: Listar métodos de optimización
       description: Retrieves a list of available methods used to optimize model fitting.
       responses:
         '200':
@@ -458,7 +557,7 @@ paths:
   /investigation/run-linearization:
     post:
       tags:
-        - Investigations
+        - "Equilibrio - Investigaciones"
       summary: Run linearization models
       description: Executes linearization models for a given sample and model set.
       requestBody:
@@ -478,7 +577,7 @@ paths:
   /investigation/run-no-linear-model:
     post:
       tags:
-        - Investigations
+        - "Equilibrio - Investigaciones"
       summary: Run non-linear models
       description: Executes non-linear optimization models for a sample.
       requestBody:
@@ -498,7 +597,7 @@ paths:
   /investigation/predict-seeds:
     post:
       tags:
-        - Investigations
+        - "Equilibrio - Investigaciones"
       summary: Predict initial seeds
       description: Predicts initial seeds for models based on sample data.
       requestBody:
@@ -518,7 +617,7 @@ paths:
   /investigations:
     get:
       tags:
-        - Investigations
+        - "Equilibrio - Investigaciones"
       summary: List investigations
       description: Retrieves a paginated list of investigations.
       parameters:
@@ -548,9 +647,24 @@ paths:
   /investigation/save:
     post:
       tags:
-        - Investigations
+        - "Equilibrio - Investigaciones"
       summary: Save investigation and version
-      description: Creates or updates an investigation and its version.
+      description: |
+        Creates or updates an investigation and its version.
+        
+        **Required fields:**
+        - `sample_id`: ID of the sample
+        - `results`: Array of fitted models (output from `/investigation/run-no-linear-model`)
+        - `comparison`: Comparison object (output from `/investigation/run-no-linear-model`)
+        
+        **Optional fields:**
+        - `investigation_id`: null to create new, or existing ID to add version
+        - `iterations`: Number of iterations used
+        - `steps`: Step size used
+        
+        **Typical workflow:**
+        1. Run `/investigation/run-no-linear-model` to get results + comparison
+        2. Call this endpoint with those results to save them
       security:
         - bearerAuth: [ ]
       requestBody:
@@ -570,7 +684,7 @@ paths:
   /investigation/{investigation_id}/version/{version_id}:
     get:
       tags:
-        - Investigations
+        - "Equilibrio - Investigaciones"
       summary: Get a specific version
       description: Retrieves a specific version of an investigation.
       parameters:
@@ -594,8 +708,8 @@ paths:
 
     delete:
       tags:
-        - Investigations
-      summary: Delete a version
+        - "Equilibrio - Investigaciones"
+      summary: Eliminar versión
       description: Deletes a specific version of an investigation.
       security:
         - bearerAuth: [ ]
@@ -617,7 +731,7 @@ paths:
   /investigation/{investigation_id}/versions:
     get:
       tags:
-        - Investigations
+        - "Equilibrio - Investigaciones"
       summary: List versions of an investigation
       description: Retrieves all versions related to an investigation.
       parameters:
@@ -637,9 +751,9 @@ paths:
   /investigation/{investigation_id}:
     delete:
       tags:
-        - Investigations
-      summary: Delete an investigation
-      description: Deletes an investigation and all its versions.
+        - "Equilibrio - Investigaciones"
+      summary: Eliminar una investigación
+      description: Elimina una investigación y todas sus versiones en cascada. Solo el propietario puede eliminarla.
       security:
         - bearerAuth: [ ]
       parameters:
@@ -650,7 +764,616 @@ paths:
             type: integer
       responses:
         '200':
-          description: Investigation deleted successfully
+          description: Investigación eliminada correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  investigation_id:
+                    type: integer
+        '403':
+          description: No autorizado
+        '404':
+          description: Investigación no encontrada
+
+  # ─────────────────────────────────────────────
+  # MÓDULO CINÉTICO
+  # ─────────────────────────────────────────────
+
+  /kinetics/models:
+    get:
+      tags:
+        - Cinética - Modelos
+      summary: Listar modelos cinéticos
+      description: |
+        Devuelve todos los modelos cinéticos disponibles en base de datos.
+        
+        **Modelos implementados:**
+        - **Difusión Intraparticular (Weber-Morris)** - Modelo de difusión en poros
+        - **Pseudo-Primer Orden (Lagergren, PFO)** - Cinética de primer orden
+        - **Pseudo-Segundo Orden (Ho & McKay, PSO)** - Cinética de segundo orden (quimisorción)
+      responses:
+        '200':
+          description: Lista de modelos cinéticos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/KineticModel'
+              example:
+                models:
+                  - _id: 1
+                    name: "Difusión Intraparticular"
+                    formula: "qt = kid * time**0.5 + C"
+                    latex_formula: "q_t = k_{id} \\cdot \\sqrt{t} + C"
+                    description: "Modelo de Weber-Morris..."
+                    parameters:
+                      kid: "constante de velocidad de difusión intraparticular (mg/g·min^0.5)"
+                      C: "intercepto relacionado con la capa límite externa (mg/g)"
+                    linearizations:
+                      - linearization_id: 1
+                        name: "Linealización Intraparticular"
+                        formula: "qt = kid * time**0.5 + C"
+                        parameters:
+                          x: "time**0.5"
+                          y: "qt"
+                          m: "kid"
+                          b: "C"
+
+  /kinetics/samples:
+    get:
+      tags:
+        - Cinética - Muestras
+      summary: Listar muestras cinéticas
+      description: Devuelve todas las muestras cinéticas activas (no eliminadas).
+      responses:
+        '200':
+          description: Lista de muestras cinéticas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  samples:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/KineticSample'
+        '404':
+          description: No se encontraron muestras
+
+  /kinetics/sample:
+    post:
+      tags:
+        - Cinética - Muestras
+      summary: Crear muestra cinética 🔒
+      description: |
+        Crea una nueva muestra cinética asociada al usuario autenticado.
+
+        **Opciones de entrada:**
+        - **Opción A:** Proveer `time` + `qt` directamente.
+        - **Opción B:** Proveer `time` + `concentration` con `initial_concentration`, `volume`
+          y `adsorbent_mass`. El backend calcula `qt = (C0 - Ct) * V / m`.
+
+        Los datos se ordenan automáticamente por tiempo antes de persistir.
+        El título se genera automáticamente si no se provee: `{user}-{temp}K-cinetica-{adsorbato}-{adsorbente}-{fecha}`.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KineticSampleInput'
+            examples:
+              con_qt:
+                summary: Con qt directo
+                value:
+                  time: [0, 5, 10, 20, 30, 60]
+                  qt: [0.0, 3.2, 5.1, 6.8, 7.4, 7.8]
+                  temperature: 298
+                  time_unit: "min"
+                  measure_unit: "mg/g"
+                  adsorbate_id: 1
+                  adsorbent_id: 1
+              con_concentracion:
+                summary: Con concentración (el backend calcula qt)
+                value:
+                  time: [0, 5, 10, 20, 30]
+                  concentration: [50.0, 43.6, 38.4, 33.2, 30.1]
+                  initial_concentration: 50.0
+                  volume: 0.25
+                  adsorbent_mass: 0.5
+                  temperature: 298
+                  time_unit: "min"
+                  measure_unit: "mg/g"
+                  adsorbate_id: 1
+                  adsorbent_id: 1
+      responses:
+        '201':
+          description: Muestra cinética creada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KineticSample'
+        '400':
+          description: Error de validación (longitudes distintas, valores negativos, faltan campos requeridos)
+        '401':
+          description: No autenticado
+
+  /kinetics/sample/{kinetic_sample_id}:
+    get:
+      tags:
+        - Cinética - Muestras
+      summary: Obtener muestra cinética por ID
+      parameters:
+        - in: path
+          name: kinetic_sample_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Datos completos de la muestra cinética
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KineticSample'
+        '404':
+          description: Muestra no encontrada
+
+    delete:
+      tags:
+        - Cinética - Muestras
+      summary: Eliminar muestra cinética 🔒
+      description: Soft-delete de una muestra cinética. Solo el propietario puede eliminarla.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: kinetic_sample_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Muestra eliminada correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  kinetic_sample_id:
+                    type: integer
+        '403':
+          description: No autorizado
+        '404':
+          description: Muestra no encontrada
+
+  /kinetics/predict-seeds:
+    post:
+      tags:
+        - Cinética - Análisis
+      summary: Predecir semillas iniciales
+      description: |
+        Estima los parámetros iniciales (seeds) para los modelos cinéticos seleccionados.
+        Necesario antes de ejecutar el ajuste no lineal.
+
+        **Estrategia de seeds:**
+        - `qe` → `max(qt)`
+        - `kid` → `max(qt) / sqrt(max(time))`
+        - `k1` → `0.1`
+        - `k2` → `0.01`
+        - otros → `1.0`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KineticPredictSeedsRequest'
+            example:
+              kinetic_sample_id: 1
+              models:
+                - model: 1
+              filter: []
+      responses:
+        '200':
+          description: Seeds predichas correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KineticPredictSeedsResponse'
+              example:
+                kinetic_sample_id: 1
+                results:
+                  - id: 1
+                    name: "Difusión Intraparticular"
+                    seeds:
+                      - name: "kid"
+                        value: 0.834
+                      - name: "C"
+                        value: 1.0
+        '400':
+          description: Faltan campos requeridos
+        '404':
+          description: Muestra no encontrada
+
+  /kinetics/run-linearization:
+    post:
+      tags:
+        - Cinética - Análisis
+      summary: Ejecutar linealización cinética
+      description: |
+        Ejecuta las linealizaciones de los modelos cinéticos seleccionados.
+
+        En todos los casos: se transforman los puntos, se ajusta una regresión lineal
+        `y = m·x + b`, se despejan los parámetros resolviendo el sistema con SymPy y se
+        propagan las incertidumbres mediante Jacobiano.
+
+        **Difusión Intraparticular (Weber-Morris):**
+        - Transforma: `x = √t`, `y = qt`
+        - Recupera: `kid = m`, `C = b`
+
+        **Pseudo-Segundo Orden (Ho y McKay):**
+        - Transforma: `x = t`, `y = t/qt`
+        - Recupera: `qe = 1/m`, `k2 = 1/(b·qe²)`
+        - El punto `t = 0` no es transformable y se descarta.
+
+        **Pseudo-Primer Orden (Lagergren):**
+        - Transforma: `x = t`, `y = ln(qe - qt)`
+        - Recupera: `k1 = -m`, `qe = e^b`
+        - Esta transformación necesita conocer `qe` de antemano, que es a la vez uno de
+          los parámetros a despejar. Se toma de `known_params.qe` si viene en el request;
+          si no, se estima como `max(qt)`. El valor efectivamente usado se devuelve en
+          `assumed_params`.
+        - **Limitación:** si la muestra no alcanzó el equilibrio, `max(qt)` subestima `qe`
+          y la linealización pierde precisión. Conviene enviar `qe` explícito cuando se
+          lo conoce.
+
+        Los puntos que no se pueden transformar (división por cero, logaritmo de un valor
+        no positivo) se descartan; la cantidad se informa en `dropped_points`. Si quedan
+        menos de 2 puntos válidos, esa linealización devuelve `status: ERROR` con el motivo,
+        sin abortar el resto de la respuesta.
+
+        Devuelve los datos transformados listos para graficar en Plotly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KineticRunLinearizationRequest'
+            example:
+              kinetic_sample_id: 1
+              models:
+                - model: 1
+                  linearizations: [1]
+              filter: []
+      responses:
+        '200':
+          description: Linealización ejecutada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KineticRunLinearizationResponse'
+              example:
+                kinetic_sample_id: 1
+                results:
+                  - model: 1
+                    best_result: 1
+                    linearizations:
+                      - name: "Linealización Intraparticular"
+                        id: 1
+                        status: "OK"
+                        slope: 0.834
+                        intercept: 0.21
+                        statistics:
+                          r_squared: 0.9912
+                        transformed:
+                          x: [0.0, 2.236, 3.162, 4.472, 5.477, 7.746]
+                          y: [0.0, 3.2, 5.1, 6.8, 7.4, 7.8]
+                        parameters:
+                          - name: "kid"
+                            value: 0.834
+                            std_err: 0.021
+                          - name: "C"
+                            value: 0.21
+                            std_err: 0.11
+        '400':
+          description: Faltan campos requeridos
+        '404':
+          description: Muestra no encontrada
+
+  /kinetics/run-no-linear-model:
+    post:
+      tags:
+        - Cinética - Análisis
+      summary: Ejecutar ajuste no lineal cinético
+      description: |
+        Endpoint principal del módulo cinético. Ejecuta el ajuste no lineal de uno o
+        varios modelos cinéticos usando `time` como variable independiente y `qt` como
+        variable dependiente.
+
+        **Flujo interno:**
+        1. Recupera la muestra cinética (aplica filtro si se indica).
+        2. Para cada modelo: corre todos los métodos de optimización disponibles
+           (Nelder-Mead, Levenberg-Marquardt, Powell, etc.).
+        3. Selecciona el mejor método por estadísticas.
+        4. Calcula R², R²adj, RMSE, SSE, AIC, BIC, χ², análisis de residuos.
+        5. Genera curva extendida de 300 puntos lista para Plotly.
+        6. Compara modelos entre sí (heurística por score ponderado).
+
+        **Bounds automáticos:**
+        - Parámetros tipo `q`: `[0.001, max(qt) × 1.1]`
+        - Otros parámetros: `[0, ∞)`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KineticRunNoLinearRequest'
+            example:
+              kinetic_sample_id: 1
+              models:
+                - model: 1
+                  seeds:
+                    - name: "kid"
+                      value: 0.834
+                    - name: "C"
+                      value: 1.0
+                  iterations: 10000
+                  step: 0.1
+              filter: []
+      responses:
+        '200':
+          description: Ajuste ejecutado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KineticRunNoLinearResponse'
+              example:
+                kinetic_sample_id: 1
+                results:
+                  - model: 1
+                    best_adjust: "leastsq"
+                    adjustment_methods:
+                      - name: "leastsq"
+                        success: true
+                        parameters:
+                          - name: "kid"
+                            value: 0.821
+                            std_err: 0.018
+                          - name: "C"
+                            value: 0.24
+                            std_err: 0.09
+                        statistics:
+                          r_squared: 0.9934
+                          adjust_r_squared: 0.9921
+                          RMSE: 0.089
+                          SSE: 0.047
+                          AIC: -31.2
+                          BIC: -30.4
+                          chi_squared: 0.012
+                        residuals:
+                          values: [0.01, -0.05, 0.03, -0.02, 0.04, -0.01]
+                          analysis:
+                            passes_normality: true
+                            normality_pvalue: 0.312
+                            passes_homoscedasticity: true
+                            homoscedasticity_pvalue: 0.541
+                            passes_independence: true
+                            durbin_watson: 1.97
+                        transformed:
+                          x: [0.0, 1.2, 2.5, 3.8, 5.1, 6.4]
+                          y: [0.0, 3.18, 5.13, 6.77, 7.41, 7.79]
+                comparison:
+                  heuristic:
+                    best_model: 1
+                    results:
+                      - model: 1
+                        score: 0.874
+        '400':
+          description: Faltan campos requeridos
+        '404':
+          description: Muestra no encontrada
+
+  /kinetics/investigations:
+    get:
+      tags:
+        - Cinética - Investigaciones
+      summary: Listar investigaciones cinéticas
+      description: Devuelve investigaciones cinéticas paginadas. Filtrable por usuario.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: per_page
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: user_id
+          schema:
+            type: integer
+          description: Filtrar por ID de usuario
+      responses:
+        '200':
+          description: Lista de investigaciones cinéticas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KineticGetInvestigationsResponse'
+
+  /kinetics/investigation/save:
+    post:
+      tags:
+        - Cinética - Investigaciones
+      summary: Guardar investigación cinética 🔒
+      description: |
+        Crea o actualiza una investigación cinética con una nueva versión de resultados.
+
+        **Campos opcionales (todos con defaults):**
+        - `kinetic_sample_id`: ID de la muestra (requerido)
+        - `kinetic_investigation_id`: null para crear nueva, o ID existente para agregar versión
+        - `results`: Array de modelos ajustados (default: [])
+        - `comparison`: Objeto de comparación (default: {})
+        - `iterations`: Iteraciones usadas (default: null)
+        - `steps`: Tamaño de paso usado (default: null)
+        
+        **Flujo típico:**
+        1. Ejecutar `/kinetics/run-no-linear-model` para obtener results + comparison
+        2. Llamar a este endpoint con esos resultados para guardarlos
+        
+        **Nota:** A diferencia del módulo de equilibrio, en cinética los campos `results` y
+        `comparison` son opcionales con defaults. Esto permite guardar investigaciones vacías.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KineticSaveRequest'
+            example:
+              kinetic_sample_id: 1
+              kinetic_investigation_id: null
+              iterations: 10000
+              steps: 0.1
+              results:
+                - model: 1
+                  best_adjust: "leastsq"
+                  seeds:
+                    - name: "kid"
+                      value: 0.834
+                    - name: "C"
+                      value: 1.0
+                  adjustment_methods: []
+              comparison:
+                heuristic:
+                  best_model: 1
+                  results: []
+      responses:
+        '201':
+          description: Investigación guardada correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  kinetic_investigation_id:
+                    type: integer
+                  version_id:
+                    type: integer
+        '401':
+          description: No autenticado
+        '403':
+          description: No autorizado
+        '404':
+          description: Muestra no encontrada
+
+  /kinetics/investigation/{kinetic_investigation_id}/versions:
+    get:
+      tags:
+        - Cinética - Investigaciones
+      summary: Listar versiones de una investigación cinética
+      parameters:
+        - in: path
+          name: kinetic_investigation_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de versiones
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  versions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/KineticVersion'
+
+  /kinetics/investigation/{kinetic_investigation_id}/version/{version_id}:
+    get:
+      tags:
+        - Cinética - Investigaciones
+      summary: Obtener versión cinética específica
+      parameters:
+        - in: path
+          name: kinetic_investigation_id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: version_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalle de la versión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KineticVersion'
+        '404':
+          description: Versión no encontrada
+
+    delete:
+      tags:
+        - Cinética - Investigaciones
+      summary: Eliminar versión cinética 🔒
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: kinetic_investigation_id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: version_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Versión eliminada correctamente
+        '403':
+          description: No autorizado
+
+  /kinetics/investigation/{kinetic_investigation_id}:
+    delete:
+      tags:
+        - Cinética - Investigaciones
+      summary: Eliminar investigación cinética 🔒
+      description: Elimina la investigación y todas sus versiones en cascada.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - in: path
+          name: kinetic_investigation_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Investigación eliminada correctamente
+        '403':
+          description: No autorizado
+        '404':
+          description: Investigación no encontrada
 
 components:
   schemas:
@@ -861,11 +1584,87 @@ components:
       type: object
       required:
         - sample_id
+        - results
+        - comparison
       properties:
         sample_id:
           type: integer
+          description: ID of the equilibrium sample
         investigation_id:
           type: integer
+          nullable: true
+          description: ID of existing investigation (null to create new)
+        results:
+          type: array
+          description: Array of fitted models from run-no-linear-model response (required)
+          items:
+            type: object
+            required:
+              - model
+              - best_adjust
+              - adjustment_methods
+              - seeds
+            properties:
+              model:
+                type: integer
+                description: Model ID
+              best_adjust:
+                type: string
+                description: Name of the best adjustment method
+              seeds:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    value:
+                      type: number
+                    stderr:
+                      type: number
+              adjustment_methods:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    parameters:
+                      type: array
+                      items:
+                        type: object
+                    statistics:
+                      type: object
+                    residuals:
+                      type: object
+                    success:
+                      type: boolean
+        comparison:
+          type: object
+          description: Comparison result from run-no-linear-model response (required)
+          required:
+            - heuristic
+          properties:
+            heuristic:
+              type: object
+              properties:
+                best_model:
+                  type: integer
+                results:
+                  type: array
+                  items:
+                    type: object
+            ridge:
+              type: object
+              nullable: true
+        iterations:
+          type: integer
+          nullable: true
+          description: Number of iterations used in fitting (optional)
+        steps:
+          type: number
+          nullable: true
+          description: Step size used in fitting (optional)
     SaveInvestigationResponse:
       type: object
       properties:
@@ -1033,34 +1832,48 @@ components:
     SampleInput:
       type: object
       required:
-        - temperature
-        - measure_unit
         - adsorbent_id
         - adsorbate_id
         - ce
         - qe
       properties:
+        ce:
+          type: array
+          description: List of equilibrium concentrations (required, min 1 point)
+          items:
+            type: number
+            format: float
+          minItems: 1
+        qe:
+          type: array
+          description: List of adsorption capacities (required, min 1 point, same length as ce)
+          items:
+            type: number
+            format: float
+          minItems: 1
+        adsorbate_id:
+          type: integer
+          description: ID of the adsorbate material
+        adsorbent_id:
+          type: integer
+          description: ID of the adsorbent material
+        title:
+          type: string
+          nullable: true
+          description: Optional custom title for the sample
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the experiment
         temperature:
           type: number
           format: float
+          nullable: true
+          description: Temperature in Kelvin (optional)
         measure_unit:
           type: string
-        adsorbent_id:
-          type: integer
-        adsorbate_id:
-          type: integer
-        ce:
-          type: array
-          description: List of concentrations
-          items:
-            type: number
-            format: float
-        qe:
-          type: array
-          description: List of adsorption values
-          items:
-            type: number
-            format: float
+          nullable: true
+          description: Unit of measurement (optional, e.g. 'mg/g')
     User:
       type: object
       properties:
@@ -1262,6 +2075,646 @@ components:
           type: number
         r_squared:
           type: number
+
+    # ─────────────────────────────────────────────
+    # SCHEMAS - MÓDULO CINÉTICO
+    # ─────────────────────────────────────────────
+
+    KineticModel:
+      type: object
+      properties:
+        _id:
+          type: integer
+        name:
+          type: string
+          example: "Difusión Intraparticular"
+        formula:
+          type: string
+          example: "qt = kid * time**0.5 + C"
+        latex_formula:
+          type: string
+          example: "q_t = k_{id} \\cdot \\sqrt{t} + C"
+        description:
+          type: string
+        parameters:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            kid: "constante de velocidad de difusión intraparticular (mg/g·min^0.5)"
+            C: "intercepto relacionado con la capa límite externa (mg/g)"
+        linearizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/KineticLinearization'
+
+    KineticLinearization:
+      type: object
+      properties:
+        linearization_id:
+          type: integer
+        name:
+          type: string
+        formula:
+          type: string
+        description:
+          type: string
+        parameters:
+          type: object
+          properties:
+            x:
+              type: string
+              description: Expresión para transformar la variable independiente
+              example: "time**0.5"
+            y:
+              type: string
+              description: Expresión para transformar la variable dependiente
+              example: "qt"
+            m:
+              type: string
+              description: Parámetro del modelo asociado a la pendiente
+              example: "kid"
+            b:
+              type: string
+              description: Parámetro del modelo asociado al intercepto
+              example: "C"
+        latex_formula:
+          type: string
+        kinetic_model_id:
+          type: integer
+
+    KineticSample:
+      type: object
+      properties:
+        kinetic_sample_id:
+          type: integer
+        time:
+          type: array
+          items:
+            type: number
+          example: [0, 5, 10, 20, 30, 60]
+        qt:
+          type: array
+          items:
+            type: number
+          example: [0.0, 3.2, 5.1, 6.8, 7.4, 7.8]
+        concentration:
+          type: array
+          items:
+            type: number
+          nullable: true
+        initial_concentration:
+          type: number
+          nullable: true
+        volume:
+          type: number
+          nullable: true
+        adsorbent_mass:
+          type: number
+          nullable: true
+        title:
+          type: string
+          nullable: true
+          example: "admin-298K-cinetica-arsenico-hidroxiapatita-01-06-2026"
+        description:
+          type: string
+          nullable: true
+        temperature:
+          type: number
+          example: 298
+        time_unit:
+          type: string
+          example: "min"
+        measure_unit:
+          type: string
+          example: "mg/g"
+        adsorbate_id:
+          type: integer
+        adsorbent_id:
+          type: integer
+        user_id:
+          type: integer
+
+    KineticSampleInput:
+      type: object
+      required:
+        - time
+        - adsorbate_id
+        - adsorbent_id
+      properties:
+        time:
+          type: array
+          items:
+            type: number
+          description: Instantes de tiempo (al menos 2 puntos)
+          example: [0, 5, 10, 20, 30, 60]
+        qt:
+          type: array
+          items:
+            type: number
+          description: Cantidad adsorbida en cada instante. Requerido si no se provee `concentration`.
+          example: [0.0, 3.2, 5.1, 6.8, 7.4, 7.8]
+        concentration:
+          type: array
+          items:
+            type: number
+          description: Concentración en solución en cada instante. Alternativa a `qt`.
+          nullable: true
+        initial_concentration:
+          type: number
+          description: Concentración inicial C₀ (mg/L). Requerido si se usa `concentration`.
+          nullable: true
+        volume:
+          type: number
+          description: Volumen de solución (L). Requerido si se usa `concentration`.
+          nullable: true
+        adsorbent_mass:
+          type: number
+          description: Masa de adsorbente (g). Requerido si se usa `concentration`.
+          nullable: true
+        temperature:
+          type: number
+          example: 298
+        time_unit:
+          type: string
+          example: "min"
+        measure_unit:
+          type: string
+          example: "mg/g"
+        adsorbate_id:
+          type: integer
+        adsorbent_id:
+          type: integer
+        title:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+
+    KineticPredictSeedsRequest:
+      type: object
+      required:
+        - kinetic_sample_id
+        - models
+      properties:
+        kinetic_sample_id:
+          type: integer
+        models:
+          type: array
+          items:
+            type: object
+            required: [model]
+            properties:
+              model:
+                type: integer
+                description: ID del modelo cinético
+        filter:
+          type: array
+          items:
+            type: integer
+          description: Índices de puntos a excluir del ajuste
+          example: []
+
+    KineticPredictSeedsResponse:
+      type: object
+      properties:
+        kinetic_sample_id:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              seeds:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    value:
+                      type: number
+
+    KineticRunLinearizationRequest:
+      type: object
+      required:
+        - kinetic_sample_id
+        - models
+      properties:
+        kinetic_sample_id:
+          type: integer
+        models:
+          type: array
+          items:
+            type: object
+            required: [model]
+            properties:
+              model:
+                type: integer
+              linearizations:
+                type: array
+                items:
+                  type: integer
+                description: IDs de linealizaciones a ejecutar
+              known_params:
+                type: object
+                additionalProperties:
+                  type: number
+                description: >
+                  Valores de los parámetros que la transformación necesita conocer de
+                  antemano (e.g. `qe` para PFO). Si se omite, se estiman desde la muestra.
+                example:
+                  qe: 7.4
+        filter:
+          type: array
+          items:
+            type: integer
+          example: []
+
+    KineticRunLinearizationResponse:
+      type: object
+      properties:
+        kinetic_sample_id:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              model:
+                type: integer
+              best_result:
+                type: integer
+                nullable: true
+                description: ID de la linealización con mejor R²
+              linearizations:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    id:
+                      type: integer
+                    status:
+                      type: string
+                      enum: [OK, ERROR]
+                    slope:
+                      type: number
+                    intercept:
+                      type: number
+                    statistics:
+                      type: object
+                      properties:
+                        r_squared:
+                          type: number
+                    transformed:
+                      type: object
+                      properties:
+                        x:
+                          type: array
+                          items:
+                            type: number
+                        y:
+                          type: array
+                          items:
+                            type: number
+                    parameters:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/FittedParameter'
+                    assumed_params:
+                      type: object
+                      additionalProperties:
+                        type: number
+                      description: >
+                        Parámetros que se dieron por conocidos para construir la
+                        transformación, ya sea provistos en el request o estimados.
+                        Sólo presente cuando `status` es `OK`.
+                      example:
+                        qe: 7.4
+                    dropped_points:
+                      type: integer
+                      description: >
+                        Cantidad de puntos experimentales descartados por no ser
+                        transformables (e.g. `t=0` en PSO, o `qt = qe` en PFO).
+                        Sólo presente cuando `status` es `OK`.
+                    reason:
+                      type: string
+                      description: Motivo del fallo. Sólo presente cuando `status` es `ERROR`.
+
+    KineticRunNoLinearRequest:
+      type: object
+      required:
+        - kinetic_sample_id
+        - models
+      properties:
+        kinetic_sample_id:
+          type: integer
+        models:
+          type: array
+          items:
+            type: object
+            required: [model, seeds]
+            properties:
+              model:
+                type: integer
+                description: ID del modelo cinético
+              seeds:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    value:
+                      type: number
+              iterations:
+                type: integer
+                default: 10000
+              step:
+                type: number
+                nullable: true
+        filter:
+          type: array
+          items:
+            type: integer
+          example: []
+
+    KineticRunNoLinearResponse:
+      type: object
+      properties:
+        kinetic_sample_id:
+          type: integer
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              model:
+                type: integer
+              best_adjust:
+                type: string
+                example: "leastsq"
+              adjustment_methods:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KineticFittedMethod'
+              seeds:
+                type: array
+                description: Semillas iniciales con las que se corrió el ajuste, tal como llegaron en el request.
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    value:
+                      type: number
+        comparison:
+          type: object
+          properties:
+            heuristic:
+              type: object
+              nullable: true
+              properties:
+                best_model:
+                  type: integer
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      model:
+                        type: integer
+                      score:
+                        type: number
+            ml:
+              type: object
+              nullable: true
+              description: >
+                Comparación por regresión Ridge sobre las predicciones combinadas de todos los
+                modelos ajustados. Es `null` si ningún modelo logró ajustar.
+              properties:
+                best_model:
+                  type: integer
+                  description: Modelo con el coeficiente Ridge de mayor valor absoluto.
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      model:
+                        type: integer
+                      coef:
+                        type: number
+                statistics:
+                  $ref: '#/components/schemas/Statistics'
+                residuals:
+                  type: object
+                  properties:
+                    values:
+                      type: array
+                      items:
+                        type: number
+                    analysis:
+                      $ref: '#/components/schemas/ResidualsAnalysis'
+                transformed:
+                  type: object
+                  description: Curva combinada lista para graficar, sin puntos negativos.
+                  properties:
+                    x:
+                      type: array
+                      items:
+                        type: number
+                    y:
+                      type: array
+                      items:
+                        type: number
+
+    KineticFittedMethod:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "leastsq"
+        success:
+          type: boolean
+        parameters:
+          type: array
+          items:
+            $ref: '#/components/schemas/FittedParameter'
+        statistics:
+          $ref: '#/components/schemas/Statistics'
+        residuals:
+          type: object
+          properties:
+            values:
+              type: array
+              items:
+                type: number
+            analysis:
+              $ref: '#/components/schemas/ResidualsAnalysis'
+        transformed:
+          type: object
+          description: Curva extendida de 300 puntos para graficar
+          properties:
+            x:
+              type: array
+              items:
+                type: number
+              description: Valores de tiempo extendidos
+            y:
+              type: array
+              items:
+                type: number
+              description: Valores de qt predichos
+
+    KineticSaveRequest:
+      type: object
+      required:
+        - kinetic_sample_id
+      properties:
+        kinetic_sample_id:
+          type: integer
+          description: ID of the kinetic sample
+        kinetic_investigation_id:
+          type: integer
+          nullable: true
+          description: ID of existing investigation (null to create new)
+        results:
+          type: array
+          description: Array of fitted models from run-no-linear-model response (optional, defaults to [])
+          items:
+            type: object
+            properties:
+              model:
+                type: integer
+              best_adjust:
+                type: string
+              seeds:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    value:
+                      type: number
+              adjustment_methods:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KineticFittedMethod'
+        comparison:
+          type: object
+          description: Comparison result from run-no-linear-model response (optional, defaults to {})
+          nullable: true
+          properties:
+            heuristic:
+              type: object
+              nullable: true
+            ml:
+              type: object
+              nullable: true
+        iterations:
+          type: integer
+          nullable: true
+          description: Number of iterations used in fitting (optional)
+        steps:
+          type: number
+          nullable: true
+          description: Step size used in fitting (optional)
+
+    KineticGetInvestigationsResponse:
+      type: object
+      properties:
+        investigations:
+          type: array
+          items:
+            $ref: '#/components/schemas/KineticInvestigation'
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+    KineticInvestigation:
+      type: object
+      properties:
+        kinetic_investigation_id:
+          type: integer
+        kinetic_sample_id:
+          type: integer
+        sample:
+          $ref: '#/components/schemas/KineticSample'
+        user_id:
+          type: integer
+        user:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: integer
+            email:
+              type: string
+
+    KineticVersion:
+      type: object
+      properties:
+        version_id:
+          type: integer
+        kinetic_investigation_id:
+          type: integer
+        iterations:
+          type: integer
+          nullable: true
+        steps:
+          type: number
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        fitted_models:
+          type: array
+          items:
+            type: object
+            properties:
+              kinetic_fitted_model_id:
+                type: integer
+              kinetic_model_id:
+                type: integer
+              best_adjust:
+                type: string
+              seeds:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FittedParameter'
+              adjustment_methods:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KineticFittedMethod'
+        comparison:
+          type: object
+          nullable: true
+
+    FittedParameter:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: number
+        std_err:
+          type: number
+          nullable: true
+
   securitySchemes:
     bearerAuth:
       type: http

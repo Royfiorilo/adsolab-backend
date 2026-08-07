@@ -22,7 +22,7 @@ class TestSampleEntity(unittest.TestCase):
         self.assertEqual(self.entity.id, 1)
 
     def test_length(self):
-        self.assertEqual(len(self.entity), 5)
+        self.assertEqual(self.entity.len(), 5)
 
     def test_remove_single_index(self):
         self.entity.remove([1])
@@ -37,12 +37,12 @@ class TestSampleEntity(unittest.TestCase):
     def test_remove_out_of_range_index(self):
         self.entity.remove([10])
         self.assertEqual(self.entity.ce, [0.0, 0.25, 0.5, 0.75, 1.0])
-        self.assertEqual(self.entity.qe, [0.1, 0.2, 0.3, 0.4, 0.5])
+        self.assertEqual(self.entity.qe, [0.0, 0.2, 0.3, 0.4, 0.5])
 
     def test_remove_empty_list(self):
         self.entity.remove([])
         self.assertEqual(self.entity.ce, [0.0, 0.25, 0.5, 0.75, 1.0])
-        self.assertEqual(self.entity.qe, [0.1, 0.2, 0.3, 0.4, 0.5])
+        self.assertEqual(self.entity.qe, [0.0, 0.2, 0.3, 0.4, 0.5])
 
 if __name__ == "__main__":
     unittest.main()

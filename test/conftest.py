@@ -1,8 +1,27 @@
+import app  # noqa: F401  debe ir primero: rompe el ciclo dump_mixin -> app -> database
+
 from http import HTTPStatus
 from unittest.mock import MagicMock, patch
 
+import flask_security
 import pytest
 from flask import Flask, jsonify
+from werkzeug.exceptions import HTTPException
+
+TEST_USER_ID = 1
+
+
+def _bypass_auth(*args, **kwargs):
+    def decorator(view):
+        return view
+    return decorator
+
+
+# Los controllers aplican estos decoradores al importarse y la app de test no inicializa
+# flask_security, así que hay que anularlos antes de importar los blueprints.
+flask_security.auth_required = _bypass_auth
+flask_security.roles_required = _bypass_auth
+flask_security.roles_accepted = _bypass_auth
 
 from controller.investigation_controller import blueprint as bp_investigation_controller
 from controller.materials_controller import blueprint as bp_materials_controller
@@ -31,6 +50,8 @@ def app():
 
     @app.errorhandler(Exception)
     def handle_generic_exception(error):
+        if isinstance(error, HTTPException):
+            return error
         return jsonify({"status": "error", "message": str(error)}), HTTPStatus.INTERNAL_SERVER_ERROR
 
     return app
@@ -52,6 +73,15 @@ def mock_hash_password():
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+@pytest.fixture(autouse=True)
+def mock_current_user():
+    user = MagicMock()
+    user.id = TEST_USER_ID
+    with patch('controller.sample_controller.current_user', user), \
+            patch('controller.investigation_controller.current_user', user):
+        yield user
 
 
 @pytest.fixture

@@ -23,17 +23,15 @@ AdsoLab Backend es un servicio web desarrollado en Python utilizando Flask que p
 - Python 3.10 instalado (se recomienda usar `pyenv` o similar).
 - Docker compose https://docs.docker.com/compose/install/ (recomendado para la base de datos).
 
-### Pasos para ejecutar
+### Paso 1 — Levantar la base de datos
 
-Antes de que nada, es necesario que la base de datos esté inicializada. Para ello, se puede utilizar docker-compose:
+Esto levanta PostgreSQL y aplica las migraciones automáticamente:
 
 ```bash
 docker-compose up -d
 ```
 
-Con eso listo, podemos avanzar con el setup de la aplicación:
-
-1. Instalar las dependencias del sistema:
+### Paso 2 — Instalar dependencias del sistema
 
 - En Debian/Ubuntu:
 
@@ -48,25 +46,18 @@ sudo apt-get install libpq-dev gcc
 brew install postgresql
 ```
 
-2. Instalar pipenv:
+- En Windows: no se requieren dependencias adicionales del sistema.
+
+### Paso 3 — Instalar pipenv y dependencias del proyecto
 
 ```bash
 pip install pipenv
-```
-
-3. Instalar las dependencias del proyecto:
-
-```bash
 pipenv install
 ```
 
-4. Configurar variable de entorno del sistema:
+### Paso 4 — Crear el archivo `.env`
 
-```bash
-export PYTHONPATH=<path al repositorio>/app
-```
-
-5. Crear un archivo .env en el root del repositorio con el siguiente contenido:
+Crear un archivo `.env` en la raíz del repositorio con el siguiente contenido:
 
 ```
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/adsolab?sslmode=disable
@@ -78,15 +69,44 @@ REACTORAPP_PASS=12345678
 REACTORAPP_USER=frossini@fi.uba.ar
 DEV_USER_EMAIL=adsolab@dev.com
 DEV_USER_PASSWORD=password
-SECRET_KEY=4SUbOhgTqwF5AAzR0SLooM3jrc2Q1gt9cgqgoiKVRb8 #generar una nueva con `secrets.token_urlsafe()`
-SECURITY_PASSWORD_SALT='146320669432092624164254231479252972359' #generar una nueva con `str(secrets.SystemRandom().getrandbits(128))`
+SECRET_KEY=<generar con: python -c "import secrets; print(secrets.token_urlsafe())">
+SECURITY_PASSWORD_SALT=<generar con: python -c "import secrets; print(secrets.SystemRandom().getrandbits(128))">
+env=development
 ```
 
-6. Correr la aplicación:
+### Paso 5 — Correr la aplicación
+
+#### Linux / MacOS
+
+Activar el entorno virtual y ejecutar:
 
 ```bash
-python ./app/start.py
+source .venv/bin/activate
+python app/start.py
 ```
+
+O sin activar el entorno:
+
+```bash
+.venv/bin/python app/start.py
+```
+
+#### Windows (PowerShell)
+
+Activar el entorno virtual una vez por sesión de terminal y ejecutar:
+
+```powershell
+.venv\Scripts\Activate.ps1
+python app/start.py
+```
+
+O sin activar el entorno:
+
+```powershell
+.venv\Scripts\python.exe app/start.py
+```
+
+El servidor quedará disponible en **http://127.0.0.1:5000**.
 
 ---
 
@@ -108,6 +128,29 @@ la segunda es más conveniente para cuando se ejecuta la API desde otro servicio
 
 Para obtener un token, se puede utilizar el servicio `POST /auth-token` cuyo body debe incluir email y password del
 usuario.
+
+**Ejemplo de autenticación con token:**
+
+```bash
+# 1. Obtener el token
+curl -X POST http://127.0.0.1:5000/auth-token \
+  -H "Content-Type: application/json" \
+  -d '{"email":"tu_email@example.com","password":"tu_password"}'
+
+# Respuesta:
+# {"token":"eyJ2ZXIiOiI1IiwidWlkIjoiNzY0MDI2Njk0YTY2NDEyZmI2YzVmMTYwZmNmYjUxNDgiLCJmc19wYWEiOjE3ODIyNzQxNDYuODgzNzA5LCJleHAiOjB9.ajtYYg.dHf8xLo3OMpm1rRizzWYaq69JCA","user_id":1,"email":"tu_email@example.com"}
+
+# 2. Usar el token en endpoints protegidos (Header Authorization)
+curl http://127.0.0.1:5000/kinetics/sample \
+  -H "Authorization: Bearer TU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{"time":[0,5,10],"qt":[0,12.5,22.3],"adsorbate_id":1,"adsorbent_id":1}'
+
+# 3. Alternativamente, usar el token como query parameter
+curl "http://127.0.0.1:5000/kinetics/sample?auth_token=TU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{"time":[0,5,10],"qt":[0,12.5,22.3],"adsorbate_id":1,"adsorbent_id":1}'
+```
 
 ### Migraciones de base de datos
 

@@ -143,3 +143,125 @@ class Role(db.Model, fsqla.FsRoleMixin):
 class User(db.Model, fsqla.FsUserMixin):
     deleted_at = db.Column(db.DateTime, nullable=True)
     pass
+
+
+# ---------------------------------------------------------------------------
+# Kinetics module tables
+# ---------------------------------------------------------------------------
+
+class KineticModel(DumpMixin, db.Model):
+    __tablename__ = 'kinetic_model'
+
+    _id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False)
+    formula = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.String, nullable=False)
+    parameters = db.Column(JSON, nullable=False)
+    constants = db.Column(ARRAY(db.String(5)), nullable=True)
+    latex_formula = db.Column(db.String(255), nullable=False)
+    linearizations = db.relationship('KineticLinearization', backref='kinetic_model', lazy=True)
+
+
+class KineticLinearization(DumpMixin, db.Model):
+    __tablename__ = 'kinetic_linearization'
+
+    linearization_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False)
+    formula = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.String, nullable=False)
+    parameters = db.Column(JSON, nullable=False)
+    constants = db.Column(ARRAY(db.String(5)), nullable=True)
+    kinetic_model_id = db.Column(db.Integer, db.ForeignKey('kinetic_model._id'), nullable=False)
+    latex_formula = db.Column(db.String(255), nullable=False)
+
+
+class KineticSample(DumpMixin, db.Model):
+    __tablename__ = 'kinetic_sample'
+
+    kinetic_sample_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    time = db.Column(ARRAY(db.Float), nullable=False)
+    qt = db.Column(ARRAY(db.Float), nullable=False)
+    concentration = db.Column(ARRAY(db.Float), nullable=True)
+    initial_concentration = db.Column(db.Float, nullable=True)
+    volume = db.Column(db.Float, nullable=True)
+    adsorbent_mass = db.Column(db.Float, nullable=True)
+    title = db.Column(db.String(100), nullable=True)
+    description = db.Column(db.String(500), nullable=True)
+    temperature = db.Column(db.Float, nullable=True)
+    time_unit = db.Column(db.String(10), nullable=True)
+    measure_unit = db.Column(db.String(10), nullable=True)
+    adsorbate_id = db.Column(db.Integer, db.ForeignKey('adsorbate.id'), nullable=False)
+    adsorbent_id = db.Column(db.Integer, db.ForeignKey('adsorbent.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+
+
+class KineticInvestigation(DumpMixin, db.Model):
+    __tablename__ = 'kinetic_investigation'
+
+    kinetic_investigation_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    kinetic_sample_id = db.Column(
+        db.Integer, db.ForeignKey('kinetic_sample.kinetic_sample_id'), nullable=False
+    )
+    sample = db.relationship('KineticSample', backref='kinetic_investigation', uselist=False, lazy=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    user = db.relationship('User', backref='kinetic_investigation', uselist=False, lazy=True)
+
+
+class KineticVersion(DumpMixin, db.Model):
+    __tablename__ = 'kinetic_version'
+
+    version_id = db.Column(db.Integer, primary_key=True)
+    iterations = db.Column(db.Integer, nullable=True)
+    steps = db.Column(db.Float, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    kinetic_investigation_id = db.Column(
+        db.Integer,
+        db.ForeignKey('kinetic_investigation.kinetic_investigation_id'),
+        primary_key=True
+    )
+    fitted_models = db.relationship(
+        'KineticFittedModel', backref='kinetic_version', cascade="all, delete-orphan", lazy=True
+    )
+    comparison = db.relationship(
+        'KineticComparison', backref='kinetic_version', cascade="all, delete-orphan", lazy=True,
+        uselist=False
+    )
+
+
+class KineticFittedModel(DumpMixin, db.Model):
+    __tablename__ = 'kinetic_fitted_model'
+
+    kinetic_fitted_model_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    kinetic_model_id = db.Column(db.Integer, nullable=False)
+    best_adjust = db.Column(db.String(100), nullable=False)
+    adjustment_methods = db.Column(ARRAY(db.JSON), nullable=False)
+    seeds = db.Column(ARRAY(db.JSON), nullable=False)
+    version_id = db.Column(db.Integer, nullable=False)
+    kinetic_investigation_id = db.Column(db.Integer, nullable=False)
+
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ['version_id', 'kinetic_investigation_id'],
+            ['kinetic_version.version_id', 'kinetic_version.kinetic_investigation_id'],
+            ondelete="CASCADE"
+        ),
+    )
+
+
+class KineticComparison(DumpMixin, db.Model):
+    __tablename__ = 'kinetic_comparison'
+
+    kinetic_comparison_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    heuristic = db.Column(db.JSON, nullable=False)
+    ml = db.Column(db.JSON, nullable=True)
+    version_id = db.Column(db.Integer, nullable=False, unique=True)
+    kinetic_investigation_id = db.Column(db.Integer, nullable=False, unique=True)
+
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ['version_id', 'kinetic_investigation_id'],
+            ['kinetic_version.version_id', 'kinetic_version.kinetic_investigation_id'],
+            ondelete="CASCADE"
+        ),
+    )

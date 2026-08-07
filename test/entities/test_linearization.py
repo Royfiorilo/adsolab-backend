@@ -38,6 +38,7 @@ class LinearizationTest(unittest.TestCase):
             formula='ce/qe = (1/qmax) * ce + 1 / (qmax * k)',
             description='Test Linearization',
             parameters={"x": "ce", "y": "ce/qe", "m": "1/qmax", "b": "1/(qmax * k)"},
+            latex_formula='',
             model_id=1
         )
 
@@ -59,6 +60,7 @@ class LinearizationTest(unittest.TestCase):
             formula='1 / qe = (1 / k * qmax) * (1 / ce) + 1 / qmax',
             description='Test Linearization',
             parameters={"x": "1/ce", "y": "1/qe", "m": "1/(k*qmax)", "b": "1/qmax"},
+            latex_formula='',
             model_id=1
         )
 
@@ -79,6 +81,7 @@ class LinearizationTest(unittest.TestCase):
             formula='log(qe) = log(kf) + 1/nf * log(ce)',
             description='Test Linearization',
             parameters={"x": "log(ce)", "y": "log(qe)", "m": "1 / nf", "b": "log(kf)"},
+            latex_formula='',
             model_id=1
         )
 
@@ -100,6 +103,7 @@ class LinearizationTest(unittest.TestCase):
             formula='qe = ((R*T)/btk) * ln(ktk) + ((R*T)/btk) * ln(ce)',
             description='Test Linearization',
             parameters={"x": "ln(ce)", "y": "qe", "m":"((R*T)/btk)", "b":"((R*T)/btk) * ln(ktk)"},
+            latex_formula='',
             model_id=1
         )
 
@@ -121,6 +125,7 @@ class LinearizationTest(unittest.TestCase):
             formula='ce/qe = (1/qmax) * ce + 1 / (qmax * k)',
             description='Test Linearization',
             parameters={"x": "ce", "y": "ce/qe", "m": "1/qmax", "b": "1/(qmax * k)"},
+            latex_formula='',
             model_id=1
         )
 
@@ -156,6 +161,7 @@ class LinearizationTest(unittest.TestCase):
             formula='1 / qe = (1 / k * qmax) * (1 / ce) + 1 / qmax',
             description='Test Linearization',
             parameters={"x": "1/ce", "y": "1/qe", "m": "1/(k*qmax)", "b": "1/qmax"},
+            latex_formula='',
             model_id=1
         )
 
@@ -191,6 +197,7 @@ class LinearizationTest(unittest.TestCase):
             formula='log(qe) = log(kf) + 1/nf * log(ce)',
             description='Test Linearization',
             parameters={"x": "log(ce)", "y": "log(qe)", "m": "1 / nf", "b": "log(kf)"},
+            latex_formula='',
             model_id=1
         )
 
@@ -227,6 +234,7 @@ class LinearizationTest(unittest.TestCase):
             formula='qe = ((R * T)/btk) * ln(ktk) + ((R * T)/btk) * ln(ce)',
             description='Test Linearization',
             parameters={"x": "ln(ce)", "y": "qe", "m": "((R * T)/btk)", "b": "((R * T)/btk) * ln(ktk)"},
+            latex_formula='',
             model_id=1,
             constants={'R': R_CONSTANT * (10 **-3), 'T': self.sample.temperature}
         )
@@ -236,17 +244,17 @@ class LinearizationTest(unittest.TestCase):
         ce_transformed = np.nan_to_num(ce_transformed, nan=0.0, posinf=0.0, neginf=0.0)
         qe_transformed = np.nan_to_num(qe_transformed, nan=0.0, posinf=0.0, neginf=0.0)
 
-        m = 0.1128
-        b = 0.1123
+        m = 0.015138
+        b = 0.112385
 
         btk = (R_CONSTANT * (10 **-3) * self.sample.temperature) / m
         ktk = np.exp(((b * btk) / (R_CONSTANT * (10 **-3) * self.sample.temperature)))
 
         result = linearization.run(self.sample, {'R': R_CONSTANT * (10 **-3), 'T': self.sample.temperature} )
         # Validamos que se calculó correctamente la pendiente y la intersección
-        self.assertAlmostEqual(result["slope"], m, delta=0.1)
-        self.assertAlmostEqual(result["intercept"], b, delta=0.01)
-        self.assertAlmostEqual(result["params_info"][0]["btk"], btk, delta=1.5)
+        self.assertAlmostEqual(result["slope"], m, delta=0.0001)
+        self.assertAlmostEqual(result["intercept"], b, delta=0.0001)
+        self.assertAlmostEqual(result["params_info"][0]["btk"], btk, delta=0.01)
         self.assertAlmostEqual(result["params_info"][0]["ktk"], ktk, delta=1.5)
 
         # Validamos que los puntos transformados sean correctos
