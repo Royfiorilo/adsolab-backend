@@ -142,7 +142,28 @@ class Role(db.Model, fsqla.FsRoleMixin):
 
 class User(db.Model, fsqla.FsUserMixin):
     deleted_at = db.Column(db.DateTime, nullable=True)
-    pass
+    
+    def is_deleted(self):
+        return self.deleted_at is not None
+
+    def soft_delete(self):
+        from exceptions.exceptions import BadRequestError
+        from datetime import datetime
+        
+        if self.is_deleted():
+            raise BadRequestError("User is already deleted")
+        
+        self.active = False
+        self.deleted_at = datetime.utcnow()
+
+    def reactivate(self):
+        from exceptions.exceptions import BadRequestError
+        
+        if not self.is_deleted():
+            raise BadRequestError("User is not deleted")
+        
+        self.active = True
+        self.deleted_at = None
 
 
 # ---------------------------------------------------------------------------

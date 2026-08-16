@@ -2,6 +2,7 @@ import logging
 from datetime import timezone
 
 from marshmallow import ValidationError
+from flask import current_app
 
 from app import db
 from database import FittedModel, Version, Comparison
@@ -11,6 +12,9 @@ from entities.schemas.historic_schema import VERSION_SCHEMA, FITTED_METHOD_SCHEM
 from exceptions.exceptions import NotFoundError
 from services.model_service import find_model
 from utils import filter_negative
+
+# Importación de las señales del Patron Observer
+from signals import version_saved, version_deleted
 
 
 def create_version(request_json):
@@ -61,6 +65,10 @@ def save_version(version_data):
         db.session.add(comparison)
 
         db.session.commit()
+        
+        if current_app:
+            version_saved.send(current_app._get_current_object(), version=version)
+            
         return version
     except Exception as e:
         db.session.rollback()
@@ -166,3 +174,6 @@ def delete_investigation_version(investigation_id, version_id):
     version = db.session.query(Version).filter_by(investigation_id=investigation_id, version_id=version_id).first()
     db.session.delete(version)
     db.session.commit()
+    
+    if current_app:
+        version_deleted.send(current_app._get_current_object(), investigation_id=investigation_id, version_id=version_id)
