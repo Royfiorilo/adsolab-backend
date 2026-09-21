@@ -24,10 +24,11 @@ flask_security.roles_required = _bypass_auth
 flask_security.roles_accepted = _bypass_auth
 
 from controller.investigation_controller import blueprint as bp_investigation_controller
+from controller.kinetics_controller import blueprint as bp_kinetics_controller
 from controller.materials_controller import blueprint as bp_materials_controller
 from controller.model_controller import blueprint as bp_model_controller
 from controller.sample_controller import blueprint as bp_sample_controller
-from exceptions.exceptions import BadRequestError, NotFoundError
+from exceptions.exceptions import BadRequestError, ForbiddenError, NotFoundError
 
 
 @pytest.fixture
@@ -37,6 +38,7 @@ def app():
     app.register_blueprint(bp_sample_controller)
     app.register_blueprint(bp_model_controller)
     app.register_blueprint(bp_materials_controller)
+    app.register_blueprint(bp_kinetics_controller)
     app.testing = True
     app.user_datastore = MagicMock()
 
@@ -47,6 +49,10 @@ def app():
     @app.errorhandler(NotFoundError)
     def handle_not_found(error):
         return jsonify({"status": "error", "message": str(error)}), HTTPStatus.NOT_FOUND
+
+    @app.errorhandler(ForbiddenError)
+    def handle_forbidden(error):
+        return jsonify({"status": "error", "message": str(error)}), HTTPStatus.FORBIDDEN
 
     @app.errorhandler(Exception)
     def handle_generic_exception(error):
@@ -80,7 +86,8 @@ def mock_current_user():
     user = MagicMock()
     user.id = TEST_USER_ID
     with patch('controller.sample_controller.current_user', user), \
-            patch('controller.investigation_controller.current_user', user):
+            patch('controller.investigation_controller.current_user', user), \
+            patch('controller.kinetics_controller.current_user', user):
         yield user
 
 
