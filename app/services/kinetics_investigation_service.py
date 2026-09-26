@@ -17,8 +17,10 @@ from database import KineticInvestigation, KineticSample
 from entities.schemas.kinetics_investigation_schema import KINETICS_INVESTIGATION_SCHEMA
 from exceptions.exceptions import NotFoundError, ForbiddenError, BadRequestError
 from services.kinetics_no_linear_model_service import predict_kinetic_seeds, run_kinetic_no_linear_models
+from services.kinetics_sample_service import find_kinetic_sample
 from services.kinetics_version_service import (
-    save_kinetic_version, get_kinetic_version, get_kinetic_versions, delete_kinetic_version
+    save_kinetic_version, get_kinetic_version, get_kinetic_versions, delete_kinetic_version,
+    validate_kinetic_version_payload,
 )
 
 
@@ -30,7 +32,12 @@ def create_kinetic_investigation(kinetic_sample_id: int, user_id: int):
     """
     Crea una investigación cinética nueva para una muestra dada, o devuelve
     la existente si ya existe una para ese par (muestra, usuario).
+
+    No hace commit: sólo `flush` para obtener el ID. La investigación se
+    persiste en la misma transacción que su primera versión, así un fallo al
+    guardar la versión no deja una investigación huérfana sin versiones.
     """
+    find_kinetic_sample(kinetic_sample_id)
     existing = (
         db.session.query(KineticInvestigation)
         .filter_by(kinetic_sample_id=kinetic_sample_id, user_id=user_id)
@@ -44,7 +51,7 @@ def create_kinetic_investigation(kinetic_sample_id: int, user_id: int):
         user_id=user_id,
     )
     db.session.add(investigation)
-    db.session.commit()
+    db.session.flush()
     return investigation
 
 
@@ -110,6 +117,9 @@ def validate_and_save_kinetic_version(request_json: dict, user_id: int):
     """
     kinetic_sample_id = request_json.get('kinetic_sample_id')
     kinetic_investigation_id = request_json.get('kinetic_investigation_id')
+    results = request_json.get('results', [])
+    comparison = request_json.get('comparison', {})
+    validate_kinetic_version_payload(results, comparison)
 
     if kinetic_investigation_id is None:
         investigation = create_kinetic_investigation(kinetic_sample_id, user_id)
@@ -125,8 +135,8 @@ def validate_and_save_kinetic_version(request_json: dict, user_id: int):
 
     version = save_kinetic_version(
         kinetic_investigation_id=kinetic_investigation_id,
-        results=request_json.get('results', []),
-        comparison=request_json.get('comparison', {}),
+        results=results,
+        comparison=comparison,
         iterations=request_json.get('iterations'),
         steps=request_json.get('steps'),
     )

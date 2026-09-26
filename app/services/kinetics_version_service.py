@@ -44,6 +44,12 @@ def _get_kinetic_version_row(kinetic_investigation_id: int, version_id: int) -> 
     return version
 
 
+def validate_kinetic_version_payload(results: list, comparison: dict):
+    """Valida el contenido de una versión antes de persistir nada."""
+    _validate_results(results)
+    _validate_comparison(comparison)
+
+
 def _validate_results(results: list):
     if not results:
         raise BadRequestError("At least one fitted model result is required to save a version.")
@@ -67,8 +73,7 @@ def save_kinetic_version(kinetic_investigation_id: int, results: list, compariso
     que en el módulo de equilibrio.
     """
     _get_kinetic_investigation(kinetic_investigation_id)
-    _validate_results(results)
-    _validate_comparison(comparison)
+    validate_kinetic_version_payload(results, comparison)
 
     last_version = (
         db.session.query(KineticVersion)

@@ -276,10 +276,12 @@ class KineticComparison(DumpMixin, db.Model):
     kinetic_comparison_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     heuristic = db.Column(db.JSON, nullable=False)
     ml = db.Column(db.JSON, nullable=True)
-    version_id = db.Column(db.Integer, nullable=False, unique=True)
-    kinetic_investigation_id = db.Column(db.Integer, nullable=False, unique=True)
+    version_id = db.Column(db.Integer, nullable=False)
+    kinetic_investigation_id = db.Column(db.Integer, nullable=False)
 
+    # version_id is numbered per investigation: only the pair is unique.
     __table_args__ = (
+        db.UniqueConstraint('version_id', 'kinetic_investigation_id', name='kinetic_comparison_version_key'),
         db.ForeignKeyConstraint(
             ['version_id', 'kinetic_investigation_id'],
             ['kinetic_version.version_id', 'kinetic_version.kinetic_investigation_id'],
