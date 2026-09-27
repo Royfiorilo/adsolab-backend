@@ -1,7 +1,21 @@
 # 🧪 Guía de Testing - Módulo Cinético
 
 > **Propósito:** Probar todos los endpoints del módulo cinético con datos experimentales reales  
-> **Última actualización:** 2026-06-24
+> **Última actualización:** 2026-09-21
+
+## ✅ Estado actual del backend
+
+Todos los endpoints de `/kinetics/*` están implementados y probados (179 tests, incluyendo
+los del módulo de equilibrio). En particular, el guardado y recuperación de investigaciones
+(`/kinetics/investigation/save`, `.../versions`, `.../version/{id}`, DELETE de versión) **ya
+funciona de punta a punta** — antes de 2026-09-17 estos cuatro devolvían 500
+(`NotImplementedError`).
+
+Modelos cinéticos disponibles hoy: **Difusión Intraparticular** (`_id: 1`), **Pseudo-Segundo
+Orden** (`_id: 2`) y **Pseudo-Primer Orden / Lagergren** (`_id: 3`). El ajuste no lineal incluye
+comparación heurística **y** por Ridge Regression (`comparison.ml`, ya no es `null`). La
+linealización soporta parámetros no medidos (p. ej. `qe` para PFO) vía `known_params`, ver
+Paso 7A.
 
 ---
 
@@ -218,7 +232,9 @@ $seedsResponse = Invoke-RestMethod -Method POST `
 
 Write-Host "`n🌱 Seeds calculadas para todos los modelos:"
 foreach ($result in $seedsResponse.results) {
-  Write-Host "`n  Modelo ID $($result.kinetic_model_id) - $($result.model_name):"
+  # Ojo: predict-seeds devuelve "id"/"name" (no "kinetic_model_id"/"model_name",
+  # esos nombres los usa la respuesta de investigation/version más abajo).
+  Write-Host "`n  Modelo ID $($result.id) - $($result.name):"
   $result.seeds | Format-Table name, value -AutoSize
 }
 
@@ -253,9 +269,42 @@ Write-Host "✅ Linealización completada"
 Write-Host "   R² = $($linResult.statistics.r_squared)"
 Write-Host "   Pendiente = $($linResult.slope)"
 Write-Host "   Intercepto = $($linResult.intercept)"
+Write-Host "   Puntos descartados (no transformables): $($linResult.dropped_points)"
 Write-Host "`n   Parámetros recuperados:"
 $linResult.parameters | Format-Table name, value, std_err
 ```
+
+#### 7A-bis. Linealización de PFO con `known_params` (parámetro no medido)
+
+La linealización de PFO/Lagergren transforma `y = ln(qe - qt)`, donde `qe` no es un dato
+medido sino uno de los parámetros a despejar. Si no se manda, el backend lo estima como
+`max(qt)`; si el usuario ya conoce un `qe` de referencia (por ejemplo, de un ensayo previo
+en equilibrio), se lo puede pasar en `known_params` y el resultado lo refleja en
+`assumed_params`:
+
+```powershell
+$body = @{
+  kinetic_sample_id = $sampleId
+  models = @(@{
+    model = 3               # Pseudo-Primer Orden (PFO)
+    linearizations = @(3)
+    known_params = @{ qe = 8.2 }
+  })
+  filter = @()
+} | ConvertTo-Json -Depth 3
+
+$pfoLinResponse = Invoke-RestMethod -Method POST `
+  -Uri "http://127.0.0.1:5000/kinetics/run-linearization" `
+  -ContentType "application/json" `
+  -Body $body
+
+$pfoLinResult = $pfoLinResponse.results[0].linearizations[0]
+Write-Host "   qe asumido: $($pfoLinResult.assumed_params.qe)"
+Write-Host "   k1 recuperado: $(($pfoLinResult.parameters | Where-Object {$_.name -eq 'k1'}).value)"
+```
+
+Si se omite `known_params`, el mismo request funciona igual pero `assumed_params.qe` va a
+mostrar el valor estimado automáticamente (`max(qt)` de la muestra) en lugar del provisto.
 
 ---
 
@@ -328,6 +377,13 @@ $fitResponse = Invoke-RestMethod -Method POST `
   -Body $body
 
 # Mostrar comparación entre todos los modelos
+# Ojo: /run-no-linear-model devuelve "model" (el id) en cada resultado, no
+# "kinetic_model_id"/"model_name" (esos son propios de la respuesta de
+# investigation/version, ver Paso 11). Armamos un diccionario id->nombre a
+# partir de /kinetics/models para mostrar nombres legibles.
+$modelNames = @{}
+foreach ($m in $models.models) { $modelNames[$m._id] = $m.name }
+
 Write-Host "`n✅ Ajuste completado para 3 modelos!"
 Write-Host "`n📊 COMPARACIÓN DE MODELOS:"
 Write-Host ("="*70)
@@ -335,8 +391,8 @@ Write-Host ("="*70)
 foreach ($result in $fitResponse.results) {
   $bestMethodName = $result.best_adjust
   $bestMethod = $result.adjustment_methods | Where-Object {$_.name -eq $bestMethodName}
-  
-  Write-Host "`n🔬 Modelo $($result.kinetic_model_id): $($result.model_name)"
+
+  Write-Host "`n🔬 Modelo $($result.model): $($modelNames[$result.model])"
   Write-Host "   Mejor método: $bestMethodName"
   Write-Host "   R² = $($bestMethod.statistics.r_squared)"
   Write-Host "   R² ajustado = $($bestMethod.statistics.adjust_r_squared)"
@@ -355,12 +411,18 @@ Write-Host "`n🏆 RANKING POR R²:"
 $fitResponse.results | ForEach-Object {
   $best = $_.adjustment_methods | Where-Object {$_.name -eq $_.best_adjust}
   [PSCustomObject]@{
-    Modelo = "$($_.kinetic_model_id): $($_.model_name)"
+    Modelo = "$($_.model): $($modelNames[$_.model])"
     "R²" = [math]::Round($best.statistics.r_squared, 4)
     RMSE = [math]::Round($best.statistics.RMSE, 4)
     AIC = [math]::Round($best.statistics.AIC, 2)
   }
 } | Sort-Object "R²" -Descending | Format-Table -AutoSize
+
+# También podés comparar contra la Regresión Ridge (comparison.ml), que ya no es null
+Write-Host "`n🧮 Comparación ML (Ridge) - mejor modelo: $($modelNames[$fitResponse.comparison.ml.best_model])"
+$fitResponse.comparison.ml.results | ForEach-Object {
+  Write-Host "   Modelo $($_.model) ($($modelNames[$_.model])): coef = $($_.coef)"
+}
 
 # Análisis detallado del mejor modelo general
 $bestOverall = $fitResponse.results | Sort-Object {
@@ -369,7 +431,7 @@ $bestOverall = $fitResponse.results | Sort-Object {
 
 $bestMethodOverall = $bestOverall.adjustment_methods | Where-Object {$_.name -eq $bestOverall.best_adjust}
 
-Write-Host "`n🎯 MEJOR MODELO GENERAL: $($bestOverall.model_name)"
+Write-Host "`n🎯 MEJOR MODELO GENERAL: $($modelNames[$bestOverall.model])"
 Write-Host "`n📊 Estadísticas completas:"
 Write-Host "   R² = $($bestMethodOverall.statistics.r_squared)"
 Write-Host "   R² ajustado = $($bestMethodOverall.statistics.adjust_r_squared)"
@@ -391,7 +453,25 @@ Write-Host "   Independencia: $(if($residuals.passes_independence){'✅ PASA'}el
 
 ### Paso 8: Guardar Investigación
 
+**Validaciones del backend** (devuelven 400 con `BadRequestError` si fallan):
+- `results` no puede estar vacío, y cada elemento necesita `model`, `best_adjust` y
+  `adjustment_methods`.
+- `comparison.heuristic` es obligatorio (`comparison.ml` es opcional, puede ir `null`).
+- La muestra/investigación cinética referenciada debe existir (404 si no).
+
+El `version_id` es autoincremental **por investigación** (no global): la primera vez que se
+guarda una investigación nueva empieza en 1; si se vuelve a guardar la misma
+`kinetic_investigation_id`, el próximo `version_id` es el siguiente disponible para esa
+investigación.
+
 ```powershell
+# /run-no-linear-model no devuelve las seeds usadas, así que las reinyectamos en
+# cada resultado antes de guardar (si no, se guardan como [] y se pierden del historial)
+$seedsByModel = @{ 1 = $seedsModel1; 2 = $seedsModel2; 3 = $seedsModel3 }
+$fitResponse.results | ForEach-Object {
+  $_ | Add-Member -NotePropertyName seeds -NotePropertyValue $seedsByModel[$_.model]
+}
+
 $body = @{
   kinetic_sample_id = $sampleId
   kinetic_investigation_id = $null  # null = nueva investigación
@@ -430,11 +510,20 @@ Write-Host "   Total: $($investigations.total) | Páginas: $($investigations.pag
 
 ### Paso 10: Listar Versiones de una Investigación
 
+A diferencia del módulo de equilibrio (que devuelve un resumen liviano por versión), acá
+cada elemento de `versions` viene con el detalle completo: `fitted_models` (con
+`adjustment_methods` y sus curvas `transformed`) y `comparison` incluidos. Es la contraparte
+de "no podía recuperar las muestras históricas": esta lista ahora sí trae todo lo necesario
+para reconstruir el gráfico de cualquier versión pasada sin pedir nada más al backend.
+
 ```powershell
 $versions = Invoke-RestMethod -Uri "http://127.0.0.1:5000/kinetics/investigation/$investigationId/versions"
 
 Write-Host "`n📂 Versiones de la investigación $investigationId :"
 $versions.versions | Format-Table version_id, iterations, steps, created_at
+
+# Cada versión ya trae sus modelos ajustados, no hace falta otro request:
+Write-Host "`n   Modelos ajustados en la versión 1: $($versions.versions[0].fitted_models.Count)"
 ```
 
 ---
@@ -455,6 +544,11 @@ foreach ($fm in $version.fitted_models) {
   Write-Host "     Parámetros:"
   $fm.adjustment_methods[0].parameters | Format-Table name, value, std_err
 }
+
+Write-Host "`n   Comparación heurística - mejor modelo: $($version.comparison.heuristic.best_model)"
+if ($version.comparison.ml) {
+  Write-Host "   Comparación ML (Ridge) - mejor modelo: $($version.comparison.ml.best_model)"
+}
 ```
 
 ---
@@ -468,6 +562,28 @@ $deleteResponse = Invoke-RestMethod -Method DELETE `
   -Headers @{"Authorization"="Bearer $token"}
 
 Write-Host "🗑️ Muestra $($deleteResponse.kinetic_sample_id) eliminada"
+```
+
+---
+
+### Paso 13: Eliminar una Versión o una Investigación Completa (Opcional) 🔒
+
+Ambos requieren estar autenticado como el dueño de la investigación (403 si no).
+
+```powershell
+# Eliminar solo una versión puntual
+$deleteVersionResponse = Invoke-RestMethod -Method DELETE `
+  -Uri "http://127.0.0.1:5000/kinetics/investigation/$investigationId/version/$versionId" `
+  -Headers @{"Authorization"="Bearer $token"}
+
+Write-Host "🗑️ Versión $($deleteVersionResponse.version_id) eliminada de la investigación $($deleteVersionResponse.kinetic_investigation_id)"
+
+# Eliminar la investigación completa (borra todas sus versiones en cascada)
+$deleteInvestigationResponse = Invoke-RestMethod -Method DELETE `
+  -Uri "http://127.0.0.1:5000/kinetics/investigation/$investigationId" `
+  -Headers @{"Authorization"="Bearer $token"}
+
+Write-Host "🗑️ Investigación $($deleteInvestigationResponse.kinetic_investigation_id) eliminada"
 ```
 
 ---
@@ -655,20 +771,41 @@ Body (raw, JSON):
 }
 
 Tests:
+// IMPORTANTE: el guardado de variables va AFUERA de pm.test(). Si algo adentro de un
+// pm.test() falla (un pm.expect que no se cumple), Postman corta la ejecución de ESE
+// callback ahí mismo — el código que viene después, dentro del mismo bloque, no llega
+// a correr. Si guardáramos fit_results/fit_comparison después de la aserción de
+// r_squared > 0.9 (como estaba antes), un ajuste válido pero con r² más bajo (o
+// cualquier otra aserción que falle) deja las variables del Paso 9 vacías o viejas,
+// sin ningún aviso claro más que el 400 río abajo. Por eso separamos: primero
+// guardamos SIEMPRE lo que necesita el Paso 9, y recién después corremos los checks
+// de calidad (que pueden fallar en rojo sin romper el resto del flujo).
+const data = pm.response.json();
+
+// Postman NO soporta notación de punto ({{var.prop}}) para leer una propiedad de
+// adentro de una variable JSON-stringificada — {{fit_results.results}} en el Paso 9
+// no se resuelve y rompe el JSON del body. Por eso guardamos "results" y
+// "comparison" como variables planas separadas.
+// De paso, reinyectamos "seeds" en cada resultado: /run-no-linear-model no las
+// devuelve, y save_kinetic_version las descarta (guarda []) si no vienen.
+const seeds = JSON.parse(pm.collectionVariables.get("seeds") || "[]");
+data.results.forEach(r => { r.seeds = seeds; });
+
+pm.collectionVariables.set("fit_results", JSON.stringify(data.results));
+pm.collectionVariables.set("fit_comparison", JSON.stringify(data.comparison));
+
+// Checks de calidad: informativos, pueden fallar (quedar en rojo) sin bloquear el
+// guardado de arriba, que ya se ejecutó.
 pm.test("Non-linear fit successful", function() {
-    const data = pm.response.json();
     const result = data.results[0];
     pm.expect(result.best_adjust).to.exist;
-    
+
     const bestMethod = result.adjustment_methods.find(m => m.name === result.best_adjust);
     pm.expect(bestMethod.success).to.be.true;
     pm.expect(bestMethod.statistics.r_squared).to.be.above(0.9);
-    
+
     console.log("Best method: " + result.best_adjust);
     console.log("R² = " + bestMethod.statistics.r_squared);
-    
-    // Guardar para siguiente request
-    pm.collectionVariables.set("fit_results", JSON.stringify(data));
 });
 ```
 
@@ -685,8 +822,8 @@ Body (raw, JSON):
   "kinetic_investigation_id": null,
   "iterations": 10000,
   "steps": 0.1,
-  "results": {{fit_results.results}},
-  "comparison": {{fit_results.comparison}}
+  "results": {{fit_results}},
+  "comparison": {{fit_comparison}}
 }
 
 Tests:
@@ -699,6 +836,11 @@ pm.test("Investigation saved", function() {
     console.log("Version ID: " + data.version_id);
 });
 ```
+
+Si igual te da 400 después de este fix, revisá con la consola de Postman (`View → Show
+Postman Console`) el body que efectivamente se mandó — ahí se ve si quedó algún
+`{{variable}}` sin resolver (aparece literal, sin reemplazar) o si falta `comparison.heuristic`
+en la respuesta del Paso 8.
 
 ---
 
@@ -728,6 +870,33 @@ pm.test("Version retrieved", function() {
     const data = pm.response.json();
     pm.expect(data.version_id).to.eql(parseInt(pm.collectionVariables.get("version_id")));
     pm.expect(data.fitted_models).to.be.an('array');
+});
+```
+
+---
+
+#### 12. Eliminar Versión 🔒
+
+```
+DELETE {{base_url}}/kinetics/investigation/{{investigation_id}}/version/{{version_id}}
+Headers: Authorization: Bearer {{token}}
+
+Tests:
+pm.test("Version deleted", function() {
+    pm.response.to.have.status(200);
+    const data = pm.response.json();
+    pm.expect(data.version_id).to.eql(parseInt(pm.collectionVariables.get("version_id")));
+});
+
+pm.test("Version is gone", function() {
+    pm.sendRequest({
+        url: pm.collectionVariables.get("base_url") + "/kinetics/investigation/" +
+             pm.collectionVariables.get("investigation_id") + "/version/" +
+             pm.collectionVariables.get("version_id"),
+        method: "GET"
+    }, function (err, res) {
+        pm.expect(res.code).to.eql(404);
+    });
 });
 ```
 
@@ -911,11 +1080,21 @@ def main():
         status = "✅" if method["success"] else "❌"
         r2 = method["statistics"]["r_squared"] if method["success"] else "N/A"
         print(f"   {status} {method['name']:15s} R²={r2}")
+
+    comparison = fit_data["comparison"]
+    print(f"\n🧮 Comparación entre modelos:")
+    print(f"   Mejor modelo (heurística): {comparison['heuristic']['best_model']}")
+    if comparison.get("ml"):
+        print(f"   Mejor modelo (Ridge/ML): {comparison['ml']['best_model']}")
     
     # ========================================
     # 8. GUARDAR INVESTIGACIÓN
     # ========================================
     print_section("8. Guardar Investigación")
+    # /run-no-linear-model no devuelve las seeds usadas; las reinyectamos antes de
+    # guardar para no perderlas del historial (son opcionales, pero conviene guardarlas)
+    for r in fit_data["results"]:
+        r["seeds"] = seeds
     save_response = requests.post(f"{BASE_URL}/kinetics/investigation/save",
         headers=headers,
         json={
@@ -956,7 +1135,18 @@ def main():
     print(f"   Creada: {version['created_at']}")
     print(f"   Iteraciones: {version['iterations']}")
     print(f"   Modelos ajustados: {len(version['fitted_models'])}")
-    
+
+    # ========================================
+    # 11. ELIMINAR VERSIÓN (limpieza opcional)
+    # ========================================
+    print_section("11. Eliminar Versión (opcional)")
+    delete_response = requests.delete(
+        f"{BASE_URL}/kinetics/investigation/{investigation_id}/version/{version_id}",
+        headers=headers,
+    )
+    delete_response.raise_for_status()
+    print(f"✅ Versión {version_id} eliminada")
+
     # ========================================
     # RESUMEN FINAL
     # ========================================
@@ -1083,6 +1273,39 @@ $qt = @(0.0, 3.2, 5.1)
 Write-Host "Longitud time: $($time.Count), qt: $($qt.Count)"
 ```
 
+### Error al guardar investigación (400)
+
+Si el 400 viene con el HTML genérico de Werkzeug (`<title>400 Bad Request</title>`, sin
+JSON) en vez de `{"status": "ERROR", "message": "..."}`, el body que llegó **no es JSON
+válido** — el request nunca llegó a nuestra validación. En Postman, la causa típica es que
+`{{fit_results}}`/`{{fit_comparison}}` del Paso 9 no se resolvieron. Y la causa típica de
+*eso* es que el guardado de esas variables en el Paso 8 está adentro de un `pm.test(...)`
+cuyo `pm.expect(...)` falló antes de llegar a la línea que las guarda — ver el comentario
+en el Paso 8 más arriba (movimos el guardado afuera del `pm.test` por este motivo).
+
+Si en cambio sí ves un JSON con `message`, las causas en `/kinetics/investigation/save` son:
+- `results` vacío, o con un elemento sin `model`/`best_adjust`/`adjustment_methods`.
+- `comparison` sin `heuristic` (es obligatorio; `ml` puede faltar u ser `null`).
+
+`seeds` por modelo es opcional al guardar (si falta, se guarda como `[]`), pero conviene
+adjuntarlo: la respuesta de `/run-no-linear-model` **no** trae de vuelta las seeds usadas
+(las tenías vos, en el request que armaste para ese endpoint), así que si no las agregás a
+mano antes de guardar, se pierden del historial:
+
+```powershell
+# Adjuntar seeds a cada resultado antes de guardar (ver Paso 8)
+$seedsByModel = @{ 1 = $seedsModel1; 2 = $seedsModel2; 3 = $seedsModel3 }
+$fitResponse.results | ForEach-Object {
+  $_ | Add-Member -NotePropertyName seeds -NotePropertyValue $seedsByModel[$_.model]
+}
+```
+
+### Error "Forbidden" al eliminar una versión (403)
+
+Sólo el usuario dueño de la investigación (`user_id` con el que se creó, vía `POST
+/kinetics/investigation/save`) puede borrar sus versiones o la investigación completa. Si
+usás un token de otro usuario, vas a recibir 403.
+
 ### Ver Logs del Backend
 
 Los logs aparecen en la terminal donde ejecutaste `python app/start.py`:
@@ -1132,10 +1355,14 @@ Marca cada paso al completarlo:
 - [ ] Análisis de residuos completo
 
 ### Persistencia
-- [ ] Investigación guardada
+- [ ] Investigación guardada (seeds reinyectadas antes de guardar)
 - [ ] Investigation ID y Version ID obtenidos
 - [ ] Investigaciones listadas
+- [ ] Versiones de la investigación listadas (con fitted_models y comparison completos)
 - [ ] Versión específica recuperada
+- [ ] Segunda versión guardada sobre la misma investigación (version_id se incrementa)
+- [ ] Versión eliminada correctamente (y un GET posterior devuelve 404)
+- [ ] Intento de borrado con otro usuario devuelve 403
 
 ### Validación
 - [ ] Todos los residuos pasan tests (normalidad, homocedasticidad, independencia)
@@ -1166,5 +1393,7 @@ Después de validar que todo funciona:
 
 ---
 
-**Última actualización:** 2026-06-24  
-**Versión:** 1.0
+**Última actualización:** 2026-09-21  
+**Versión:** 2.0 — actualizado tras implementar `kinetics_version_service.py`
+(guardado/recuperación de versiones), la comparación ML (Ridge) para cinética y los
+`known_params` en linealización.

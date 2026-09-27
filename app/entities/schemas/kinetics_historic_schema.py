@@ -20,7 +20,7 @@ class KineticsFittedMethodSchema(Schema, DumpMixin):
 class KineticsFittedModelSchema(Schema, DumpMixin):
     """Schema para el resultado del ajuste de un modelo cinético."""
     kinetic_fitted_model_id = fields.Integer(load_default=None)
-    model_id = fields.Integer(load_default=None)
+    kinetic_model_id = fields.Integer(load_default=None)
     model_name = fields.Str(load_default=None)
     best_adjust = fields.Str(allow_none=False)
     seeds = fields.List(fields.Dict(), allow_none=False)

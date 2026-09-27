@@ -1109,6 +1109,11 @@ paths:
         **Bounds automáticos:**
         - Parámetros tipo `q`: `[0.001, max(qt) × 1.1]`
         - Otros parámetros: `[0, ∞)`
+
+        **Importante:** la respuesta **no** incluye las `seeds` usadas — si vas a guardar
+        estos resultados con `POST /kinetics/investigation/save`, tenés que reinyectarlas
+        vos en cada elemento de `results` antes de mandarlas (las tenías en el request que
+        armaste para este mismo endpoint).
       requestBody:
         required: true
         content:
@@ -1216,22 +1221,27 @@ paths:
         - Cinética - Investigaciones
       summary: Guardar investigación cinética 🔒
       description: |
-        Crea o actualiza una investigación cinética con una nueva versión de resultados.
+        Crea (o agrega una versión a) una investigación cinética con resultados de ajuste.
 
-        **Campos opcionales (todos con defaults):**
-        - `kinetic_sample_id`: ID de la muestra (requerido)
-        - `kinetic_investigation_id`: null para crear nueva, o ID existente para agregar versión
-        - `results`: Array de modelos ajustados (default: [])
-        - `comparison`: Objeto de comparación (default: {})
-        - `iterations`: Iteraciones usadas (default: null)
-        - `steps`: Tamaño de paso usado (default: null)
-        
         **Flujo típico:**
-        1. Ejecutar `/kinetics/run-no-linear-model` para obtener results + comparison
-        2. Llamar a este endpoint con esos resultados para guardarlos
-        
-        **Nota:** A diferencia del módulo de equilibrio, en cinética los campos `results` y
-        `comparison` son opcionales con defaults. Esto permite guardar investigaciones vacías.
+        1. Ejecutar `/kinetics/run-no-linear-model` para obtener `results` + `comparison`.
+        2. Reinyectar `seeds` en cada elemento de `results` — ese endpoint no las devuelve,
+           hay que conservar las que se usaron en el request de ese paso.
+        3. Llamar a este endpoint con esos resultados para guardarlos.
+
+        Si `kinetic_investigation_id` es `null`, crea una investigación nueva (o reutiliza
+        una existente para el mismo par muestra/usuario). Si se pasa un
+        `kinetic_investigation_id` existente, agrega una nueva versión: `version_id` es
+        autoincremental **por investigación** (no global) — la primera versión de cada
+        investigación es 1, la siguiente 2, etc.
+
+        **Validaciones (400 si fallan):**
+        - `results` no puede estar vacío, y cada elemento necesita `model`, `best_adjust`
+          y `adjustment_methods`. Mensaje: `"At least one fitted model result is required
+          to save a version."` o `"Missing fields in result: <campos>."`
+        - `comparison.heuristic` es obligatorio (`comparison.ml` puede faltar o ser
+          `null`). Mensaje: `"comparison.heuristic is required to save a version."`
+        - `seeds` por resultado es opcional — si falta, se guarda como `[]`.
       security:
         - bearerAuth: [ ]
       requestBody:
@@ -1253,7 +1263,21 @@ paths:
                       value: 0.834
                     - name: "C"
                       value: 1.0
-                  adjustment_methods: []
+                  adjustment_methods:
+                    - name: "leastsq"
+                      success: true
+                      parameters:
+                        - name: "kid"
+                          value: 0.821
+                          std_err: 0.018
+                      statistics:
+                        r_squared: 0.9934
+                      residuals:
+                        values: [0.01, -0.05]
+                        analysis:
+                          passes_normality: true
+                          passes_homoscedasticity: true
+                          passes_independence: true
               comparison:
                 heuristic:
                   best_model: 1
@@ -1273,18 +1297,28 @@ paths:
                     type: integer
                   version_id:
                     type: integer
+        '400':
+          description: >
+            results vacío o con un elemento sin model/best_adjust/adjustment_methods,
+            o comparison sin heuristic.
         '401':
           description: No autenticado
         '403':
-          description: No autorizado
+          description: No autorizado (kinetic_investigation_id existe pero pertenece a otro usuario)
         '404':
-          description: Muestra no encontrada
+          description: kinetic_investigation_id (si se envía) no existe
 
   /kinetics/investigation/{kinetic_investigation_id}/versions:
     get:
       tags:
         - Cinética - Investigaciones
       summary: Listar versiones de una investigación cinética
+      description: |
+        Devuelve todas las versiones de una investigación, ordenadas de la más vieja a la
+        más nueva. A diferencia del módulo de equilibrio (que devuelve un resumen liviano
+        por versión), acá cada elemento viene con el detalle completo: `fitted_models`
+        (con sus `adjustment_methods` y curvas `transformed`) y `comparison` incluidos —
+        no hace falta pedir cada versión por separado para reconstruir un gráfico.
       parameters:
         - in: path
           name: kinetic_investigation_id
@@ -1303,6 +1337,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/KineticVersion'
+        '404':
+          description: Investigación no encontrada
 
   /kinetics/investigation/{kinetic_investigation_id}/version/{version_id}:
     get:
@@ -1334,6 +1370,9 @@ paths:
       tags:
         - Cinética - Investigaciones
       summary: Eliminar versión cinética 🔒
+      description: >
+        Elimina una versión puntual. Solo el propietario de la investigación puede
+        borrarla. El borrado elimina en cascada sus fitted_models y comparación asociados.
       security:
         - bearerAuth: [ ]
       parameters:
@@ -1350,15 +1389,28 @@ paths:
       responses:
         '200':
           description: Versión eliminada correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  kinetic_investigation_id:
+                    type: integer
+                  version_id:
+                    type: integer
+        '401':
+          description: No autenticado
         '403':
-          description: No autorizado
+          description: No autorizado (la investigación pertenece a otro usuario)
+        '404':
+          description: Investigación o versión no encontrada
 
   /kinetics/investigation/{kinetic_investigation_id}:
     delete:
       tags:
         - Cinética - Investigaciones
       summary: Eliminar investigación cinética 🔒
-      description: Elimina la investigación y todas sus versiones en cascada.
+      description: Elimina la investigación y todas sus versiones en cascada. Solo el propietario puede eliminarla.
       security:
         - bearerAuth: [ ]
       parameters:
@@ -1370,6 +1422,8 @@ paths:
       responses:
         '200':
           description: Investigación eliminada correctamente
+        '401':
+          description: No autenticado
         '403':
           description: No autorizado
         '404':
@@ -2465,16 +2519,6 @@ components:
                 type: array
                 items:
                   $ref: '#/components/schemas/KineticFittedMethod'
-              seeds:
-                type: array
-                description: Semillas iniciales con las que se corrió el ajuste, tal como llegaron en el request.
-                items:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                    value:
-                      type: number
         comparison:
           type: object
           properties:
@@ -2578,19 +2622,25 @@ components:
       type: object
       required:
         - kinetic_sample_id
+        - results
+        - comparison
       properties:
         kinetic_sample_id:
           type: integer
-          description: ID of the kinetic sample
+          description: ID de la muestra cinética asociada a la investigación
         kinetic_investigation_id:
           type: integer
           nullable: true
-          description: ID of existing investigation (null to create new)
+          description: ID de investigación existente (null para crear una nueva)
         results:
           type: array
-          description: Array of fitted models from run-no-linear-model response (optional, defaults to [])
+          minItems: 1
+          description: >
+            Resultados de `run-no-linear-model`, con `seeds` reinyectadas a mano (ese
+            endpoint no las devuelve). No puede estar vacío.
           items:
             type: object
+            required: [model, best_adjust, adjustment_methods]
             properties:
               model:
                 type: integer
@@ -2598,6 +2648,7 @@ components:
                 type: string
               seeds:
                 type: array
+                description: Opcional. Si se omite, se guarda como [] (se pierde del historial).
                 items:
                   type: object
                   properties:
@@ -2611,23 +2662,23 @@ components:
                   $ref: '#/components/schemas/KineticFittedMethod'
         comparison:
           type: object
-          description: Comparison result from run-no-linear-model response (optional, defaults to {})
-          nullable: true
+          description: Resultado de `comparison` en la respuesta de `run-no-linear-model`.
+          required: [heuristic]
           properties:
             heuristic:
               type: object
-              nullable: true
+              description: Obligatorio. No puede ser null ni un objeto vacío.
             ml:
               type: object
               nullable: true
         iterations:
           type: integer
           nullable: true
-          description: Number of iterations used in fitting (optional)
+          description: Iteraciones usadas en el ajuste (informativo, opcional)
         steps:
           type: number
           nullable: true
-          description: Step size used in fitting (optional)
+          description: Tamaño de paso usado en el ajuste (informativo, opcional)
 
     KineticGetInvestigationsResponse:
       type: object
@@ -2702,7 +2753,27 @@ components:
                   $ref: '#/components/schemas/KineticFittedMethod'
         comparison:
           type: object
-          nullable: true
+          properties:
+            kinetic_comparison_id:
+              type: integer
+            heuristic:
+              type: object
+              properties:
+                best_model:
+                  type: integer
+                results:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      model:
+                        type: integer
+                      score:
+                        type: number
+            ml:
+              type: object
+              nullable: true
+              description: Igual estructura que `comparison.ml` en la respuesta de run-no-linear-model.
 
     FittedParameter:
       type: object
