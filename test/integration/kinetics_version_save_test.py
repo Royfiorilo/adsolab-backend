@@ -1,7 +1,4 @@
-"""
-Integración de guardar / leer / borrar versiones cinéticas contra PostgreSQL real.
-Casos: docs/test-specs/kinetics-version-save.md (KSAVE-*).
-"""
+"""Save / read / delete kinetic versions on PostgreSQL. Cases: docs/test-specs/kinetics-version-save.md."""
 from datetime import datetime
 
 import pytest
@@ -57,7 +54,7 @@ def investigations_of(session, sample):
 
 
 # ---------------------------------------------------------------------------
-# Guardar
+# Save
 # ---------------------------------------------------------------------------
 
 def test_should_create_investigation_and_first_version_when_sample_has_none(db_session, make_kinetic_sample):
@@ -191,7 +188,7 @@ def test_should_create_no_investigation_when_payload_is_invalid(db_session, make
 
 
 def test_should_let_each_investigation_have_its_own_version_one(db_session, make_kinetic_sample):
-    """KSAVE-S03 (regresión: UNIQUE por columna en kinetic_comparison)"""
+    """KSAVE-S03 (regression: per-column UNIQUE)"""
     first_sample, second_sample = make_kinetic_sample(), make_kinetic_sample()
 
     first = validate_and_save_kinetic_version(payload(first_sample), first_sample.user_id)
@@ -202,7 +199,7 @@ def test_should_let_each_investigation_have_its_own_version_one(db_session, make
 
 
 def test_should_roll_back_the_new_investigation_when_writing_the_version_fails(db_session, make_kinetic_sample):
-    """KSAVE-S04 — un `model` no numérico hace fallar el commit después de crear la investigación."""
+    """KSAVE-S04 (non-numeric model fails at commit)"""
     sample = make_kinetic_sample()
     broken = [{"model": "no-es-un-id", "best_adjust": "leastsq", "adjustment_methods": ADJUSTMENT_METHODS}]
 
@@ -225,7 +222,7 @@ def test_should_add_next_version_when_saving_into_own_investigation_explicitly(d
 
 
 # ---------------------------------------------------------------------------
-# Leer, listar, borrar
+# Read, list, delete
 # ---------------------------------------------------------------------------
 
 def save_versions(sample, amount):

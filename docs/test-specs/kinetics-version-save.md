@@ -1,75 +1,75 @@
-# Test spec — Guardar y gestionar versiones cinéticas (`KSAVE`)
+# Test spec — Save and manage kinetic versions (`KSAVE`)
 
-**Bajo prueba:**
+**Under test:**
 - `POST /kinetics/investigation/save` → `validate_and_save_kinetic_version` (`app/services/kinetics_investigation_service.py`)
   → `create_kinetic_investigation` + `save_kinetic_version` (`app/services/kinetics_version_service.py`)
 - `GET /kinetics/investigation/<id>/versions`, `GET …/version/<ver>`, `DELETE …/version/<ver>`, `DELETE /kinetics/investigation/<id>`
 
-**Entradas:** `kinetic_sample_id`, `kinetic_investigation_id` (opcional), `results[]` (`model`, `best_adjust`, `adjustment_methods`, `seeds`), `comparison` (`heuristic`, `ml`), `iterations`, `steps`, usuario autenticado.
-**Salidas / efectos:** filas en `kinetic_investigation`, `kinetic_version`, `kinetic_fitted_model`, `kinetic_comparison`; señales `version_saved` / `version_deleted`.
-**Errores:** `BadRequestError` (400), `NotFoundError` (404), `ForbiddenError` (403).
-**Niveles:** `unit` (sin base) · `integration` (PostgreSQL real, `@pytest.mark.integration`) · `controller` (cliente Flask, service mockeado)
-**Tipos:** H feliz · B límite · N negativo · E borde · S estado/secuencia
+**Inputs:** `kinetic_sample_id`, `kinetic_investigation_id` (optional), `results[]` (`model`, `best_adjust`, `adjustment_methods`, `seeds`), `comparison` (`heuristic`, `ml`), `iterations`, `steps`, authenticated user.
+**Outputs / side effects:** rows in `kinetic_investigation`, `kinetic_version`, `kinetic_fitted_model`, `kinetic_comparison`; signals `version_saved` / `version_deleted`.
+**Errors:** `BadRequestError` (400), `NotFoundError` (404), `ForbiddenError` (403).
+**Levels:** `unit` (no DB) · `integration` (real PostgreSQL, `@pytest.mark.integration`) · `controller` (Flask client, service mocked)
+**Types:** H happy · B boundary · N negative · E edge · S state/sequence
 
-## Casos
+## Cases
 
-### Guardar
+### Save
 
-| ID | Tipo | Nivel | Dado / entrada | Esperado | Estado | Test |
+| ID | Type | Level | Given / input | Expected | Status | Test |
 |---|---|---|---|---|---|---|
-| KSAVE-H01 | H | integration | muestra válida, sin investigación previa, 1 resultado | 1 investigación, versión 1, 1 fitted model, 1 comparación | new | `test_should_create_investigation_and_first_version_when_sample_has_none` |
-| KSAVE-H02 | H | integration | guardar y leer la versión | `adjustment_methods`, `seeds`, `heuristic`, `ml` vuelven idénticos (JSON/ARRAY) | new | `test_should_read_back_exactly_what_was_saved` |
-| KSAVE-H03 | H | controller | payload válido | 201 con `kinetic_investigation_id` y `version_id` | covered | `test_save_kinetics_investigation` |
-| KSAVE-B01 | B | integration | primera versión de una investigación | `version_id = 1` | new | `test_should_create_investigation_and_first_version_when_sample_has_none` |
-| KSAVE-B02 | B | integration | `comparison.heuristic = {}` (dict vacío) | 400, nada escrito | new | `test_should_reject_and_write_nothing_when_heuristic_is_an_empty_dict` |
+| KSAVE-H01 | H | integration | valid sample, no previous investigation, 1 result | 1 investigation, version 1, 1 fitted model, 1 comparison | new | `test_should_create_investigation_and_first_version_when_sample_has_none` |
+| KSAVE-H02 | H | integration | save, then read the version | `adjustment_methods`, `seeds`, `heuristic`, `ml` come back identical (JSON/ARRAY) | new | `test_should_read_back_exactly_what_was_saved` |
+| KSAVE-H03 | H | controller | valid payload | 201 with `kinetic_investigation_id` and `version_id` | covered | `test_save_kinetics_investigation` |
+| KSAVE-B01 | B | integration | first version of an investigation | `version_id = 1` | new | `test_should_create_investigation_and_first_version_when_sample_has_none` |
+| KSAVE-B02 | B | integration | `comparison.heuristic = {}` (empty dict) | 400, nothing written | new | `test_should_reject_and_write_nothing_when_heuristic_is_an_empty_dict` |
 | KSAVE-N01 | N | unit | `results = []` | 400 | covered | `test_should_raise_bad_request_when_results_are_empty` |
-| KSAVE-N02 | N | unit | resultado sin `model` / sin `best_adjust` / sin `adjustment_methods` (uno por campo) | 400 nombrando el campo | new | `test_should_raise_bad_request_naming_each_missing_required_field` |
-| KSAVE-N03 | N | unit | `comparison` sin `heuristic` | 400 | covered | `test_should_raise_bad_request_when_comparison_has_no_heuristic` |
-| KSAVE-N04 | N | integration | `kinetic_sample_id` inexistente | 404, nada escrito | new | `test_should_raise_not_found_and_write_nothing_when_sample_does_not_exist` |
-| KSAVE-N05 | N | integration | muestra con soft-delete (`deleted_at`) | 404, nada escrito | new | `test_should_raise_not_found_when_sample_is_soft_deleted` |
-| KSAVE-N06 | N | integration | `kinetic_investigation_id` de otro usuario | 403, la investigación ajena no gana versiones | new | `test_should_forbid_saving_into_another_user_investigation` |
-| KSAVE-N07 | N | unit | `kinetic_investigation_id` inexistente | 404 | covered | `test_should_raise_not_found_when_the_given_investigation_does_not_exist` |
-| KSAVE-N08 | N | integration | falta `kinetic_sample_id` (y no hay investigación) | 400 | open | Q1 |
-| KSAVE-N09 | N | integration | `model` no numérico (`"abc"`) | 400 | open | Q2 |
-| KSAVE-E01 | E | integration | `comparison.ml = null` | se guarda con `ml` NULL | new | `test_should_store_null_ml_when_comparison_has_no_ml` |
-| KSAVE-E02 | E | integration | resultado sin `seeds` | se guarda `seeds = []` | new | `test_should_store_empty_seeds_when_result_has_none` |
-| KSAVE-E03 | E | integration | `iterations` / `steps` presentes y ausentes | se guardan tal cual / NULL | new | `test_should_store_iterations_and_steps_as_given` |
-| KSAVE-S01 | S | integration | 2º guardado, misma muestra y usuario | misma investigación, versión 2 | new | `test_should_add_version_two_to_the_same_investigation_on_second_save` |
-| KSAVE-S02 | S | integration | payload inválido sobre muestra nueva | ninguna investigación creada (atomicidad) | new | `test_should_create_no_investigation_when_payload_is_invalid` |
-| KSAVE-S03 | S | integration | dos investigaciones distintas, cada una su versión 1 | ambas se guardan (bug de los UNIQUE) | new | `test_should_let_each_investigation_have_its_own_version_one` |
-| KSAVE-S04 | S | integration | falla la escritura después de crear la investigación (error de base al hacer commit) | rollback completo: ni investigación ni versión | new | `test_should_roll_back_the_new_investigation_when_writing_the_version_fails` |
-| KSAVE-S05 | S | integration | guardar con `kinetic_investigation_id` propio explícito | versión n+1 en esa investigación | new | `test_should_add_next_version_when_saving_into_own_investigation_explicitly` |
-| KSAVE-S06 | S | unit | comparación duplicada para la misma versión | la restricción la rechaza | covered | `test_should_reject_a_second_comparison_for_the_same_version` |
+| KSAVE-N02 | N | unit | result without `model` / `best_adjust` / `adjustment_methods` (one per field) | 400 naming the field | new | `test_should_raise_bad_request_naming_each_missing_required_field` |
+| KSAVE-N03 | N | unit | `comparison` without `heuristic` | 400 | covered | `test_should_raise_bad_request_when_comparison_has_no_heuristic` |
+| KSAVE-N04 | N | integration | unknown `kinetic_sample_id` | 404, nothing written | new | `test_should_raise_not_found_and_write_nothing_when_sample_does_not_exist` |
+| KSAVE-N05 | N | integration | soft-deleted sample (`deleted_at`) | 404, nothing written | new | `test_should_raise_not_found_when_sample_is_soft_deleted` |
+| KSAVE-N06 | N | integration | another user's `kinetic_investigation_id` | 403, that investigation gets no new version | new | `test_should_forbid_saving_into_another_user_investigation` |
+| KSAVE-N07 | N | unit | unknown `kinetic_investigation_id` | 404 | covered | `test_should_raise_not_found_when_the_given_investigation_does_not_exist` |
+| KSAVE-N08 | N | integration | missing `kinetic_sample_id` (and no investigation) | 400 | open | Q1 |
+| KSAVE-N09 | N | integration | non-numeric `model` (`"abc"`) | 400 | open | Q2 |
+| KSAVE-E01 | E | integration | `comparison.ml = null` | saved with `ml` NULL | new | `test_should_store_null_ml_when_comparison_has_no_ml` |
+| KSAVE-E02 | E | integration | result without `seeds` | saved with `seeds = []` | new | `test_should_store_empty_seeds_when_result_has_none` |
+| KSAVE-E03 | E | integration | `iterations` / `steps` present and absent | stored as given / NULL | new | `test_should_store_iterations_and_steps_as_given` |
+| KSAVE-S01 | S | integration | 2nd save, same sample and user | same investigation, version 2 | new | `test_should_add_version_two_to_the_same_investigation_on_second_save` |
+| KSAVE-S02 | S | integration | invalid payload on a new sample | no investigation created (atomicity) | new | `test_should_create_no_investigation_when_payload_is_invalid` |
+| KSAVE-S03 | S | integration | two investigations, each with its version 1 | both saved (UNIQUE bug) | new | `test_should_let_each_investigation_have_its_own_version_one` |
+| KSAVE-S04 | S | integration | writing fails after the investigation is created (DB error at commit) | full rollback: no investigation, no version | new | `test_should_roll_back_the_new_investigation_when_writing_the_version_fails` |
+| KSAVE-S05 | S | integration | save with own `kinetic_investigation_id` given explicitly | version n+1 in that investigation | new | `test_should_add_next_version_when_saving_into_own_investigation_explicitly` |
+| KSAVE-S06 | S | unit | duplicate comparison for the same version | rejected by the constraint | covered | `test_should_reject_a_second_comparison_for_the_same_version` |
 
-### Leer, listar, borrar
+### Read, list, delete
 
-| ID | Tipo | Nivel | Dado / entrada | Esperado | Estado | Test |
+| ID | Type | Level | Given / input | Expected | Status | Test |
 |---|---|---|---|---|---|---|
-| KSAVE-H04 | H | integration | investigación con v1, v2, v3 | lista ordenada ascendente por `version_id` | new | `test_should_list_versions_in_ascending_order` |
-| KSAVE-N10 | N | unit | versión inexistente | 404 | covered | `test_should_raise_not_found_when_version_does_not_exist` |
-| KSAVE-N11 | N | unit | listar versiones de investigación inexistente | 404 | covered | `TestGetKineticVersions.test_should_raise_not_found_when_investigation_does_not_exist` |
-| KSAVE-N12 | N | integration | borrar versión siendo otro usuario | 403 y la versión sigue existiendo | new | `test_should_forbid_deleting_a_version_of_another_user` |
-| KSAVE-S07 | S | integration | borrar una versión | desaparecen sus fitted models y su comparación (cascada); las otras versiones quedan | new | `test_should_delete_a_version_with_its_fitted_models_and_comparison_only` |
-| KSAVE-S08 | S | integration | borrar la investigación | desaparecen todas sus versiones y dependientes | new | `test_should_delete_every_version_when_deleting_the_investigation` |
-| KSAVE-S09 | S | integration | con v1 y v2, borrar v2 y volver a guardar | la nueva versión es la 2 (se reutiliza el número) | open | Q3 |
+| KSAVE-H04 | H | integration | investigation with v1, v2, v3 | list sorted ascending by `version_id` | new | `test_should_list_versions_in_ascending_order` |
+| KSAVE-N10 | N | unit | unknown version | 404 | covered | `test_should_raise_not_found_when_version_does_not_exist` |
+| KSAVE-N11 | N | unit | list versions of an unknown investigation | 404 | covered | `TestGetKineticVersions.test_should_raise_not_found_when_investigation_does_not_exist` |
+| KSAVE-N12 | N | integration | delete a version as another user | 403, version still exists | new | `test_should_forbid_deleting_a_version_of_another_user` |
+| KSAVE-S07 | S | integration | delete a version | its fitted models and comparison are gone (cascade); other versions stay | new | `test_should_delete_a_version_with_its_fitted_models_and_comparison_only` |
+| KSAVE-S08 | S | integration | delete the investigation | all its versions and dependants are gone | new | `test_should_delete_every_version_when_deleting_the_investigation` |
+| KSAVE-S09 | S | integration | with v1 and v2, delete v2 and save again | the new version is 2 (number reused) | open | Q3 |
 
-## Preguntas abiertas
+## Open questions
 
-Comportamientos que el código no define bien. No se resuelven adivinando.
+Behaviour the code does not clearly define. Not resolved by guessing.
 
-1. **Q1 — falta `kinetic_sample_id`.** Hoy llega `None` a `find_kinetic_sample` y responde **404**
-   "Kinetic sample with id None". ¿Debería ser **400** (campo requerido faltante)?
-2. **Q2 — tipos incorrectos en `results`.** La validación sólo mira que las claves existan. Un
-   `model` no numérico explota en la base al hacer commit → **500**. ¿Validamos tipos → 400?
-3. **Q3 — reutilización del número de versión.** `version_id = max + 1`: si se borra la última
-   versión, el próximo guardado reutiliza su número, y un link viejo a `…/version/2` pasa a mostrar
-   otros resultados. ¿Es aceptable o el número debe ser monotónico?
-4. **Q4 — guardar sobre la muestra de otro usuario.** Con `kinetic_sample_id` de una muestra ajena,
-   se crea una investigación del usuario actual sobre esa muestra. ¿Está permitido?
+1. **Q1 — missing `kinetic_sample_id`.** `None` reaches `find_kinetic_sample` and the API answers
+   **404** "Kinetic sample with id None". Should it be **400** (missing required field)?
+2. **Q2 — wrong types in `results`.** Validation only checks that keys exist. A non-numeric
+   `model` fails in the DB at commit → **500**. Validate types → 400?
+3. **Q3 — version number reuse.** `version_id = max + 1`: deleting the last version makes the next
+   save reuse its number, so an old link to `…/version/2` shows different results. Acceptable, or
+   should numbers be monotonic?
+4. **Q4 — saving on another user's sample.** Given someone else's `kinetic_sample_id`, an
+   investigation of the current user is created on that sample. Allowed?
 
-## Tests existentes sin caso asociado
+## Existing tests not mapped to a case
 
-- `test_should_flush_without_committing_a_new_investigation` — contrato de implementación que
-  sostiene KSAVE-S02/S04 a nivel unitario; se mantiene.
+- `test_should_flush_without_committing_a_new_investigation` — implementation contract behind
+  KSAVE-S02/S04 at unit level; kept.
 - `test_should_allow_version_one_in_several_investigations` / `…several_versions_of_one_investigation`
-  (SQLite) — duplican KSAVE-S03/S01 sin base real; se mantienen porque corren sin Postgres.
+  (SQLite) — duplicate KSAVE-S03/S01 without a real DB; kept because they run without Postgres.

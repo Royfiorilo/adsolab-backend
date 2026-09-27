@@ -1,17 +1,4 @@
-"""
-Fixtures para tests de integración contra PostgreSQL real.
-
-Requieren TEST_DATABASE_URL: una base cuyo nombre termine en `_test`, construida sólo con
-`dbmate up` (igual que en CI). Sin esa variable, los tests que usan `db_session` se omiten.
-
-Cada test corre dentro de una transacción que se revierte al terminar: los `commit()` del código
-de la app caen en un SAVEPOINT, así que la base queda igual que antes del test.
-
-`db.session` se reemplaza por un `scoped_session` de SQLAlchemy atado a esa conexión porque
-Flask-SQLAlchemy 3.1 ignora el `bind` de la sesión en `get_bind`: con
-`db.session.configure(bind=connection)` las filas se escriben por otra conexión y sobreviven
-al rollback (verificado).
-"""
+"""PostgreSQL integration fixtures: need TEST_DATABASE_URL (a `*_test` DB); each test is rolled back."""
 import os
 import uuid
 
@@ -24,7 +11,7 @@ from database import KineticSample, User, db
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
-# Adsorbatos y adsorbentes que ya siembran las migraciones.
+# Seeded by the migrations.
 SEEDED_ADSORBATE_ID = 1
 SEEDED_ADSORBENT_ID = 1
 
@@ -32,11 +19,11 @@ SEEDED_ADSORBENT_ID = 1
 @pytest.fixture(scope="session")
 def integration_app():
     if not TEST_DATABASE_URL:
-        pytest.skip("TEST_DATABASE_URL no definido: se omiten los tests de integración")
+        pytest.skip("TEST_DATABASE_URL not set: skipping integration tests")
     database_name = make_url(TEST_DATABASE_URL).database or ""
     if not database_name.endswith("_test"):
         pytest.exit(
-            f"TEST_DATABASE_URL apunta a '{database_name}': sólo se aceptan bases '*_test'",
+            f"TEST_DATABASE_URL points to '{database_name}': only '*_test' databases are allowed",
             returncode=2,
         )
 
@@ -56,6 +43,7 @@ def db_session(integration_app):
     connection = db.engine.connect()
     transaction = connection.begin()
     original_session = db.session
+    # Flask-SQLAlchemy 3.1 ignores the session bind, so rows would survive the rollback.
     db.session = scoped_session(
         sessionmaker(bind=connection, join_transaction_mode="create_savepoint")
     )
@@ -90,7 +78,7 @@ def make_kinetic_sample(db_session, make_user):
         fields = {
             "time": [0.0, 5.0, 10.0, 20.0, 40.0],
             "qt": [0.0, 3.8, 5.0, 6.1, 6.4],
-            "title": "muestra de integración",
+            "title": "integration sample",
             "adsorbate_id": SEEDED_ADSORBATE_ID,
             "adsorbent_id": SEEDED_ADSORBENT_ID,
         }

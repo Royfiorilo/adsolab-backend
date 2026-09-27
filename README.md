@@ -115,25 +115,24 @@ El servidor quedará disponible en **http://127.0.0.1:5000**.
 
 ## Tests
 
-La estrategia completa (qué nivel de test para qué, convenciones, tipos de caso) está en
-[`docs/test-specs/README.md`](docs/test-specs/README.md), junto a las especificaciones de casos.
+Testing strategy (levels, conventions, case types) and the per-feature case specs:
+[`docs/test-specs/`](docs/test-specs/README.md).
 
 ```bash
-# Unitarios (los de integración se omiten si no hay TEST_DATABASE_URL)
+# Unit tests (integration tests are skipped without TEST_DATABASE_URL)
 PYTHONPATH=$PWD/app pipenv run python -m pytest -q
 
-# Todo, contra PostgreSQL real y con cobertura de líneas
+# Everything, against a real PostgreSQL, with line coverage
 TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/adsolab_test \
   PYTHONPATH=$PWD/app pipenv run python -m pytest -q --cov=app
 ```
 
-- Los tests de integración (`@pytest.mark.integration`, en `test/integration/`) corren contra una
-  base **`*_test`** construida sólo con las migraciones; el fixture rechaza cualquier otra base.
-  Para crearla: `createdb adsolab_test` y
+- Integration tests (`test/integration/`, `@pytest.mark.integration`) need a **`*_test`** database
+  built only from migrations: `createdb adsolab_test` and
   `dbmate --url "postgresql://postgres:postgres@localhost:5432/adsolab_test?sslmode=disable" up`.
-- Cada test corre dentro de una transacción que se revierte al final: la base queda como estaba.
-- En CI (`.github/workflows/tests.yml`) se corren en cada PR y push a `main`, con PostgreSQL como
-  service container. El badge de cobertura de líneas se publica en la rama `badges` en cada push a `main`.
+  Each test is rolled back, so the database is left unchanged.
+- CI (`.github/workflows/tests.yml`) runs them on every PR and push to `main`; pushes to `main`
+  also publish the line-coverage badge to the `badges` branch.
 
 ## Especificación de la API
 

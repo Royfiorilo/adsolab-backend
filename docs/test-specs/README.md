@@ -1,81 +1,74 @@
-# Estrategia de testing (backend)
+# Testing strategy (backend)
 
-Cómo se testea este repo y dónde vive cada cosa. Las especificaciones de casos de cada
-funcionalidad están en esta misma carpeta (`<funcionalidad>.md`).
+How this repo is tested. Each feature's case spec lives in this folder (`<feature>.md`).
 
-## Principios
+## Principles
 
-- **Mayormente integración.** Los mocks esconden errores en los bordes: un `UNIQUE` mal definido
-  en PostgreSQL pasó todos los tests mockeados y rompía el guardado de la segunda versión. Todo lo
-  que depende de la base se prueba contra **PostgreSQL real**.
-- **Primero los casos, después los tests.** Cada funcionalidad tiene una especificación con casos
-  identificados (felices, límite, negativos, borde, de estado), derivados con técnicas estándar:
-  particiones de equivalencia, valores límite, tablas de decisión, transiciones de estado.
-- **Un test que no puede fallar no sirve.** Cada test nuevo se verifica rompiendo a propósito el
-  comportamiento que cubre (mutación manual): tiene que ponerse en rojo.
-- **Comportamiento, no implementación.** Se verifica lo observable: valor devuelto, respuesta
-  HTTP, filas en la base.
+- **Mostly integration.** Mocks hide boundary bugs: a wrong PostgreSQL `UNIQUE` passed every
+  mocked test and broke saving a second version. Anything that depends on the database is tested
+  against **real PostgreSQL**.
+- **Cases first, tests second.** Each feature gets a spec of identified cases (happy, boundary,
+  negative, edge, state) derived with equivalence partitioning, boundary values, decision tables
+  and state transitions.
+- **A test that cannot fail is useless.** Every new test is checked by breaking the behaviour it
+  covers (manual mutation): it must go red.
+- **Behaviour, not implementation.** Assert what is observable: return value, HTTP response, rows
+  in the database.
 
-## Qué nivel para qué
+## Which level for what
 
-| Qué | Nivel | Marker |
+| What | Level | Marker |
 |---|---|---|
-| Matemática: modelos, ajuste, linealización, estadísticos | Unitario, con datos sintéticos de parámetros conocidos y tolerancia explícita | — |
-| Schemas / validación | Unitario: cada partición válida e inválida + límites | — |
-| Services que tocan la base (guardar, versiones, borrar, restricciones, cascadas, transacciones) | **Integración** (PostgreSQL real) | `integration` |
-| Controllers (ruteo, códigos HTTP, mapeo de errores) | Cliente Flask con el service mockeado | — |
-| Migraciones | CI las aplica todas sobre una base vacía antes de los tests | — |
+| Math: models, fitting, linearization, statistics | Unit, synthetic data with known parameters and an explicit tolerance | — |
+| Schemas / validation | Unit: every valid and invalid partition + boundaries | — |
+| Services touching the DB (save, versions, delete, constraints, cascades, transactions) | **Integration** (real PostgreSQL) | `integration` |
+| Controllers (routing, status codes, error mapping) | Flask client, service mocked | — |
+| Migrations | CI applies all of them to an empty DB before the tests | — |
 
-Mockear la base sólo vale para orquestación sin semántica de base (p. ej. "se valida antes de
-crear la investigación"). Restricciones, cascadas y transacciones **nunca** se prueban con mocks.
+Mock the DB only for orchestration with no DB semantics (e.g. "validation runs before the
+investigation is created"). Constraints, cascades and transactions are **never** tested with mocks.
 
-## Convenciones
+## Conventions
 
-- Tests nuevos en estilo pytest (funciones + fixtures). Los archivos existentes en
-  `unittest.TestCase` se dejan como están; no se mezclan estilos dentro de un archivo.
-- Nombre: `test_should_<resultado>_when_<condición>`. El ID del caso va en el docstring
-  (`"""KSAVE-N03"""`), así cada test se rastrea hasta su caso.
-- Estructura Arrange / Act / Assert, separada por líneas en blanco. Un comportamiento por test.
-- Datos: funciones o fixtures con valores válidos por defecto, sobrescribiendo sólo lo que el test
-  prueba (`payload(sample, results=[])`).
-- Números: nunca `==` con floats; `pytest.approx` / `numpy.testing.assert_allclose` con la
-  tolerancia y su motivo.
-- Determinismo: sin red, sin hora real, semillas fijas.
-- Ubicación: `test/<capa>/<modulo>_test.py` (unitarios), `test/integration/<funcionalidad>_test.py`.
+- New tests in pytest style. Existing `unittest.TestCase` files stay as they are; don't mix styles in one file.
+- Name: `test_should_<result>_when_<condition>`; the case ID goes in the docstring (`"""KSAVE-N03"""`).
+- Arrange / Act / Assert separated by blank lines; one behaviour per test.
+- Data: builders with valid defaults, overriding only what the test is about (`payload(sample, results=[])`).
+- Floats: never `==`; `pytest.approx` / `numpy.testing.assert_allclose` with a stated tolerance.
+- Deterministic: no network, no real time, fixed seeds.
+- Location: `test/<layer>/<module>_test.py` (unit), `test/integration/<feature>_test.py`.
+- Comments short and in English.
 
-## Tipos de caso
+## Case types
 
-| Prefijo | Significado |
+| Prefix | Meaning |
 |---|---|
-| `H` | Feliz: entrada válida y representativa |
-| `B` | Límite: justo en / dentro / fuera de un límite (mín-1, mín, mín+1, máx, máx+1) |
-| `N` | Negativo: entrada inválida o acción prohibida, rechazada con el error correcto |
-| `E` | Borde: válido pero inusual (cero, vacío permitido, duplicados, desordenado, magnitudes extremas) |
-| `S` | Estado / secuencia: orden de operaciones, idempotencia, atomicidad |
+| `H` | Happy: valid, representative input |
+| `B` | Boundary: at / just inside / just outside a limit (min-1, min, min+1, max, max+1) |
+| `N` | Negative: invalid input or forbidden action, rejected with the right error |
+| `E` | Edge: valid but unusual (zero, allowed empty, duplicates, unsorted, extreme magnitudes) |
+| `S` | State / sequence: operation order, idempotency, atomicity |
 
-IDs: `<FUNCIONALIDAD>-<tipo><nn>`, p. ej. `KSAVE-N03`.
+IDs: `<FEATURE>-<type><nn>`, e.g. `KSAVE-N03`.
 
-## Tests de integración
+## Integration tests
 
-- Necesitan `TEST_DATABASE_URL` apuntando a una base cuyo nombre termine en **`_test`**,
-  construida sólo con `dbmate up`. Sin la variable, se **omiten** (no fallan). El fixture se niega
-  a correr contra cualquier otra base.
-- Cada test corre dentro de una transacción que se revierte al final; los `commit()` del código
-  caen en un SAVEPOINT. La base queda igual que antes.
+- Need `TEST_DATABASE_URL` pointing to a database named **`*_test`**, built only with `dbmate up`.
+  Without it they are **skipped**, not failed; any other database is refused.
+- Each test runs in a transaction rolled back at the end (app `commit()`s land on a SAVEPOINT).
 - Fixtures (`test/integration/conftest.py`): `db_session`, `make_user`, `make_kinetic_sample`.
-- Detalle técnico: se reemplaza `db.session` por un `scoped_session` de SQLAlchemy atado a la
-  conexión del test, porque Flask-SQLAlchemy 3.1 ignora el `bind` de la sesión y con
-  `db.session.configure(bind=...)` las filas sobreviven al rollback (verificado).
+- `db.session` is swapped for a SQLAlchemy `scoped_session` bound to the test connection:
+  Flask-SQLAlchemy 3.1 ignores the session bind, so `db.session.configure(bind=...)` leaks rows
+  past the rollback (verified).
 
-## Cobertura
+## Coverage
 
-Cobertura de líneas con `pytest-cov`, publicada como badge por CI. Es una señal, no una meta: no
-hay umbral mínimo. Código crítico sin cubrir es motivo para escribir una especificación, no para
-agregar tests sin asserts.
+Line coverage via `pytest-cov`, published as a badge by CI. A signal, not a target: no minimum
+threshold.
 
-## Lo que se decidió no adoptar
+## Not adopted
 
-- **`pytest-flask-sqlalchemy`:** sin mantenimiento, hecho para SQLAlchemy 1.x (usamos 2.0).
-- **testcontainers:** redundante con docker compose (local) y el service container (CI).
-- **Umbral de cobertura y herramientas de mutación (mutmut):** a este tamaño cuestan más de lo que
-  aportan; la verificación manual por test cubre la intención.
+- **`pytest-flask-sqlalchemy`:** unmaintained, built for SQLAlchemy 1.x (we use 2.0).
+- **testcontainers:** redundant with docker compose (local) and the service container (CI).
+- **Coverage threshold, mutation tools (mutmut):** not worth it at this size; the manual check per
+  test covers the intent.
