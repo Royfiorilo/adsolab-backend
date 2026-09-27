@@ -7,6 +7,7 @@ from services.kinetics_version_service import (
     get_kinetic_version,
     get_kinetic_versions,
     save_kinetic_version,
+    validate_kinetic_version_payload,
 )
 
 INVESTIGATION_ID = 1
@@ -111,6 +112,20 @@ class TestSaveKineticVersion(unittest.TestCase):
             save_kinetic_version(INVESTIGATION_ID, valid_results(), valid_comparison())
 
         self.session.rollback.assert_called_once()
+
+
+class TestValidateKineticVersionPayload(unittest.TestCase):
+    def test_should_raise_bad_request_naming_each_missing_required_field(self):
+        """KSAVE-N02"""
+        for field in ("model", "best_adjust", "adjustment_methods"):
+            with self.subTest(missing=field):
+                result = valid_results()[0]
+                del result[field]
+
+                with self.assertRaises(BadRequestError) as raised:
+                    validate_kinetic_version_payload([result], valid_comparison())
+
+                self.assertIn(field, str(raised.exception))
 
 
 class TestGetKineticVersion(unittest.TestCase):
