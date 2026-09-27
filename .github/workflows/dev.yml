@@ -6,11 +6,33 @@ on:
       - main
     
 jobs:
+  # Skips the release (instead of failing) while the dev DB secrets are not configured.
+  check-secrets:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+    - id: check
+      env:
+        DB_USERNAME_DEV: ${{ secrets.DB_USERNAME_DEV }}
+        DB_PASSWORD_DEV: ${{ secrets.DB_PASSWORD_DEV }}
+        DB_URL_DEV: ${{ secrets.DB_URL_DEV }}
+        DB_NAME: ${{ secrets.DB_NAME }}
+      run: |
+        if [ -n "$DB_USERNAME_DEV" ] && [ -n "$DB_PASSWORD_DEV" ] && [ -n "$DB_URL_DEV" ] && [ -n "$DB_NAME" ]; then
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "::notice::Dev DB secrets are not configured: skipping dev migrations."
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+        fi
+
   build:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.configured == 'true'
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - run: sudo curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/releases/latest/download/dbmate-linux-amd64
     - run: sudo chmod +x /usr/local/bin/dbmate
