@@ -1,5 +1,8 @@
 # AdsoLab Backend
 
+[![Tests](https://github.com/Royfiorilo/adsolab-backend/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Royfiorilo/adsolab-backend/actions/workflows/tests.yml)
+![Line coverage](https://raw.githubusercontent.com/Royfiorilo/adsolab-backend/badges/coverage.svg)
+
 ## ¿Qué es AdsoLab?
 
 Es una plataforma para el modelado y validación del equilibrio en los procesos de adsorción de contaminantes.
@@ -109,6 +112,28 @@ O sin activar el entorno:
 El servidor quedará disponible en **http://127.0.0.1:5000**.
 
 ---
+
+## Tests
+
+La estrategia completa (qué nivel de test para qué, convenciones, tipos de caso) está en
+[`docs/test-specs/README.md`](docs/test-specs/README.md), junto a las especificaciones de casos.
+
+```bash
+# Unitarios (los de integración se omiten si no hay TEST_DATABASE_URL)
+PYTHONPATH=$PWD/app pipenv run python -m pytest -q
+
+# Todo, contra PostgreSQL real y con cobertura de líneas
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/adsolab_test \
+  PYTHONPATH=$PWD/app pipenv run python -m pytest -q --cov=app
+```
+
+- Los tests de integración (`@pytest.mark.integration`, en `test/integration/`) corren contra una
+  base **`*_test`** construida sólo con las migraciones; el fixture rechaza cualquier otra base.
+  Para crearla: `createdb adsolab_test` y
+  `dbmate --url "postgresql://postgres:postgres@localhost:5432/adsolab_test?sslmode=disable" up`.
+- Cada test corre dentro de una transacción que se revierte al final: la base queda como estaba.
+- En CI (`.github/workflows/tests.yml`) se corren en cada PR y push a `main`, con PostgreSQL como
+  service container. El badge de cobertura de líneas se publica en la rama `badges` en cada push a `main`.
 
 ## Especificación de la API
 

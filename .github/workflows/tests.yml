@@ -1,0 +1,96 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:11  # same version as docker-compose.yml
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: adsolab_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/adsolab_test
+      PYTHONPATH: ${{ github.workspace }}/app
+      DBMATE_VERSION: v2.36.0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install pipenv
+          pipenv sync --dev
+
+      # Builds the test DB only from migrations: a broken migration fails here, before merge.
+      - name: Apply migrations
+        run: |
+          sudo curl -fsSL -o /usr/local/bin/dbmate \
+            "https://github.com/amacneil/dbmate/releases/download/${DBMATE_VERSION}/dbmate-linux-amd64"
+          sudo chmod +x /usr/local/bin/dbmate
+          dbmate --url "${TEST_DATABASE_URL}?sslmode=disable" --migrations-dir db/migrations --no-dump-schema up
+
+      - name: Run tests (unit + integration) with line coverage
+        run: pipenv run python -m pytest -q -rs --cov=app --cov-report=term --cov-report=xml
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+
+  # Separate job so that only this one, and only on main, gets a write token.
+  coverage-badge:
+    needs: backend
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # pushes coverage.svg to the `badges` branch
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: /tmp/coverage
+
+      - name: Publish line-coverage badge to the badges branch
+        run: |
+          pip install anybadge==1.16.0
+          COVERAGE=$(python3 -c "import xml.etree.ElementTree as ET; print(round(float(ET.parse('/tmp/coverage/coverage.xml').getroot().get('line-rate')) * 100))")
+          anybadge --label "line coverage" --value "${COVERAGE}" --suffix "%" --overwrite --file /tmp/coverage.svg \
+            50=red 70=orange 85=yellowgreen 101=green
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch --depth 1 origin +badges:refs/remotes/origin/badges; then git switch -c badges origin/badges; else git switch --orphan badges; fi
+          git rm -rf --quiet --ignore-unmatch .
+          cp /tmp/coverage.svg coverage.svg
+          git add coverage.svg
+          git commit -m "Update line-coverage badge: ${COVERAGE}%" || exit 0  # unchanged coverage
+          git push origin badges
