@@ -19,11 +19,11 @@ How this repo is tested. Each feature's case spec lives in this folder (`<featur
 
 | What | Level | Marker |
 |---|---|---|
-| Math: models, fitting, linearization, statistics | Unit, synthetic data with known parameters and an explicit tolerance | — |
-| Schemas / validation | Unit: every valid and invalid partition + boundaries | — |
+| Math: models, fitting, linearization, statistics | Unit, synthetic data with known parameters and an explicit tolerance | - |
+| Schemas / validation | Unit: every valid and invalid partition + boundaries | - |
 | Services touching the DB (save, versions, delete, constraints, cascades, transactions) | **Integration** (real PostgreSQL) | `integration` |
-| Controllers (routing, status codes, error mapping) | Flask client, service mocked | — |
-| Migrations | CI applies all of them to an empty DB before the tests | — |
+| Controllers (routing, status codes, error mapping) | Flask client, service mocked | - |
+| Migrations | CI applies all of them to an empty DB before the tests | - |
 
 Mock the DB only for orchestration with no DB semantics (e.g. "validation runs before the
 investigation is created"). Constraints, cascades and transactions are **never** tested with mocks.

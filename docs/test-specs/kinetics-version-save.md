@@ -1,4 +1,4 @@
-# Test spec — Save and manage kinetic versions (`KSAVE`)
+# Test spec: save and manage kinetic versions (`KSAVE`)
 
 **Under test:**
 - `POST /kinetics/investigation/save` → `validate_and_save_kinetic_version` (`app/services/kinetics_investigation_service.py`)
@@ -57,19 +57,19 @@
 
 Behaviour the code does not clearly define. Not resolved by guessing.
 
-1. **Q1 — missing `kinetic_sample_id`.** `None` reaches `find_kinetic_sample` and the API answers
+1. **Q1: Missing `kinetic_sample_id`.** `None` reaches `find_kinetic_sample` and the API answers
    **404** "Kinetic sample with id None". Should it be **400** (missing required field)?
-2. **Q2 — wrong types in `results`.** Validation only checks that keys exist. A non-numeric
+2. **Q2: Wrong types in `results`.** Validation only checks that keys exist. A non-numeric
    `model` fails in the DB at commit → **500**. Validate types → 400?
-3. **Q3 — version number reuse.** `version_id = max + 1`: deleting the last version makes the next
+3. **Q3: Version number reuse.** `version_id = max + 1`: deleting the last version makes the next
    save reuse its number, so an old link to `…/version/2` shows different results. Acceptable, or
    should numbers be monotonic?
-4. **Q4 — saving on another user's sample.** Given someone else's `kinetic_sample_id`, an
+4. **Q4: Saving on another user's sample.** Given someone else's `kinetic_sample_id`, an
    investigation of the current user is created on that sample. Allowed?
 
 ## Existing tests not mapped to a case
 
-- `test_should_flush_without_committing_a_new_investigation` — implementation contract behind
+- `test_should_flush_without_committing_a_new_investigation`: implementation contract behind
   KSAVE-S02/S04 at unit level; kept.
 - `test_should_allow_version_one_in_several_investigations` / `…several_versions_of_one_investigation`
-  (SQLite) — duplicate KSAVE-S03/S01 without a real DB; kept because they run without Postgres.
+  (SQLite): duplicate KSAVE-S03/S01 without a real DB; kept because they run without Postgres.
