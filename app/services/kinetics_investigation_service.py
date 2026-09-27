@@ -32,10 +32,6 @@ def create_kinetic_investigation(kinetic_sample_id: int, user_id: int):
     """
     Crea una investigación cinética nueva para una muestra dada, o devuelve
     la existente si ya existe una para ese par (muestra, usuario).
-
-    No hace commit: sólo `flush` para obtener el ID. La investigación se
-    persiste en la misma transacción que su primera versión, así un fallo al
-    guardar la versión no deja una investigación huérfana sin versiones.
     """
     find_kinetic_sample(kinetic_sample_id)
     existing = (
@@ -51,7 +47,7 @@ def create_kinetic_investigation(kinetic_sample_id: int, user_id: int):
         user_id=user_id,
     )
     db.session.add(investigation)
-    db.session.flush()
+    db.session.flush()  # committed with its first version: a failed save leaves no orphan
     return investigation
 
 

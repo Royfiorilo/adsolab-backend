@@ -45,7 +45,7 @@ def _get_kinetic_version_row(kinetic_investigation_id: int, version_id: int) -> 
 
 
 def validate_kinetic_version_payload(results: list, comparison: dict):
-    """Valida el contenido de una versión antes de persistir nada."""
+    """Validate a version payload before anything is written."""
     _validate_results(results)
     _validate_comparison(comparison)
 
