@@ -264,6 +264,7 @@ def run_kinetic_no_linear_models(request_json: dict):
           - results: lista de modelos ajustados con parámetros y estadísticas.
           - comparison: dict con heurística y ML.
     """
+    from app import db
     from services.kinetics_sample_service import find_kinetic_sample, filter_kinetic_sample
     from services.kinetics_comparison_service import get_kinetic_comparison
 
@@ -273,13 +274,15 @@ def run_kinetic_no_linear_models(request_json: dict):
         sample = filter_kinetic_sample(sample, filter_indexes)
 
     methods = get_optimization_methods()
+    models_by_id = {m['model']: find_kinetic_model(m['model']) for m in request_json['models']}
+    db.session.remove()
+
     raw_results = []
     successful_models = []
 
     for model_config in request_json['models']:
         model_id = model_config['model']
-        model_data = find_kinetic_model(model_id)
-        kinetic_model = KineticNoLinearModel(model_data)
+        kinetic_model = KineticNoLinearModel(models_by_id[model_id])
         try:
             fit_results = kinetic_model.run(
                 sample=sample,
