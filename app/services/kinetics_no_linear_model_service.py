@@ -31,6 +31,9 @@ from services.kinetics_model_service import find_kinetic_models, find_kinetic_mo
 from services.model_service import get_optimization_methods
 from utils import round_list_numbers, round_number
 
+# Global methods (ampgo, basinhopping) reach the same minimum on these 2-parameter models at ~20x the CPU.
+KINETIC_FIT_METHODS = ('leastsq', 'nelder', 'cobyla')
+
 
 def calculate_kinetic_seeds(sample: KineticsSampleEntity, model_data: Dict[str, Any]) -> List[Dict]:
     """
@@ -244,6 +247,11 @@ class KineticNoLinearModel:
         return self.best_method.method_name if self.best_method else None
 
 
+def get_kinetic_optimization_methods() -> Dict[str, str]:
+    return {code: description for code, description in get_optimization_methods().items()
+            if code in KINETIC_FIT_METHODS}
+
+
 def run_kinetic_no_linear_models(request_json: dict):
     """
     Ejecuta el ajuste no lineal de uno o varios modelos cinéticos.
@@ -273,7 +281,7 @@ def run_kinetic_no_linear_models(request_json: dict):
     if filter_indexes:
         sample = filter_kinetic_sample(sample, filter_indexes)
 
-    methods = get_optimization_methods()
+    methods = get_kinetic_optimization_methods()
     models_by_id = {m['model']: find_kinetic_model(m['model']) for m in request_json['models']}
     db.session.remove()
 

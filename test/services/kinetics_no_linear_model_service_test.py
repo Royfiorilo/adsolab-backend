@@ -17,6 +17,9 @@ PFO_MODEL = {"_id": 3, "name": "PFO", "formula": "qt = qe * (1 - exp(-k1 * time)
 PSO_MODEL = {"_id": 2, "name": "PSO", "formula": "qt = (k2 * qe**2 * time) / (1 + k2 * qe * time)",
              "parameters": {"qe": "", "k2": ""}}
 
+ALL_DB_METHODS = {code: code for code in
+                  ("leastsq", "ampgo", "nelder", "cg", "cobyla", "basinhopping")}
+
 EXPECTED_STATISTICS = ["r_squared", "adjust_r_squared", "chi_squared", "adjust_chi_squeared",
                        "RMSE", "SSE", "HYBRID", "AIC", "BIC"]
 EXPECTED_RESIDUAL_ANALYSIS = ["normality_pvalue", "homoscedasticity_pvalue", "durbin_watson",
@@ -126,16 +129,17 @@ class TestFitStatisticsAndResiduals(unittest.TestCase):
 
 
 class TestRunKineticNoLinearModels(unittest.TestCase):
-    def run_service(self, seeds):
+    def run_service(self, seeds, methods=None):
         request = {
             "kinetic_sample_id": 1,
             "filter": [],
             "models": [{"model": PFO_MODEL["_id"], "seeds": seeds, "iterations": 2000}],
         }
-        with patch('services.kinetics_sample_service.find_kinetic_sample', return_value=pfo_sample()), \
+        with patch('app.db'), \
+                patch('services.kinetics_sample_service.find_kinetic_sample', return_value=pfo_sample()), \
                 patch('services.kinetics_no_linear_model_service.find_kinetic_model', return_value=PFO_MODEL), \
                 patch('services.kinetics_no_linear_model_service.get_optimization_methods',
-                      return_value={"leastsq": "Least Squares"}):
+                      return_value=methods or {"leastsq": "Least Squares"}):
             return run_kinetic_no_linear_models(request)
 
     def test_should_echo_the_seeds_of_every_model(self):
@@ -160,6 +164,15 @@ class TestRunKineticNoLinearModels(unittest.TestCase):
         self.assertIsNotNone(comparison["heuristic"])
         self.assertIsNotNone(comparison["ml"])
         self.assertEqual(comparison["ml"]["best_model"], PFO_MODEL["_id"])
+
+    def test_should_fit_only_the_local_methods_when_the_db_lists_global_ones(self):
+        """Global optimizers cost ~20x the CPU for the same minimum."""
+        results, _ = self.run_service([{"name": "qe", "value": 7.0}, {"name": "k1", "value": 0.1}],
+                                      methods=ALL_DB_METHODS)
+
+        names = [method["name"] for method in results[0]["adjustment_methods"]]
+
+        self.assertEqual(names, ["leastsq", "nelder", "cobyla"])
 
 
 if __name__ == "__main__":
