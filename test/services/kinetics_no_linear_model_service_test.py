@@ -128,12 +128,32 @@ class TestFitStatisticsAndResiduals(unittest.TestCase):
         self.assertEqual(list(self.best.transformed["x"]), list(other.transformed["x"]))
 
 
+class TestGlobalFallback(unittest.TestCase):
+    LOCAL = {"leastsq": "", "nelder": "", "cobyla": ""}
+    GLOBAL = {"ampgo": "", "basinhopping": ""}
+
+    def fitted_method_names(self, iterations):
+        model = KineticNoLinearModel(PFO_MODEL)
+        results = model.run(sample=pfo_sample(), seeds=[{"name": "qe", "value": 7.0}, {"name": "k1", "value": 0.1}],
+                            methods=self.LOCAL, iterations=iterations, fallback_methods=self.GLOBAL)
+        return [result.method_name for result in results]
+
+    def test_should_skip_the_global_methods_when_a_local_method_succeeds(self):
+        self.assertEqual(self.fitted_method_names(iterations=2000), ["leastsq", "nelder", "cobyla"])
+
+    def test_should_run_the_global_methods_when_every_local_method_fails(self):
+        # One evaluation is not enough for any method to converge.
+        names = self.fitted_method_names(iterations=1)
+
+        self.assertEqual(names, ["leastsq", "nelder", "cobyla", "ampgo", "basinhopping"])
+
+
 class TestRunKineticNoLinearModels(unittest.TestCase):
-    def run_service(self, seeds, methods=None):
+    def run_service(self, seeds, methods=None, iterations=2000):
         request = {
             "kinetic_sample_id": 1,
             "filter": [],
-            "models": [{"model": PFO_MODEL["_id"], "seeds": seeds, "iterations": 2000}],
+            "models": [{"model": PFO_MODEL["_id"], "seeds": seeds, "iterations": iterations}],
         }
         with patch('app.db'), \
                 patch('services.kinetics_sample_service.find_kinetic_sample', return_value=pfo_sample()), \
@@ -173,6 +193,14 @@ class TestRunKineticNoLinearModels(unittest.TestCase):
         names = [method["name"] for method in results[0]["adjustment_methods"]]
 
         self.assertEqual(names, ["leastsq", "nelder", "cobyla"])
+
+    def test_should_fall_back_to_the_global_methods_when_every_local_method_fails(self):
+        results, _ = self.run_service([{"name": "qe", "value": 7.0}, {"name": "k1", "value": 0.1}],
+                                      methods=ALL_DB_METHODS, iterations=1)
+
+        names = [method["name"] for method in results[0]["adjustment_methods"]]
+
+        self.assertEqual(names, ["leastsq", "nelder", "cobyla", "ampgo", "basinhopping"])
 
 
 if __name__ == "__main__":
