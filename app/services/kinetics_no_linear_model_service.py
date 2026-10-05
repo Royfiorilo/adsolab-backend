@@ -16,7 +16,7 @@ Responsabilidad:
     de los modelos cinéticos sean validadas con Jorge/Silvia.
 """
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 import lmfit
 import numpy as np
@@ -30,6 +30,10 @@ from entities.statistics import Statistics
 from services.kinetics_model_service import find_kinetic_models, find_kinetic_model
 from services.model_service import get_optimization_methods
 from utils import round_list_numbers, round_number
+
+# Global methods reach the same minimum on these 2-parameter models at ~20x the CPU: only a fallback.
+KINETIC_FIT_METHODS = ('leastsq', 'nelder', 'cobyla')
+KINETIC_FALLBACK_METHODS = ('ampgo', 'basinhopping')
 
 
 def calculate_kinetic_seeds(sample: KineticsSampleEntity, model_data: Dict[str, Any]) -> List[Dict]:
@@ -173,13 +177,21 @@ class KineticNoLinearModel:
         self.best_method: Optional[FitResult] = None
 
     def run(self, sample: KineticsSampleEntity, seeds: List[Dict],
-            methods: Dict, step=None, iterations=None) -> List[FitResult]:
+            methods: Dict, step=None, iterations=None, fallback_methods: Optional[Dict] = None) -> List[FitResult]:
         x = np.array(sample.time, dtype=float)
         y = np.array(sample.qt, dtype=float)
         iterations = DEFAULT_ITERATIONS if iterations is None else iterations
         initial_params = {s['name']: s['value'] for s in seeds}
-        self.method_results = []
 
+        self.method_results = self._run_methods(x, y, initial_params, methods, step, iterations)
+        if fallback_methods and not any(result.success for result in self.method_results):
+            self.method_results += self._run_methods(x, y, initial_params, fallback_methods, step, iterations)
+
+        self._determine_best_method()
+        return self.method_results
+
+    def _run_methods(self, x, y, initial_params, methods, step, iterations) -> List[FitResult]:
+        results = []
         for method, description in methods.items():
             try:
                 result = self._run_method(x, y, initial_params, method, description, step, iterations)
@@ -190,10 +202,8 @@ class KineticNoLinearModel:
                     method_name=method,
                     method_description=description,
                 )
-            self.method_results.append(result)
-
-        self._determine_best_method()
-        return self.method_results
+            results.append(result)
+        return results
 
     def _run_method(self, x, y, initial_params, method, description, step, iterations) -> FitResult:
         fit_params = KineticFitParameters(x, y, initial_params, step, iterations, method)
@@ -244,6 +254,16 @@ class KineticNoLinearModel:
         return self.best_method.method_name if self.best_method else None
 
 
+def get_kinetic_optimization_methods() -> Tuple[Dict[str, str], Dict[str, str]]:
+    """Returns (methods, fallback_methods) from the method table."""
+    methods = get_optimization_methods()
+
+    def pick(codes):
+        return {code: description for code, description in methods.items() if code in codes}
+
+    return pick(KINETIC_FIT_METHODS), pick(KINETIC_FALLBACK_METHODS)
+
+
 def run_kinetic_no_linear_models(request_json: dict):
     """
     Ejecuta el ajuste no lineal de uno o varios modelos cinéticos.
@@ -273,7 +293,7 @@ def run_kinetic_no_linear_models(request_json: dict):
     if filter_indexes:
         sample = filter_kinetic_sample(sample, filter_indexes)
 
-    methods = get_optimization_methods()
+    methods, fallback_methods = get_kinetic_optimization_methods()
     models_by_id = {m['model']: find_kinetic_model(m['model']) for m in request_json['models']}
     db.session.remove()
 
@@ -290,6 +310,7 @@ def run_kinetic_no_linear_models(request_json: dict):
                 methods=methods,
                 step=model_config.get('step'),
                 iterations=model_config.get('iterations'),
+                fallback_methods=fallback_methods,
             )
             raw_results.append({
                 "model": model_id,
