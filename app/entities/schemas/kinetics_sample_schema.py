@@ -1,7 +1,21 @@
 from marshmallow import fields, Schema, validates_schema, pre_load, post_load, ValidationError
+from marshmallow.validate import Range
 
 from entities.kinetics_sample import KineticsSampleEntity
 from entities.schemas.dump_mixin import DumpMixin
+
+# Negative readings above this limit are instrument noise and become 0; at or below it they are errors.
+NOISE_LIMIT = 1.0
+
+
+def zero_instrument_noise(values):
+    """Turns values in (-NOISE_LIMIT, 0) into 0. Anything that is not a list of numbers is returned as is."""
+    if not isinstance(values, list):
+        return values
+    return [
+        0 if isinstance(v, (int, float)) and not isinstance(v, bool) and -NOISE_LIMIT < v < 0.0 else v
+        for v in values
+    ]
 
 
 class KineticsSampleSchema(Schema, DumpMixin):
@@ -16,9 +30,9 @@ class KineticsSampleSchema(Schema, DumpMixin):
     time = fields.List(fields.Float(), required=True, validate=lambda v: len(v) >= 2)
     qt = fields.List(fields.Float(), load_default=None)
     concentration = fields.List(fields.Float(), load_default=None)
-    initial_concentration = fields.Float(load_default=None)
-    volume = fields.Float(load_default=None)
-    adsorbent_mass = fields.Float(load_default=None)
+    initial_concentration = fields.Float(load_default=None, validate=Range(min=0))
+    volume = fields.Float(load_default=None, validate=Range(min=0, min_inclusive=False))
+    adsorbent_mass = fields.Float(load_default=None, validate=Range(min=0, min_inclusive=False))
 
     title = fields.Str(load_default=None)
     description = fields.Str(load_default=None)
@@ -35,8 +49,8 @@ class KineticsSampleSchema(Schema, DumpMixin):
     def normalize_numbers(self, data, **kwargs):
         """Elimina valores muy cercanos a 0 negativos por redondeo de instrumento."""
         for field_name in ['time', 'qt', 'concentration']:
-            if field_name in data and data[field_name] is not None:
-                data[field_name] = [0 if -1.0 < v < 0.0 else v for v in data[field_name]]
+            if field_name in data:
+                data[field_name] = zero_instrument_noise(data[field_name])
         return data
 
     @validates_schema
@@ -69,6 +83,8 @@ class KineticsSampleSchema(Schema, DumpMixin):
             raise ValidationError('time values must be non-negative.')
         if data.get('qt') is not None and any(v < 0 for v in data['qt']):
             raise ValidationError('qt values must be non-negative.')
+        if data.get('concentration') is not None and any(v < 0 for v in data['concentration']):
+            raise ValidationError('concentration values must be non-negative.')
 
     @post_load
     def make_sample(self, data, **kwargs):

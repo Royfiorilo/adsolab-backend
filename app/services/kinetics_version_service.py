@@ -54,7 +54,9 @@ def _validate_results(results: list):
     if not results:
         raise BadRequestError("At least one fitted model result is required to save a version.")
     for result in results:
-        missing = [field for field in REQUIRED_RESULT_FIELDS if field not in result]
+        if not isinstance(result, dict):
+            raise BadRequestError("Each result must be an object.")
+        missing = [field for field in REQUIRED_RESULT_FIELDS if result.get(field) is None]
         if missing:
             raise BadRequestError(f"Missing fields in result: {', '.join(missing)}.")
 

@@ -23,6 +23,8 @@ from services.kinetics_version_service import (
     validate_kinetic_version_payload,
 )
 
+MAX_PER_PAGE = 100
+
 
 # ---------------------------------------------------------------------------
 # Investigation CRUD
@@ -53,6 +55,9 @@ def create_kinetic_investigation(kinetic_sample_id: int, user_id: int):
 
 def get_kinetic_investigations(page: int, per_page: int, user_id: int = None):
     """Lista investigaciones cinéticas paginadas, opcionalmente filtradas por usuario."""
+    if page < 1 or per_page < 1:
+        raise BadRequestError("page and per_page must be at least 1.")
+    per_page = min(per_page, MAX_PER_PAGE)
     query = db.session.query(KineticInvestigation)
     if user_id is not None:
         query = query.filter_by(user_id=user_id)

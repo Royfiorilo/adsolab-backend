@@ -181,7 +181,7 @@ def update_user(user_id, data, current_user):
 def delete_user(user_id):
     user = User.query.get(user_id)
     if not user:
-        raise BadRequestError(f'User {user_id} not found.')
+        raise NotFoundError(f'User {user_id} not found.')
 
     # Patrón State
     user.soft_delete()
