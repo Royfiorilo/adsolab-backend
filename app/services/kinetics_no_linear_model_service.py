@@ -27,6 +27,7 @@ from entities.kinetics_sample import KineticsSampleEntity
 from entities.no_linear_model import FitResult, FitStrategy, MIN_PARAM_VALUE, LIMIT_QMAX, DEFAULT_ITERATIONS
 from entities.response_formatter import ResponseFormatter
 from entities.statistics import Statistics
+from exceptions.exceptions import BadRequestError
 from services.kinetics_model_service import find_kinetic_models, find_kinetic_model
 from services.model_service import get_optimization_methods
 from utils import round_list_numbers, round_number
@@ -34,6 +35,9 @@ from utils import round_list_numbers, round_number
 # Global methods reach the same minimum on these 2-parameter models at ~20x the CPU: only a fallback.
 KINETIC_FIT_METHODS = ('leastsq', 'nelder', 'cobyla')
 KINETIC_FALLBACK_METHODS = ('ampgo', 'basinhopping')
+# The Ridge comparison cross-validates with 5 folds, so it needs at least 5 points; it also keeps
+# n - n_params - 1 positive for the adjusted R2 of the 2-parameter models.
+MIN_FIT_POINTS = 5
 
 
 def calculate_kinetic_seeds(sample: KineticsSampleEntity, model_data: Dict[str, Any]) -> List[Dict]:
@@ -292,6 +296,11 @@ def run_kinetic_no_linear_models(request_json: dict):
     filter_indexes = request_json.get('filter', [])
     if filter_indexes:
         sample = filter_kinetic_sample(sample, filter_indexes)
+    if sample.len() < MIN_FIT_POINTS:
+        raise BadRequestError(
+            f"At least {MIN_FIT_POINTS} points are needed to fit and compare models, "
+            f"the sample has {sample.len()}."
+        )
 
     methods, fallback_methods = get_kinetic_optimization_methods()
     models_by_id = {m['model']: find_kinetic_model(m['model']) for m in request_json['models']}

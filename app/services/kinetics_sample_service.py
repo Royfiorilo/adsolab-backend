@@ -13,7 +13,7 @@ from marshmallow import ValidationError
 
 from app import db
 from database import KineticSample, User
-from entities.schemas.kinetics_sample_schema import KINETICS_SAMPLE_SCHEMA
+from entities.schemas.kinetics_sample_schema import KINETICS_SAMPLE_SCHEMA, zero_instrument_noise
 from exceptions.exceptions import NotFoundError, FilterSampleError, BadRequestError, ForbiddenError
 from services.materials_service import find_adsorbate, find_adsorbent
 
@@ -38,11 +38,42 @@ def get_all_kinetic_samples():
     return samples
 
 
+def sort_order(time, qt):
+    """Indexes that sort the points by time (ties by qt)."""
+    return sorted(range(len(time)), key=lambda i: (time[i], qt[i]))
+
+
 def order_sample(time, qt):
     """Ordena time/qt de menor a mayor tiempo."""
-    pairs = sorted(zip(time, qt))
-    t, q = zip(*pairs)
-    return list(t), list(q)
+    order = sort_order(time, qt)
+    return [time[i] for i in order], [qt[i] for i in order]
+
+
+def prepare_sample_values(sample_data):
+    """
+    Returns (time, qt, concentration) sorted by the same permutation, with qt computed from the
+    concentration when it was not sent. Raises ValidationError when the computed qt is invalid.
+    """
+    qt = sample_data.qt
+    if qt is None:
+        qt = zero_instrument_noise(calculate_qt_from_concentration(
+            sample_data.concentration,
+            sample_data.initial_concentration,
+            sample_data.volume,
+            sample_data.adsorbent_mass,
+        ))
+        if any(v < 0 for v in qt):
+            raise ValidationError(
+                'The qt computed from the concentration is negative: check initial_concentration.'
+            )
+
+    order = sort_order(sample_data.time, qt)
+    concentration = sample_data.concentration
+    return (
+        [sample_data.time[i] for i in order],
+        [qt[i] for i in order],
+        [concentration[i] for i in order] if concentration is not None else None,
+    )
 
 
 def calculate_qt_from_concentration(concentration, initial_concentration, volume, adsorbent_mass):
@@ -83,16 +114,7 @@ def create_kinetic_sample_db(request_json: dict):
     try:
         sample_data = KINETICS_SAMPLE_SCHEMA.load(request_json)
 
-        # Calcular qt si solo se aportaron concentraciones
-        if sample_data.qt is None and sample_data.concentration is not None:
-            sample_data.qt = calculate_qt_from_concentration(
-                sample_data.concentration,
-                sample_data.initial_concentration,
-                sample_data.volume,
-                sample_data.adsorbent_mass,
-            )
-
-        time_sorted, qt_sorted = order_sample(sample_data.time, sample_data.qt)
+        time_sorted, qt_sorted, concentration_sorted = prepare_sample_values(sample_data)
 
         user = User.query.filter_by(id=sample_data.user_id).first()
         username = user.email.split("@")[0]
@@ -106,7 +128,7 @@ def create_kinetic_sample_db(request_json: dict):
         kinetic_sample = KineticSample(
             time=time_sorted,
             qt=qt_sorted,
-            concentration=sample_data.concentration,
+            concentration=concentration_sorted,
             initial_concentration=sample_data.initial_concentration,
             volume=sample_data.volume,
             adsorbent_mass=sample_data.adsorbent_mass,

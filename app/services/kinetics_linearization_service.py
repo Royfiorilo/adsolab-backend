@@ -96,13 +96,19 @@ def _solve_params(equations: dict, result_lr) -> tuple:
     unknowns = tuple(all_syms)
     solutions = solve((eq_m, eq_b), unknowns)
 
-    if isinstance(solutions, dict):
-        params_values = {str(k): float(v) for k, v in solutions.items()}
-    elif isinstance(solutions, list) and solutions:
-        first = solutions[0]
-        params_values = {str(unknowns[i]): float(first[i]) for i in range(len(unknowns))}
-    else:
-        params_values = {str(unknowns[i]): float(v) for i, v in enumerate(solutions)}
+    try:
+        if isinstance(solutions, dict):
+            params_values = {str(k): float(v) for k, v in solutions.items()}
+        elif isinstance(solutions, list) and solutions:
+            first = solutions[0]
+            params_values = {str(unknowns[i]): float(first[i]) for i in range(len(unknowns))}
+        else:
+            params_values = {str(unknowns[i]): float(v) for i, v in enumerate(solutions)}
+    except TypeError:
+        raise LinearizationError("The fitted line gives no real solution for the parameters.")
+
+    if not params_values or not all(math.isfinite(v) for v in params_values.values()):
+        raise LinearizationError("The fitted line gives no finite solution for the parameters.")
 
     cov_matrix = np.array([
         [result_lr.stderr ** 2, 0],
