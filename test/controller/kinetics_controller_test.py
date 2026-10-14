@@ -103,3 +103,35 @@ def test_delete_kinetics_version_forbidden(mock_delete_version, client):
     response = client.delete("/kinetics/investigation/1/version/1")
 
     assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+@patch("controller.kinetics_controller.get_all_kinetic_samples")
+def test_should_pass_the_user_id_filter_to_the_samples_list(mock_list, client):
+    """KLIST-H03"""
+    mock_list.return_value = []
+
+    response = client.get("/kinetics/samples?user_id=7")
+
+    assert response.status_code == HTTPStatus.OK
+    mock_list.assert_called_once_with(7)
+
+
+@patch("controller.kinetics_controller.get_all_kinetic_samples")
+def test_should_list_every_sample_when_no_user_id_is_sent(mock_list, client):
+    """KLIST-H04"""
+    mock_list.return_value = []
+
+    client.get("/kinetics/samples")
+
+    mock_list.assert_called_once_with(None)
+
+
+@patch("controller.kinetics_controller.find_readable_kinetic_sample")
+def test_should_answer_404_when_the_sample_is_not_readable(mock_find, client):
+    """KDEL-N06: a deleted sample without versions is not found"""
+    mock_find.side_effect = NotFoundError("Kinetic sample with id 5 doesn't exist.")
+
+    response = client.get("/kinetics/sample/5")
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    mock_find.assert_called_once_with(5)
