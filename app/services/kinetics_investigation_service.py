@@ -133,6 +133,7 @@ def validate_and_save_kinetic_version(request_json: dict, user_id: int):
             raise NotFoundError(f"Kinetic investigation {kinetic_investigation_id} not found.")
         if investigation.user_id != user_id:
             raise ForbiddenError("User is not authorized to save this kinetic investigation.")
+        find_kinetic_sample(investigation.kinetic_sample_id)
 
     version = save_kinetic_version(
         kinetic_investigation_id=kinetic_investigation_id,

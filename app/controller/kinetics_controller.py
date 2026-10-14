@@ -11,7 +11,7 @@ from entities.schemas.kinetics_historic_schema import KINETICS_VERSION_SCHEMA
 from exceptions.exceptions import BadRequestError
 from services.kinetics_model_service import find_kinetic_models
 from services.kinetics_sample_service import (
-    get_all_kinetic_samples, find_kinetic_sample,
+    get_all_kinetic_samples, find_readable_kinetic_sample,
     create_kinetic_sample_db, delete_kinetic_sample,
 )
 from services.kinetics_investigation_service import (
@@ -44,16 +44,16 @@ def get_kinetic_models():
 
 @blueprint.route('/kinetics/samples', methods=['GET'])
 def get_kinetics_samples():
-    """Lista muestras cinéticas activas."""
-    samples = get_all_kinetic_samples()
+    """Lista muestras cinéticas activas, opcionalmente filtradas por usuario."""
+    samples = get_all_kinetic_samples(request.args.get('user_id', None, type=int))
     output = [KINETICS_SAMPLE_SCHEMA.dump(s) for s in samples]
     return jsonify({"samples": output}), HTTPStatus.OK
 
 
 @blueprint.route('/kinetics/sample/<int:kinetic_sample_id>', methods=['GET'])
 def get_kinetics_sample_by_id(kinetic_sample_id):
-    """Recupera una muestra cinética por ID."""
-    sample = find_kinetic_sample(kinetic_sample_id)
+    """Recupera una muestra cinética por ID (una borrada, mientras tenga versiones guardadas)."""
+    sample = find_readable_kinetic_sample(kinetic_sample_id)
     return jsonify(KINETICS_SAMPLE_SCHEMA.dump(sample)), HTTPStatus.OK
 
 

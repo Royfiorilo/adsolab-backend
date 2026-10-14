@@ -12,7 +12,7 @@ from datetime import datetime
 from marshmallow import ValidationError
 
 from app import db
-from database import KineticSample, User
+from database import KineticInvestigation, KineticSample, KineticVersion, User
 from entities.schemas.kinetics_sample_schema import KINETICS_SAMPLE_SCHEMA, zero_instrument_noise
 from exceptions.exceptions import NotFoundError, FilterSampleError, BadRequestError, ForbiddenError
 from services.materials_service import find_adsorbate, find_adsorbent
@@ -30,9 +30,40 @@ def find_kinetic_sample(kinetic_sample_id: int):
     return sample
 
 
-def get_all_kinetic_samples():
-    """Devuelve todas las muestras cinéticas activas."""
-    samples = KineticSample.with_schema(None).filter_by(deleted_at=None).all()
+def has_saved_versions(kinetic_sample_id: int) -> bool:
+    """True when some investigation of the sample has at least one saved version."""
+    return (
+        db.session.query(KineticVersion)
+        .join(
+            KineticInvestigation,
+            KineticVersion.kinetic_investigation_id == KineticInvestigation.kinetic_investigation_id,
+        )
+        .filter(KineticInvestigation.kinetic_sample_id == kinetic_sample_id)
+        .first()
+    ) is not None
+
+
+def find_readable_kinetic_sample(kinetic_sample_id: int):
+    """
+    Like `find_kinetic_sample`, but a soft-deleted sample is returned while it still has saved
+    versions, so they can be opened. For reads only: new analyses use `find_kinetic_sample`.
+    """
+    sample = (
+        KineticSample.with_schema(KINETICS_SAMPLE_SCHEMA)
+        .filter_by(kinetic_sample_id=kinetic_sample_id)
+        .first()
+    )
+    if not sample or (sample.deleted_at is not None and not has_saved_versions(kinetic_sample_id)):
+        raise NotFoundError(f"Kinetic sample with id {kinetic_sample_id} doesn't exist.")
+    return sample
+
+
+def get_all_kinetic_samples(user_id: int = None):
+    """Devuelve las muestras cinéticas activas, opcionalmente solo las de un usuario."""
+    query = KineticSample.with_schema(None).filter_by(deleted_at=None)
+    if user_id is not None:
+        query = query.filter_by(user_id=user_id)
+    samples = query.all()
     if not samples:
         raise NotFoundError("No kinetic samples found.")
     return samples
