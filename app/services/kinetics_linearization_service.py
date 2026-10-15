@@ -23,6 +23,7 @@ from sympy import Eq, solve, sympify, symbols, diff
 import numpy as np
 
 from entities.formula import Formula
+from entities.kinetic_parameters import STRICTLY_POSITIVE_PARAMS
 from exceptions.exceptions import LinearizationError
 from utils import round_number, round_list_numbers
 
@@ -94,7 +95,8 @@ def _solve_params(equations: dict, result_lr) -> tuple:
 
     all_syms = eq_m.free_symbols | eq_b.free_symbols
     unknowns = tuple(all_syms)
-    solutions = solve((eq_m, eq_b), unknowns)
+    # Exact rationals (the default) make SymPy hang on log equations such as Elovich's intercept.
+    solutions = solve((eq_m, eq_b), unknowns, rational=False)
 
     try:
         if isinstance(solutions, dict):
@@ -130,6 +132,14 @@ def _solve_params(equations: dict, result_lr) -> tuple:
     return params_values, params_stderr
 
 
+def _check_positive_params(params_values: dict):
+    for name, value in params_values.items():
+        if name in STRICTLY_POSITIVE_PARAMS and value <= 0:
+            raise LinearizationError(
+                f"The fitted line gives {name} = {value:.4g}, but it must be positive."
+            )
+
+
 def _run_single_linearization(sample, lin_data: dict, provided_params: dict = None) -> dict:
     identity = {"name": lin_data['name'], "id": lin_data['linearization_id']}
     parameters = lin_data.get('parameters', {})
@@ -142,6 +152,7 @@ def _run_single_linearization(sample, lin_data: dict, provided_params: dict = No
         result_lr = linregress(x_dots, y_dots)
         equations = {k: v for k, v in parameters.items() if k not in ('x', 'y')}
         params_values, params_stderr = _solve_params(equations, result_lr)
+        _check_positive_params(params_values)
     except (LinearizationError, ValueError, KeyError) as e:
         return {**identity, "status": "ERROR", "reason": str(e)}
 

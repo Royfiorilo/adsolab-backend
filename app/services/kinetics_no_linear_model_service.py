@@ -23,6 +23,7 @@ import numpy as np
 
 from entities.comparator import AdsorptionModelComparison
 from entities.formula import Formula
+from entities.kinetic_parameters import STRICTLY_POSITIVE_PARAMS, POSITIVE_PARAM_MIN
 from entities.kinetics_sample import KineticsSampleEntity
 from entities.no_linear_model import FitResult, FitStrategy, MIN_PARAM_VALUE, LIMIT_QMAX, DEFAULT_ITERATIONS
 from entities.response_formatter import ResponseFormatter
@@ -49,6 +50,8 @@ def calculate_kinetic_seeds(sample: KineticsSampleEntity, model_data: Dict[str, 
       - 'k1'  → 0.1                       (constante de velocidad PFO)
       - 'k2'  → 0.01                      (constante de velocidad PSO)
       - 'kid' → max(qt) / max(time)**0.5  (constante de difusión intraparticular)
+      - 'alpha_elo' → qt / t del primer punto con t > 0 y qt > 0  (velocidad inicial de Elovich)
+      - 'beta_elo'  → 1 / max(qt)
       - default → 1.0
 
     TODO: refinar con base en análisis de los datos experimentales.
@@ -68,11 +71,23 @@ def calculate_kinetic_seeds(sample: KineticsSampleEntity, model_data: Dict[str, 
             value = 0.01
         elif name_lower in ('kid',):
             value = max_qt / (max_time ** 0.5) if max_time > 0 else 1.0
+        elif name_lower == 'alpha_elo':
+            value = _elovich_initial_rate(sample, max_qt, max_time)
+        elif name_lower == 'beta_elo':
+            value = 1.0 / max_qt if max_qt > 0 else 1.0
         else:
             value = 1.0
         seeds.append({"name": param_name, "value": round(value, 6)})
 
     return seeds
+
+
+def _elovich_initial_rate(sample: KineticsSampleEntity, max_qt: float, max_time: float) -> float:
+    # The curve is concave, so the first measured rate underestimates alpha_elo; the fit corrects it.
+    for t, q in sorted(zip(sample.time, sample.qt)):
+        if t > 0 and q > 0:
+            return q / t
+    return max_qt / max_time if max_qt > 0 and max_time > 0 else 1.0
 
 
 def predict_kinetic_seeds(request_json: dict) -> List[Dict]:
@@ -130,6 +145,8 @@ class KineticFitStrategy(FitStrategy):
             name_lower = param_name.lower()
             if 'q' in name_lower:
                 param.set(min=MIN_PARAM_VALUE, max=params.qt.max() * LIMIT_QMAX)
+            elif param_name in STRICTLY_POSITIVE_PARAMS:
+                param.set(min=POSITIVE_PARAM_MIN, max=np.inf, brute_step=params.step)
             else:
                 param.set(min=0, max=np.inf, brute_step=params.step)
 
