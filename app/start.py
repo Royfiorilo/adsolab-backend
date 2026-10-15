@@ -8,7 +8,7 @@ from flask import jsonify, request
 from flask_login import current_user
 
 from app import create_app
-from exceptions.exceptions import BadRequestError, NotFoundError, FilterSampleError, ForbiddenError
+from exceptions.exceptions import BadRequestError, ConflictError, NotFoundError, FilterSampleError, ForbiddenError
 
 app = create_app()
 
@@ -28,6 +28,15 @@ def handle_not_found_error(e):
         "status": "ERROR",
         "message": e.message
     }), HTTPStatus.NOT_FOUND
+
+
+@app.errorhandler(ConflictError)
+def handle_conflict_error(e):
+    return jsonify({
+        "status": "ERROR",
+        "message": e.message,
+        "existing": e.existing
+    }), HTTPStatus.CONFLICT
 
 
 @app.errorhandler(ForbiddenError)

@@ -15,6 +15,14 @@ class ForbiddenError(Exception):
         super().__init__(self.message)
 
 
+class ConflictError(Exception):
+    """The resource already exists; `existing` is returned to the client so it can use it."""
+    def __init__(self, message="Conflict", existing=None):
+        self.message = message
+        self.existing = existing
+        super().__init__(self.message)
+
+
 class LinearizationError(Exception):
     def __init__(self, message="Error running linearization"):
         self.message = message

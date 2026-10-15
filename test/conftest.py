@@ -28,7 +28,7 @@ from controller.kinetics_controller import blueprint as bp_kinetics_controller
 from controller.materials_controller import blueprint as bp_materials_controller
 from controller.model_controller import blueprint as bp_model_controller
 from controller.sample_controller import blueprint as bp_sample_controller
-from exceptions.exceptions import BadRequestError, ForbiddenError, NotFoundError
+from exceptions.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 
 
 @pytest.fixture
@@ -49,6 +49,10 @@ def app():
     @app.errorhandler(NotFoundError)
     def handle_not_found(error):
         return jsonify({"status": "error", "message": str(error)}), HTTPStatus.NOT_FOUND
+
+    @app.errorhandler(ConflictError)
+    def handle_conflict(error):
+        return jsonify({"status": "error", "message": str(error), "existing": error.existing}), HTTPStatus.CONFLICT
 
     @app.errorhandler(ForbiddenError)
     def handle_forbidden(error):
