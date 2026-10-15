@@ -1,11 +1,12 @@
 from marshmallow import ValidationError
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 from database import Adsorbate, Adsorbent
-from entities.schemas.adsorbate_schema import ADSORBATE_SCHEMA
-from entities.schemas.adsorbent_schema import ADSORBENT_SCHEMA
+from entities.schemas.adsorbate_schema import ADSORBATE_SCHEMA, ADSORBATE_CREATION_SCHEMA
+from entities.schemas.adsorbent_schema import ADSORBENT_SCHEMA, ADSORBENT_CREATION_SCHEMA
 from app import db
-from exceptions.exceptions import NotFoundError, BadRequestError
-from services.reactorapp_service import get_adsorbents, get_adsorbates
+from exceptions.exceptions import BadRequestError, ConflictError, NotFoundError
 
 def get_all_adsorbents():
     adsorbents = Adsorbent.with_schema(None).all()
@@ -46,69 +47,50 @@ def find_adsorbent(adsorbent_id):
     return adsorbent
 
 
-def sync_materials():
-    reactor_adsorbents = get_adsorbents()
-    add_adsorbents(reactor_adsorbents)
-    reactor_adsorbates = get_adsorbates()
-    add_adsorbates(reactor_adsorbates)
+def _normalized(column):
+    """Same normalization as the unique indexes of the migration: trim, collapse spaces, lowercase."""
+    return func.lower(func.regexp_replace(func.btrim(column), r'\s+', ' ', 'g'))
 
 
-
-def add_adsorbates(adsorbates):
-
-    for adsorbate_json in adsorbates:
-        adsorbate_json = traslate_adsorbate(adsorbate_json)
-        adsorbate_data = ADSORBATE_SCHEMA.load(adsorbate_json)
-        adsorbate = Adsorbate.with_schema(ADSORBATE_SCHEMA).filter_by(id=adsorbate_data.id).first()
-        if not adsorbate:
-            create_adsorbate(adsorbate_data)
-
-
-def create_adsorbate(adsorbate_data):
+def _load(schema, request_json):
     try:
-        adsorbate = Adsorbate(id=adsorbate_data.id,
-                           ion_name = adsorbate_data.ion_name,
-                           iupac_name = adsorbate_data.iupac_name,
-                           formula = adsorbate_data.formula)
-        db.session.add(adsorbate)
-        db.session.commit()
-        return adsorbate
-    except ValidationError as me:
-        db.session.rollback()
-        raise me
+        return schema.load(request_json if request_json is not None else {})
+    except ValidationError as error:
+        raise BadRequestError(f"Validation Error: {error.messages}")
 
 
-def add_adsorbents(adsorbents):
-    for adsorbent_json in adsorbents:
-        adsorbent_json = traslate_adsorbent(adsorbent_json)
-        adsorbent_data = ADSORBENT_SCHEMA.load(adsorbent_json)
-        adsorbent = Adsorbent.with_schema(ADSORBENT_SCHEMA).filter_by(id=adsorbent_data.id).first()
-        if not adsorbent:
-            create_adsorbent(adsorbent_data)
+def _find_same(model, column, value):
+    return db.session.query(model).filter(_normalized(column) == value.lower()).first()
 
 
-def create_adsorbent(adsorbent_data):
+def _create(model, column, value, values, dump, kind):
+    """Inserts unless a material with the same normalized name exists (409 with the existing one)."""
+    existing = _find_same(model, column, value)
+    if existing:
+        raise ConflictError(f"The {kind} '{value}' already exists.", dump(existing))
+    material = model(**values)
+    db.session.add(material)
     try:
-        adsorbent = Adsorbent(id=adsorbent_data.id,
-                              name=adsorbent_data.name
-                              )
-        db.session.add(adsorbent)
         db.session.commit()
-        return adsorbent
-    except ValidationError as me:
+    except IntegrityError:
+        # Another request created it between the check and the insert: the unique index decides.
         db.session.rollback()
-        raise me
+        existing = _find_same(model, column, value)
+        if existing is None:
+            raise
+        raise ConflictError(f"The {kind} '{value}' already exists.", dump(existing))
+    return material
 
-def traslate_adsorbate(json):
-    return {
-        'id' : json['id'],
-        'ion_name': json['nombreIon'],
-        'iupac_name': json['nombreIUPAC'],
-        'formula': json['formula']
-    }
 
-def traslate_adsorbent(json):
-    return {
-        'id' : json['id'],
-        'name': json['nombre']
-    }
+def create_adsorbate(request_json):
+    data = _load(ADSORBATE_CREATION_SCHEMA, request_json)
+    adsorbate = _create(Adsorbate, Adsorbate.ion_name, data['ion_name'], data,
+                        ADSORBATE_SCHEMA.dump, 'adsorbate')
+    return ADSORBATE_SCHEMA.dump(adsorbate)
+
+
+def create_adsorbent(request_json):
+    data = _load(ADSORBENT_CREATION_SCHEMA, request_json)
+    adsorbent = _create(Adsorbent, Adsorbent.name, data['name'], data,
+                        ADSORBENT_SCHEMA.dump, 'adsorbent')
+    return ADSORBENT_SCHEMA.dump(adsorbent)
