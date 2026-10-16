@@ -113,7 +113,7 @@ def test_should_raise_when_the_equations_have_no_solution():
 
 def test_should_solve_pso_parameters_when_the_line_is_valid():
     """KLIN-H01: slope 1/qe = 0.2 gives qe = 5 and k2 = 1/(b * qe**2) = 0.04"""
-    values, _ = _solve_params(PSO_EQUATIONS, line(slope=0.2, intercept=1.0))
+    values = _solve_params(PSO_EQUATIONS, line(slope=0.2, intercept=1.0))
 
     assert values["qe"] == pytest.approx(5.0, rel=1e-9)
     assert values["k2"] == pytest.approx(0.04, rel=1e-9)

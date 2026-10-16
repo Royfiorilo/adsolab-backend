@@ -1,8 +1,8 @@
 from scipy.stats import linregress
-from sympy import Eq, solve, sympify, symbols, diff
-import numpy as np
+from sympy import Eq, solve, sympify, symbols
 
 from .formula import Formula
+from .linear_fit_errors import line_covariance, propagate_std_errors
 from .model import Model
 from .statistics import Statistics
 
@@ -42,45 +42,11 @@ class Linearization(Model):
                 y_dots.append(round(data["qe"], ROUND_DIGIT))
         return x_dots, y_dots
 
-    def _find_params_errors(self, params_info, unknown, result_lreg, eq_m, eq_b):
-        # Calcular errores estándar
-        parameter_std_errs = {}
-
-        # Matriz de covarianza
-        cov_matrix = np.array([
-            [result_lreg.stderr ** 2, 0],
-            [0, result_lreg.intercept_stderr ** 2]
-        ])
-
-        for var in unknown:
-            # Calcular derivadas parciales directamente de las ecuaciones originales
-            df_dm = diff(eq_m.lhs, var)
-            df_db = diff(eq_b.lhs, var)
-
-            for param in params_info:
-                df_dm = df_dm.subs(param, params_info[param])
-                df_db = df_db.subs(param, params_info[param])
-
-            # Convertir a valor numérico
-            df_dm_value = float(df_dm)
-            df_db_value = float(df_db)
-
-            # Calcular propagación de error
-            '''parameter_error = np.sqrt(
-                (float(df_dm_value) * result_lreg.stderr) ** 2 +
-                (float(df_db_value) * result_lreg.intercept_stderr) ** 2
-            )'''
-
-            # Vector de derivadas y calcular el error propagado
-            derivatives = np.array([df_dm_value, df_db_value])
-            parameter_error = np.sqrt(np.dot(derivatives, np.dot(cov_matrix, derivatives)))
-
-            parameter_std_errs[var.name] = parameter_error
-
-        return parameter_std_errs
+    def _find_params_errors(self, params_values, result_lreg, eq_m, eq_b, x_dots):
+        return propagate_std_errors(eq_m.lhs, eq_b.lhs, params_values, line_covariance(result_lreg, x_dots))
 
 
-    def _find_params_values(self, equations, unknown, result_lreg, constants):
+    def _find_params_values(self, equations, unknown, result_lreg, constants, x_dots):
         m_ecuation = equations['m']
         b_ecuation = equations['b']
         for constant in self.constants:
@@ -96,7 +62,7 @@ class Linearization(Model):
         solutions = solve((eq_m, eq_b), tuple(unknown))
         params_info = [{var.name: float(sol) for var, sol in zip(unknown, sol_tuple)} for sol_tuple in solutions]
 
-        parameter_std_errs = self._find_params_errors(params_info[0],unknown,result_lreg,eq_m,eq_b)
+        parameter_std_errs = self._find_params_errors(params_info[0], result_lreg, eq_m, eq_b, x_dots)
 
         params_info.append(parameter_std_errs)
 
@@ -128,7 +94,7 @@ class Linearization(Model):
         unkown = symbols(vars)
 
         # Ejecuta el sistema de ecuaciones para descubrir el valor de los parámetros y su desvío estándar.
-        params_info = self._find_params_values(equations, unkown, result_lr, constants)
+        params_info = self._find_params_values(equations, unkown, result_lr, constants, x_dots)
 
         result = {
             "name": self.name,
