@@ -19,11 +19,12 @@ Responsabilidad:
 import math
 
 from scipy.stats import linregress
-from sympy import Eq, solve, sympify, symbols, diff
+from sympy import Eq, solve, sympify
 import numpy as np
 
 from entities.formula import Formula
 from entities.kinetic_parameters import STRICTLY_POSITIVE_PARAMS
+from entities.linear_fit_errors import line_covariance, propagate_std_errors
 from exceptions.exceptions import LinearizationError
 from utils import round_number, round_list_numbers
 
@@ -89,7 +90,7 @@ def _transform_points(sample, x_formula: Formula, y_formula: Formula, known_para
     return x_dots, y_dots, dropped
 
 
-def _solve_params(equations: dict, result_lr) -> tuple:
+def _solve_params(equations: dict, result_lr) -> dict:
     eq_m = Eq(sympify(equations['m'], evaluate=False), result_lr.slope)
     eq_b = Eq(sympify(equations['b'], evaluate=False), result_lr.intercept)
 
@@ -112,24 +113,7 @@ def _solve_params(equations: dict, result_lr) -> tuple:
     if not params_values or not all(math.isfinite(v) for v in params_values.values()):
         raise LinearizationError("The fitted line gives no finite solution for the parameters.")
 
-    cov_matrix = np.array([
-        [result_lr.stderr ** 2, 0],
-        [0, result_lr.intercept_stderr ** 2]
-    ])
-
-    params_stderr = {}
-    for sym_name in params_values:
-        sym = symbols(sym_name)
-        df_dm = float(diff(sympify(equations['m']), sym).subs(
-            {symbols(k): v for k, v in params_values.items()}
-        ))
-        df_db = float(diff(sympify(equations['b']), sym).subs(
-            {symbols(k): v for k, v in params_values.items()}
-        ))
-        derivatives = np.array([df_dm, df_db])
-        params_stderr[sym_name] = float(np.sqrt(np.dot(derivatives, np.dot(cov_matrix, derivatives))))
-
-    return params_values, params_stderr
+    return params_values
 
 
 def _check_positive_params(params_values: dict):
@@ -151,8 +135,11 @@ def _run_single_linearization(sample, lin_data: dict, provided_params: dict = No
         x_dots, y_dots, dropped = _transform_points(sample, x_formula, y_formula, known_params)
         result_lr = linregress(x_dots, y_dots)
         equations = {k: v for k, v in parameters.items() if k not in ('x', 'y')}
-        params_values, params_stderr = _solve_params(equations, result_lr)
+        params_values = _solve_params(equations, result_lr)
         _check_positive_params(params_values)
+        params_stderr = propagate_std_errors(
+            sympify(equations['m']), sympify(equations['b']), params_values, line_covariance(result_lr, x_dots)
+        )
     except (LinearizationError, ValueError, KeyError) as e:
         return {**identity, "status": "ERROR", "reason": str(e)}
 
@@ -169,11 +156,15 @@ def _run_single_linearization(sample, lin_data: dict, provided_params: dict = No
             {
                 "name": name,
                 "value": round_number(value),
-                "std_err": round_number(params_stderr.get(name)),
+                "std_err": _round_or_none(params_stderr.get(name)),
             }
             for name, value in params_values.items()
         ],
     }
+
+
+def _round_or_none(value):
+    return None if value is None else round_number(value)
 
 
 def run_kinetic_linearization(request_json: dict):

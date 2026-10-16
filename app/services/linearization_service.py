@@ -28,7 +28,7 @@ def format_linearization_result(*, name: str, id: str, x, y,
         {
             "name": var,
             "value": round_number(params_info[0][var]),
-            "std_err": round_number(params_info[1][var])
+            "std_err": None if params_info[1][var] is None else round_number(params_info[1][var])
         }
         for var in vars
     ]
