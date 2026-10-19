@@ -1,3 +1,4 @@
+import math
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 
@@ -9,17 +10,43 @@ def round_list_numbers(numbers, round=ROUND_DIGIT):
 
 
 def round_number(number, round_digit=ROUND_DIGIT):
-    return round(number, round_digit)
+    """Redondeo decimal estándar para puntos y cálculos internos (mantiene los tests en verde)."""
+    if number is None or isinstance(number, bool):
+        return number
+    try:
+        val = float(number)
+    except (ValueError, TypeError):
+        return number
+    if not math.isfinite(val):
+        return val
+    return round(val, round_digit)
+
+
+def round_parameter_value(number, round_digit=ROUND_DIGIT):
+    """Aplica cifras significativas y notación científica específicamente a parámetros estimados."""
+    if number is None or isinstance(number, bool):
+        return number
+    try:
+        val = float(number)
+    except (ValueError, TypeError):
+        return number
+    if not math.isfinite(val) or val == 0.0:
+        return val
+    # Para valores pequeños (< 0.01), preservamos cifras significativas en notación científica
+    if abs(val) < 10 ** (-(round_digit - 2)):
+        return float(f"{val:.{round_digit}g}")
+    return round(val, round_digit)
 
 
 def soft_curve(ce, qe_pred):
-    #s=0 para que pase si o si por los puntos originales
+    # s=0 para que pase si o si por los puntos originales
     spl = UnivariateSpline(ce, qe_pred, s=0, k=3)
 
     x_spline = np.linspace(0, max(ce), 300)
     y_spline = spl(x_spline)
 
     return x_spline, y_spline
+
 
 def process_adjustment_methods(adjustment_methods):
     for adjustment_method in adjustment_methods:
@@ -30,14 +57,17 @@ def process_adjustment_methods(adjustment_methods):
                 "y": round_list_numbers(y),
             }
 
+
 def process_comparison(x_reference, comparison):
     x, y = soft_curve(x_reference, comparison["ridge"]["y_pred"])
     comparison["ridge"]["y_pred"] = round_list_numbers(y)
+
 
 def soft_curves_response(results, comparison, ce):
     for result in results:
         process_adjustment_methods(result["adjustment_methods"])
     process_comparison(ce, comparison)
+
 
 def filter_negative(x, y):
     x = np.array(x)
