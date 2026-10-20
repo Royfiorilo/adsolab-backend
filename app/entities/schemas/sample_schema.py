@@ -19,14 +19,17 @@ class SampleSchema(Schema, DumpMixin):
     adsorbate_id = fields.Integer(required=True)
     adsorbent_id = fields.Integer(required=True)
     
-    # Campos computados para la metadata explícita exigida por la cátedra
-    adsorbate = fields.Method("get_adsorbate_name", dump_only=True)
-    adsorbent = fields.Method("get_adsorbent_name", dump_only=True)
+    # Declaramos los campos como dump_only y pasamos por alto en load
+    adsorbate = fields.Method("get_adsorbate_name", dump_only=True, load_default=None)
+    adsorbent = fields.Method("get_adsorbent_name", dump_only=True, load_default=None)
 
     deleted_at = fields.DateTime(missing=None)
     user_id = fields.Integer(missing=None)
 
     def get_adsorbate_name(self, obj):
+        # Si el objeto es un dict (en tests o mocks)
+        if isinstance(obj, dict):
+            return obj.get('adsorbate') or obj.get('adsorbate_name')
         if hasattr(obj, 'adsorbate') and obj.adsorbate:
             if isinstance(obj.adsorbate, dict):
                 return obj.adsorbate.get('iupac_name') or obj.adsorbate.get('ion_name')
@@ -34,7 +37,6 @@ class SampleSchema(Schema, DumpMixin):
         
         if hasattr(obj, 'adsorbate_id') and obj.adsorbate_id:
             try:
-                # Verificamos que exista una sesión activa para evitar errores en mocks de test
                 if db.session and hasattr(db.session, 'get'):
                     from entities.adsorbate import Adsorbate
                     adsorbate = db.session.get(Adsorbate, obj.adsorbate_id)
@@ -44,6 +46,8 @@ class SampleSchema(Schema, DumpMixin):
         return None
 
     def get_adsorbent_name(self, obj):
+        if isinstance(obj, dict):
+            return obj.get('adsorbent') or obj.get('adsorbent_name')
         if hasattr(obj, 'adsorbent') and obj.adsorbent:
             if isinstance(obj.adsorbent, dict):
                 return obj.adsorbent.get('name')
@@ -85,6 +89,9 @@ class SampleSchema(Schema, DumpMixin):
 
     @post_load
     def make_sample(self, data, **kwargs):
+        # Excluimos los campos de solo lectura antes de instanciar la entidad
+        data.pop('adsorbate', None)
+        data.pop('adsorbent', None)
         return SampleEntity(**data)
 
 
