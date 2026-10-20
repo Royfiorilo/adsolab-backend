@@ -28,24 +28,33 @@ class SampleSchema(Schema, DumpMixin):
 
     def get_adsorbate_name(self, obj):
         if hasattr(obj, 'adsorbate') and obj.adsorbate:
-            return getattr(obj.adsorbate, 'iupac_name', None)
+            if isinstance(obj.adsorbate, dict):
+                return obj.adsorbate.get('iupac_name') or obj.adsorbate.get('ion_name')
+            return getattr(obj.adsorbate, 'iupac_name', getattr(obj.adsorbate, 'ion_name', None))
+        
         if hasattr(obj, 'adsorbate_id') and obj.adsorbate_id:
             try:
-                from entities.adsorbate import Adsorbate
-                adsorbate = db.session.get(Adsorbate, obj.adsorbate_id)
-                return adsorbate.iupac_name if adsorbate else None
+                # Verificamos que exista una sesión activa para evitar errores en mocks de test
+                if db.session and hasattr(db.session, 'get'):
+                    from entities.adsorbate import Adsorbate
+                    adsorbate = db.session.get(Adsorbate, obj.adsorbate_id)
+                    return adsorbate.iupac_name if adsorbate else None
             except Exception:
                 return None
         return None
 
     def get_adsorbent_name(self, obj):
         if hasattr(obj, 'adsorbent') and obj.adsorbent:
+            if isinstance(obj.adsorbent, dict):
+                return obj.adsorbent.get('name')
             return getattr(obj.adsorbent, 'name', None)
+            
         if hasattr(obj, 'adsorbent_id') and obj.adsorbent_id:
             try:
-                from entities.adsorbent import Adsorbent
-                adsorbent = db.session.get(Adsorbent, obj.adsorbent_id)
-                return adsorbent.name if adsorbent else None
+                if db.session and hasattr(db.session, 'get'):
+                    from entities.adsorbent import Adsorbent
+                    adsorbent = db.session.get(Adsorbent, obj.adsorbent_id)
+                    return adsorbent.name if adsorbent else None
             except Exception:
                 return None
         return None
