@@ -2,8 +2,6 @@ from marshmallow import fields, post_load, validate, Schema, ValidationError, pr
 from entities.sample import SampleEntity
 from .dump_mixin import DumpMixin
 from database import db
-from entities.adsorbate import Adsorbate
-from entities.adsorbent import Adsorbent
 
 
 class SampleSchema(Schema, DumpMixin):
@@ -21,7 +19,7 @@ class SampleSchema(Schema, DumpMixin):
     adsorbate_id = fields.Integer(required=True)
     adsorbent_id = fields.Integer(required=True)
     
-    # Nuevos campos computados para la metadata explícita en cabeceras y reportes
+    # Campos computados para la metadata explícita exigida por la cátedra
     adsorbate = fields.Method("get_adsorbate_name", dump_only=True)
     adsorbent = fields.Method("get_adsorbent_name", dump_only=True)
 
@@ -29,15 +27,27 @@ class SampleSchema(Schema, DumpMixin):
     user_id = fields.Integer(missing=None)
 
     def get_adsorbate_name(self, obj):
+        if hasattr(obj, 'adsorbate') and obj.adsorbate:
+            return getattr(obj.adsorbate, 'iupac_name', None)
         if hasattr(obj, 'adsorbate_id') and obj.adsorbate_id:
-            adsorbate = db.session.get(Adsorbate, obj.adsorbate_id)
-            return adsorbate.iupac_name if adsorbate else None
+            try:
+                from entities.adsorbate import Adsorbate
+                adsorbate = db.session.get(Adsorbate, obj.adsorbate_id)
+                return adsorbate.iupac_name if adsorbate else None
+            except Exception:
+                return None
         return None
 
     def get_adsorbent_name(self, obj):
+        if hasattr(obj, 'adsorbent') and obj.adsorbent:
+            return getattr(obj.adsorbent, 'name', None)
         if hasattr(obj, 'adsorbent_id') and obj.adsorbent_id:
-            adsorbent = db.session.get(Adsorbent, obj.adsorbent_id)
-            return adsorbent.name if adsorbent else None
+            try:
+                from entities.adsorbent import Adsorbent
+                adsorbent = db.session.get(Adsorbent, obj.adsorbent_id)
+                return adsorbent.name if adsorbent else None
+            except Exception:
+                return None
         return None
 
     @pre_load

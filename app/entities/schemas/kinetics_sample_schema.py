@@ -4,8 +4,6 @@ from marshmallow.validate import Range
 from entities.kinetics_sample import KineticsSampleEntity
 from entities.schemas.dump_mixin import DumpMixin
 from database import db
-from entities.adsorbate import Adsorbate
-from entities.adsorbent import Adsorbent
 
 # Negative readings above this limit are instrument noise and become 0; at or below it they are errors.
 NOISE_LIMIT = 1.0
@@ -39,7 +37,7 @@ class KineticsSampleSchema(Schema, DumpMixin):
     adsorbate_id = fields.Integer(required=True)
     adsorbent_id = fields.Integer(required=True)
 
-    # Nuevos campos computados para la metadata explícita
+    # Campos computados para la metadata explícita de muestras cinéticas
     adsorbate = fields.Method("get_adsorbate_name", dump_only=True)
     adsorbent = fields.Method("get_adsorbent_name", dump_only=True)
 
@@ -47,15 +45,27 @@ class KineticsSampleSchema(Schema, DumpMixin):
     user_id = fields.Integer(load_default=None)
 
     def get_adsorbate_name(self, obj):
+        if hasattr(obj, 'adsorbate') and obj.adsorbate:
+            return getattr(obj.adsorbate, 'iupac_name', None)
         if hasattr(obj, 'adsorbate_id') and obj.adsorbate_id:
-            adsorbate = db.session.get(Adsorbate, obj.adsorbate_id)
-            return adsorbate.iupac_name if adsorbate else None
+            try:
+                from entities.adsorbate import Adsorbate
+                adsorbate = db.session.get(Adsorbate, obj.adsorbate_id)
+                return adsorbate.iupac_name if adsorbate else None
+            except Exception:
+                return None
         return None
 
     def get_adsorbent_name(self, obj):
+        if hasattr(obj, 'adsorbent') and obj.adsorbent:
+            return getattr(obj.adsorbent, 'name', None)
         if hasattr(obj, 'adsorbent_id') and obj.adsorbent_id:
-            adsorbent = db.session.get(Adsorbent, obj.adsorbent_id)
-            return adsorbent.name if adsorbent else None
+            try:
+                from entities.adsorbent import Adsorbent
+                adsorbent = db.session.get(Adsorbent, obj.adsorbent_id)
+                return adsorbent.name if adsorbent else None
+            except Exception:
+                return None
         return None
 
     @pre_load
