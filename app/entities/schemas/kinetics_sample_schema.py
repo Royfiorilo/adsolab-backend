@@ -3,6 +3,9 @@ from marshmallow.validate import Range
 
 from entities.kinetics_sample import KineticsSampleEntity
 from entities.schemas.dump_mixin import DumpMixin
+from database import db
+from entities.adsorbate import Adsorbate
+from entities.adsorbent import Adsorbent
 
 # Negative readings above this limit are instrument noise and become 0; at or below it they are errors.
 NOISE_LIMIT = 1.0
@@ -19,13 +22,6 @@ def zero_instrument_noise(values):
 
 
 class KineticsSampleSchema(Schema, DumpMixin):
-    """
-    Schema de validación y serialización para muestras cinéticas.
-
-    Acepta `time + qt` directamente, o `time + concentration` con los
-    parámetros necesarios para calcular `qt` (initial_concentration, volume,
-    adsorbent_mass). La conversión real se realiza en `kinetics_sample_service`.
-    """
     kinetic_sample_id = fields.Integer(load_default=None)
     time = fields.List(fields.Float(), required=True, validate=lambda v: len(v) >= 2)
     qt = fields.List(fields.Float(), load_default=None)
@@ -42,12 +38,28 @@ class KineticsSampleSchema(Schema, DumpMixin):
 
     adsorbate_id = fields.Integer(required=True)
     adsorbent_id = fields.Integer(required=True)
+
+    # Nuevos campos computados para la metadata explícita
+    adsorbate = fields.Method("get_adsorbate_name", dump_only=True)
+    adsorbent = fields.Method("get_adsorbent_name", dump_only=True)
+
     deleted_at = fields.DateTime(load_default=None)
     user_id = fields.Integer(load_default=None)
 
+    def get_adsorbate_name(self, obj):
+        if hasattr(obj, 'adsorbate_id') and obj.adsorbate_id:
+            adsorbate = db.session.get(Adsorbate, obj.adsorbate_id)
+            return adsorbate.iupac_name if adsorbate else None
+        return None
+
+    def get_adsorbent_name(self, obj):
+        if hasattr(obj, 'adsorbent_id') and obj.adsorbent_id:
+            adsorbent = db.session.get(Adsorbent, obj.adsorbent_id)
+            return adsorbent.name if adsorbent else None
+        return None
+
     @pre_load
     def normalize_numbers(self, data, **kwargs):
-        """Elimina valores muy cercanos a 0 negativos por redondeo de instrumento."""
         for field_name in ['time', 'qt', 'concentration']:
             if field_name in data:
                 data[field_name] = zero_instrument_noise(data[field_name])

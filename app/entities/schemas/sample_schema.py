@@ -1,6 +1,9 @@
 from marshmallow import fields, post_load, validate, Schema, ValidationError, pre_load, validates_schema
 from entities.sample import SampleEntity
 from .dump_mixin import DumpMixin
+from database import db
+from entities.adsorbate import Adsorbate
+from entities.adsorbent import Adsorbent
 
 
 class SampleSchema(Schema, DumpMixin):
@@ -17,8 +20,25 @@ class SampleSchema(Schema, DumpMixin):
     measure_unit = fields.Str(missing=None)
     adsorbate_id = fields.Integer(required=True)
     adsorbent_id = fields.Integer(required=True)
+    
+    # Nuevos campos computados para la metadata explícita en cabeceras y reportes
+    adsorbate = fields.Method("get_adsorbate_name", dump_only=True)
+    adsorbent = fields.Method("get_adsorbent_name", dump_only=True)
+
     deleted_at = fields.DateTime(missing=None)
     user_id = fields.Integer(missing=None)
+
+    def get_adsorbate_name(self, obj):
+        if hasattr(obj, 'adsorbate_id') and obj.adsorbate_id:
+            adsorbate = db.session.get(Adsorbate, obj.adsorbate_id)
+            return adsorbate.iupac_name if adsorbate else None
+        return None
+
+    def get_adsorbent_name(self, obj):
+        if hasattr(obj, 'adsorbent_id') and obj.adsorbent_id:
+            adsorbent = db.session.get(Adsorbent, obj.adsorbent_id)
+            return adsorbent.name if adsorbent else None
+        return None
 
     @pre_load
     def normalize_numbers(self, data, **kwargs):
@@ -27,7 +47,7 @@ class SampleSchema(Schema, DumpMixin):
                 data[field] = self._normalize_field(data[field])
         return data
 
-    def  _normalize_field(self, field_data):
+    def _normalize_field(self, field_data):
         return [0 if -1.0 < num < 0.0 else num for num in field_data]
 
     @validates_schema
@@ -43,12 +63,6 @@ class SampleSchema(Schema, DumpMixin):
         for field in ['ce', 'qe']:
             if any(val < 0 for val in data[field]):
                 raise ValidationError(f'Numbers in {field} cannot be negative')
-
-    def _validate_non_ce_equals(self, data):
-        ce_distinct = set(data['ce'])
-        if len(data['ce']) != len(ce_distinct):
-            raise ValidationError('Ce must have different values in all the points.')
-
 
     @post_load
     def make_sample(self, data, **kwargs):
