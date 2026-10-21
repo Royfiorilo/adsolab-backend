@@ -5,7 +5,7 @@ import pytest
 from entities.kinetics_sample import KineticsSampleEntity
 from services.kinetics_linearization_service import _run_single_linearization
 from services.kinetics_no_linear_model_service import KineticNoLinearModel
-from utils import round_parameter_value
+from utils import round_significant
 
 QE, K2 = 50.0, 2.5e-5
 TIMES = [0.0, 60.0, 240.0, 960.0, 2880.0, 8640.0, 17280.0, 34560.0]
@@ -36,7 +36,7 @@ def params_by_name(parameters):
     (12.3456789, 12.3457),
 ])
 def test_should_keep_significant_figures_when_value_is_below_one(value, expected):
-    result = round_parameter_value(value)
+    result = round_significant(value)
 
     # rel=1e-12: only float representation noise is tolerated.
     assert result == pytest.approx(expected, rel=1e-12)
@@ -44,7 +44,7 @@ def test_should_keep_significant_figures_when_value_is_below_one(value, expected
 
 @pytest.mark.parametrize("value", [0.0, None, True, "abc", math.inf])
 def test_should_return_value_unchanged_when_it_cannot_be_rounded(value):
-    assert round_parameter_value(value) == value
+    assert round_significant(value) == value
 
 
 def test_should_not_round_small_rate_constant_to_zero_when_fitting():

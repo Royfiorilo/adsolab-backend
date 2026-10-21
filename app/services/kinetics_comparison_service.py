@@ -12,7 +12,7 @@ Responsabilidad:
 from typing import Dict, List, Tuple
 
 from entities.comparator import AdsorptionModelComparison
-from utils import filter_negative, round_number
+from utils import filter_negative, round_significant
 
 
 def _extract_best_methods(fitted_models: List[Tuple]) -> List[Dict]:
@@ -87,7 +87,7 @@ def get_kinetic_comparison(fitted_models: List[Tuple], sample) -> Dict:
         "heuristic": {
             "best_model": best_heuristic,
             "results": [
-                {"model": model, "score": round_number(score)}
+                {"model": model, "score": round_significant(score)}
                 for model, score in scores.items()
             ],
         },

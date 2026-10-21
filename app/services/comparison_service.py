@@ -4,7 +4,7 @@ import numpy as np
 
 from entities.comparator import AdsorptionModelComparison
 from entities.no_linear_model import AdsorptionPredictor
-from utils import round_number, filter_negative
+from utils import round_significant, filter_negative
 
 
 class ModelMethod(TypedDict):
@@ -69,7 +69,7 @@ def format_comparison_results(heuristic_scores, best_heuristic: str, ridge_score
         "heuristic": {
             "best_model": best_heuristic,
             "results": [
-                {'model': model, 'score': round_number(score)}
+                {'model': model, 'score': round_significant(score)}
                 for model, score in heuristic_scores.items()
             ]
         },

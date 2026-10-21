@@ -23,8 +23,8 @@ def round_number(number, round_digit=ROUND_DIGIT):
     return round(val, round_digit)
 
 
-def round_parameter_value(number, significant_figures=SIGNIFICANT_FIGURES):
-    """Keeps significant figures below 1, where fixed decimals would turn small rate constants into 0."""
+def round_significant(number, significant_figures=SIGNIFICANT_FIGURES):
+    """Keeps significant figures below 1, where fixed decimals would turn small values (rate constants, SSE) into 0."""
     if number is None or isinstance(number, bool):
         return number
     try:
