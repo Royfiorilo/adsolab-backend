@@ -47,6 +47,7 @@ def _resolve_known_params(sample, x_formula: Formula, y_formula: Formula, provid
     for name in sorted(required):
         if provided and name in provided:
             known[name] = float(provided[name])
+            _check_qe_not_below_max_qt(sample, name, known[name])
         elif name in DEFAULT_PARAM_ESTIMATORS:
             known[name] = float(DEFAULT_PARAM_ESTIMATORS[name](sample))
         else:
@@ -55,6 +56,14 @@ def _resolve_known_params(sample, x_formula: Formula, y_formula: Formula, provid
                 f"and has no default estimator. Send it in 'known_params'."
             )
     return known
+
+
+def _check_qe_not_below_max_qt(sample, name: str, value: float):
+    # Tran et al. (2017): a qe below the largest measured qt makes ln(qe - qt) undefined.
+    if name == "qe" and value < max(sample.qt):
+        raise LinearizationError(
+            f"qe = {value:.4g} cannot be lower than the largest measured qt ({max(sample.qt):.4g})."
+        )
 
 
 def _apply_formula(formula: Formula, data: dict):
