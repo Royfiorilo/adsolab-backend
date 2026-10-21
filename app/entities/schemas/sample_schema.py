@@ -1,7 +1,7 @@
 from marshmallow import fields, post_load, validate, Schema, ValidationError, pre_load, validates_schema
 from entities.sample import SampleEntity
 from .dump_mixin import DumpMixin
-from database import db
+from database import db, Adsorbate, Adsorbent
 
 
 class SampleSchema(Schema, DumpMixin):
@@ -18,50 +18,35 @@ class SampleSchema(Schema, DumpMixin):
     measure_unit = fields.Str(missing=None)
     adsorbate_id = fields.Integer(required=True)
     adsorbent_id = fields.Integer(required=True)
-    
-    # Declaramos los campos como dump_only y pasamos por alto en load
-    adsorbate = fields.Method("get_adsorbate_name", dump_only=True, load_default=None)
-    adsorbent = fields.Method("get_adsorbent_name", dump_only=True, load_default=None)
+
+    adsorbate = fields.Method("get_adsorbate_name", dump_only=True)
+    adsorbent = fields.Method("get_adsorbent_name", dump_only=True)
 
     deleted_at = fields.DateTime(missing=None)
     user_id = fields.Integer(missing=None)
 
     def get_adsorbate_name(self, obj):
-        # Si el objeto es un dict (en tests o mocks)
-        if isinstance(obj, dict):
-            return obj.get('adsorbate') or obj.get('adsorbate_name')
-        if hasattr(obj, 'adsorbate') and obj.adsorbate:
-            if isinstance(obj.adsorbate, dict):
-                return obj.adsorbate.get('iupac_name') or obj.adsorbate.get('ion_name')
-            return getattr(obj.adsorbate, 'iupac_name', getattr(obj.adsorbate, 'ion_name', None))
-        
-        if hasattr(obj, 'adsorbate_id') and obj.adsorbate_id:
-            try:
-                if db.session and hasattr(db.session, 'get'):
-                    from entities.adsorbate import Adsorbate
-                    adsorbate = db.session.get(Adsorbate, obj.adsorbate_id)
-                    return adsorbate.iupac_name if adsorbate else None
-            except Exception:
-                return None
-        return None
+        return self._material_name(obj, 'adsorbate', Adsorbate, 'iupac_name')
 
     def get_adsorbent_name(self, obj):
+        return self._material_name(obj, 'adsorbent', Adsorbent, 'name')
+
+    @staticmethod
+    def _material_name(obj, kind, model, name_field):
         if isinstance(obj, dict):
-            return obj.get('adsorbent') or obj.get('adsorbent_name')
-        if hasattr(obj, 'adsorbent') and obj.adsorbent:
-            if isinstance(obj.adsorbent, dict):
-                return obj.adsorbent.get('name')
-            return getattr(obj.adsorbent, 'name', None)
-            
-        if hasattr(obj, 'adsorbent_id') and obj.adsorbent_id:
-            try:
-                if db.session and hasattr(db.session, 'get'):
-                    from entities.adsorbent import Adsorbent
-                    adsorbent = db.session.get(Adsorbent, obj.adsorbent_id)
-                    return adsorbent.name if adsorbent else None
-            except Exception:
-                return None
-        return None
+            return obj.get(kind)
+        material_id = getattr(obj, f'{kind}_id', None)
+        if material_id is None:
+            return None
+        material = db.session.get(model, material_id)
+        return getattr(material, name_field) if material else None
+
+    @pre_load
+    def drop_material_names(self, data, **kwargs):
+        # DumpMixin loads what it just dumped, so the dump-only names come back as input.
+        if not isinstance(data, dict):
+            return data
+        return {key: value for key, value in data.items() if key not in ('adsorbate', 'adsorbent')}
 
     @pre_load
     def normalize_numbers(self, data, **kwargs):
@@ -89,9 +74,6 @@ class SampleSchema(Schema, DumpMixin):
 
     @post_load
     def make_sample(self, data, **kwargs):
-        # Excluimos los campos de solo lectura antes de instanciar la entidad
-        data.pop('adsorbate', None)
-        data.pop('adsorbent', None)
         return SampleEntity(**data)
 
 
