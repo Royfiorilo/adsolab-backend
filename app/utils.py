@@ -3,6 +3,7 @@ import numpy as np
 from scipy.interpolate import UnivariateSpline
 
 ROUND_DIGIT = 4
+SIGNIFICANT_FIGURES = 4
 
 
 def round_list_numbers(numbers, round=ROUND_DIGIT):
@@ -22,8 +23,8 @@ def round_number(number, round_digit=ROUND_DIGIT):
     return round(val, round_digit)
 
 
-def round_parameter_value(number, round_digit=ROUND_DIGIT):
-    """Aplica cifras significativas y notación científica específicamente a parámetros estimados."""
+def round_parameter_value(number, significant_figures=SIGNIFICANT_FIGURES):
+    """Keeps significant figures below 1, where fixed decimals would turn small rate constants into 0."""
     if number is None or isinstance(number, bool):
         return number
     try:
@@ -32,10 +33,9 @@ def round_parameter_value(number, round_digit=ROUND_DIGIT):
         return number
     if not math.isfinite(val) or val == 0.0:
         return val
-    # Para valores pequeños (< 0.01), preservamos cifras significativas en notación científica
-    if abs(val) < 10 ** (-(round_digit - 2)):
-        return float(f"{val:.{round_digit}g}")
-    return round(val, round_digit)
+    if abs(val) < 1:
+        return float(f"{val:.{significant_figures}g}")
+    return round(val, ROUND_DIGIT)
 
 
 def soft_curve(ce, qe_pred):

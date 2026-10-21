@@ -31,7 +31,7 @@ from entities.statistics import Statistics
 from exceptions.exceptions import BadRequestError
 from services.kinetics_model_service import find_kinetic_models, find_kinetic_model
 from services.model_service import get_optimization_methods
-from utils import round_list_numbers, round_number
+from utils import round_list_numbers, round_parameter_value
 
 # Global methods reach the same minimum on these 2-parameter models at ~20x the CPU: only a fallback.
 KINETIC_FIT_METHODS = ('leastsq', 'nelder', 'cobyla')
@@ -166,6 +166,15 @@ class KineticFitStrategy(FitStrategy):
             method_name=params.method,
             method_message=str(result.message),
         )
+
+    def _get_parameters_with_stderr(self, result):
+        params = super()._get_parameters_with_stderr(result)
+        for param in params:
+            raw = result.params[param['name']]
+            param['value'] = round_parameter_value(raw.value)
+            if raw.stderr is not None:
+                param['std_err'] = round_parameter_value(raw.stderr)
+        return params
 
 
 class KineticPredictor:
