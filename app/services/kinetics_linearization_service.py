@@ -26,7 +26,7 @@ from entities.formula import Formula
 from entities.kinetic_parameters import STRICTLY_POSITIVE_PARAMS
 from entities.linear_fit_errors import line_covariance, propagate_std_errors
 from exceptions.exceptions import LinearizationError
-from utils import round_number, round_list_numbers
+from utils import round_list_numbers, round_parameter_value
 
 ROUND_DIGIT = 4
 MIN_VALID_POINTS = 2
@@ -147,15 +147,15 @@ def _run_single_linearization(sample, lin_data: dict, provided_params: dict = No
         **identity,
         "status": "OK",
         "transformed": {"x": x_dots, "y": round_list_numbers(y_dots)},
-        "slope": round_number(result_lr.slope),
-        "intercept": round_number(result_lr.intercept),
+        "slope": round_parameter_value(result_lr.slope),
+        "intercept": round_parameter_value(result_lr.intercept),
         "statistics": {"r_squared": round(result_lr.rvalue ** 2, ROUND_DIGIT)},
         "assumed_params": known_params,
         "dropped_points": dropped,
         "parameters": [
             {
                 "name": name,
-                "value": round_number(value),
+                "value": round_parameter_value(value),
                 "std_err": _round_or_none(params_stderr.get(name)),
             }
             for name, value in params_values.items()
@@ -164,7 +164,7 @@ def _run_single_linearization(sample, lin_data: dict, provided_params: dict = No
 
 
 def _round_or_none(value):
-    return None if value is None else round_number(value)
+    return None if value is None else round_parameter_value(value)
 
 
 def run_kinetic_linearization(request_json: dict):
