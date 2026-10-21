@@ -30,6 +30,16 @@ class TestKineticsSampleSchema(unittest.TestCase):
         self.assertEqual(sample.adsorbate_id, 1)
         self.assertEqual(sample.adsorbent_id, 2)
 
+    def test_should_ignore_material_names_when_loading_a_dumped_sample(self):
+        sample = KINETICS_SAMPLE_SCHEMA.load(build_payload(adsorbate="Plomo", adsorbent="Carbón activado"))
+
+        self.assertIsInstance(sample, KineticsSampleEntity)
+        self.assertFalse(hasattr(sample, "adsorbate"))
+
+    def test_should_reject_a_payload_that_is_not_an_object(self):
+        with self.assertRaises(ValidationError):
+            KINETICS_SAMPLE_SCHEMA.load(["not", "a", "sample"])
+
     def test_should_reject_sample_without_qt_and_without_concentration(self):
         with self.assertRaises(ValidationError):
             KINETICS_SAMPLE_SCHEMA.load(build_payload(qt=None))
