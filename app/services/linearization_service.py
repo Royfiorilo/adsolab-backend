@@ -5,7 +5,7 @@ from entities.schemas.linearization_schema import LINEARIZATION_SCHEMA
 from exceptions.exceptions import NotFoundError
 from services.model_service import find_model
 from services.sample_service import find_sample, filter_sample
-from utils import round_list_numbers, round_number
+from utils import round_list_numbers, round_significant
 
 
 def process_linearization(linearization_id: str, sample, constants) -> dict:
@@ -27,8 +27,8 @@ def format_linearization_result(*, name: str, id: str, x, y,
     parameters = [
         {
             "name": var,
-            "value": round_number(params_info[0][var]),
-            "std_err": None if params_info[1][var] is None else round_number(params_info[1][var])
+            "value": round_significant(params_info[0][var]),
+            "std_err": None if params_info[1][var] is None else round_significant(params_info[1][var])
         }
         for var in vars
     ]

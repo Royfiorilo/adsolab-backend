@@ -6,7 +6,7 @@ import numpy as np
 from numdifftools import Hessian
 
 from entities.statistics import Statistics
-from utils import round_number, round_list_numbers, filter_negative
+from utils import round_number, round_list_numbers, round_significant, filter_negative
 from .comparator import AdsorptionModelComparison
 from .model import Model
 
@@ -113,7 +113,7 @@ class FitStrategy:
             else:
                 stderr = value.stderr
 
-            params.append({"name": param, "value": round_number(value.value), "std_err": round_number(stderr) if stderr else stderr})
+            params.append({"name": param, "value": round_significant(value.value), "std_err": round_significant(stderr) if stderr else stderr})
 
         return params
 

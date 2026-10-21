@@ -4,7 +4,7 @@ from scipy import stats
 from sklearn.metrics import r2_score, mean_squared_error
 from statsmodels.stats.stattools import durbin_watson
 
-from utils import round_number
+from utils import round_significant
 
 ROUND_DIGIT = 4
 
@@ -141,15 +141,15 @@ class Statistics():
         '''
         hybrid = cls.hybrid(y_exp, y_pred, num_params)
         stats = {
-            "r_squared": round_number(cls.r_squared(y_exp, y_pred)),
-            "adjust_r_squared": round_number(cls.adjust_r_squared(y_exp, y_pred, num_params)),
-            "chi_squared": round_number(cls.chi_squared(y_exp, y_pred)),
-            "adjust_chi_squeared": round_number(cls.adjust_chi_squared(y_exp, y_pred, num_params)),
-            "RMSE": round_number(cls.rmse(y_exp, y_pred)),
-            "SSE": round_number(cls.sse(y_exp, y_pred)),
-            "HYBRID": round_number(hybrid) if hybrid else None,
-            "AIC": round_number(aic),
-            "BIC": round_number(bic)
+            "r_squared": round_significant(cls.r_squared(y_exp, y_pred)),
+            "adjust_r_squared": round_significant(cls.adjust_r_squared(y_exp, y_pred, num_params)),
+            "chi_squared": round_significant(cls.chi_squared(y_exp, y_pred)),
+            "adjust_chi_squeared": round_significant(cls.adjust_chi_squared(y_exp, y_pred, num_params)),
+            "RMSE": round_significant(cls.rmse(y_exp, y_pred)),
+            "SSE": round_significant(cls.sse(y_exp, y_pred)),
+            "HYBRID": round_significant(hybrid) if hybrid else None,
+            "AIC": round_significant(aic),
+            "BIC": round_significant(bic)
         }
 
         return stats
@@ -180,9 +180,9 @@ class Statistics():
         dw_stat = durbin_watson(residuals)
 
         return {
-            'normality_pvalue': round_number(normality_p),
-            'homoscedasticity_pvalue': round_number(homo_p),
-            'durbin_watson': round_number(dw_stat),
+            'normality_pvalue': round_significant(normality_p),
+            'homoscedasticity_pvalue': round_significant(homo_p),
+            'durbin_watson': round_significant(dw_stat),
             'passes_normality': True if normality_p > 0.05 else False,
             # Si el valor p de la homocedasticidad es mayor a 0.05, se acepta homocedasticidad (0).
             # Si el valor p es menor o igual a 0.05, se rechaza homocedasticidad (1).
