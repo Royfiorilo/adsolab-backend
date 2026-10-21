@@ -37,9 +37,8 @@ class KineticsSampleSchema(Schema, DumpMixin):
     adsorbate_id = fields.Integer(required=True)
     adsorbent_id = fields.Integer(required=True)
 
-    # Declaramos los campos como dump_only y pasamos por alto en load
-    adsorbate = fields.Method("get_adsorbate_name", dump_only=True, load_default=None)
-    adsorbent = fields.Method("get_adsorbent_name", dump_only=True, load_default=None)
+    adsorbate = fields.Method("get_adsorbate_name", dump_only=True)
+    adsorbent = fields.Method("get_adsorbent_name", dump_only=True)
 
     deleted_at = fields.DateTime(load_default=None)
     user_id = fields.Integer(load_default=None)
@@ -79,6 +78,13 @@ class KineticsSampleSchema(Schema, DumpMixin):
             except Exception:
                 return None
         return None
+
+    @pre_load
+    def drop_material_names(self, data, **kwargs):
+        # DumpMixin loads what it just dumped, so the dump-only names come back as input.
+        if not isinstance(data, dict):
+            return data
+        return {key: value for key, value in data.items() if key not in ('adsorbate', 'adsorbent')}
 
     @pre_load
     def normalize_numbers(self, data, **kwargs):
@@ -122,9 +128,6 @@ class KineticsSampleSchema(Schema, DumpMixin):
 
     @post_load
     def make_sample(self, data, **kwargs):
-        # Excluimos los campos de solo lectura antes de instanciar la entidad
-        data.pop('adsorbate', None)
-        data.pop('adsorbent', None)
         return KineticsSampleEntity(**data)
 
 
