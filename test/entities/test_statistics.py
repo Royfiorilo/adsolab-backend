@@ -1,4 +1,6 @@
 import unittest
+from types import SimpleNamespace
+
 import numpy as np
 import pandas as pd
 from unittest.mock import patch
@@ -104,7 +106,7 @@ class TestStatistics(unittest.TestCase):
         self.assertIsInstance(outliers, list)
 
     def test_check_residuals_format(self):
-        result = Statistics.check_residuals(self.residuals)
+        result = Statistics.check_residuals(self.residuals, self.y_pred)
 
         self.assertIn('normality_pvalue', result)
         self.assertIn('homoscedasticity_pvalue', result)
@@ -128,11 +130,11 @@ class TestStatistics(unittest.TestCase):
         self.assertLessEqual(result['durbin_watson'], 4.0)
 
     @patch('entities.statistics.durbin_watson', return_value=2.12345)
-    @patch('scipy.stats.levene', return_value=(0, 0.67890))
+    @patch('scipy.stats.spearmanr', return_value=SimpleNamespace(statistic=0.2, pvalue=0.67890))
     @patch('scipy.stats.shapiro', return_value=(0, 0.12345))
-    def test_check_residuals_rounding(self, mock_shapiro, mock_levene, mock_durbin_watson):
+    def test_check_residuals_rounding(self, mock_shapiro, mock_spearmanr, mock_durbin_watson):
         # Mock statistical test results to have more decimal places
-        result = Statistics.check_residuals(self.residuals)
+        result = Statistics.check_residuals(self.residuals, self.y_pred)
 
         # Check that values are rounded to 3 decimal places
         self.assertAlmostEqual(result['normality_pvalue'], 0.1235, places=3)

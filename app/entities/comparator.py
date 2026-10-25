@@ -18,6 +18,12 @@ RESIDUAL_TESTS = ('passes_normality', 'passes_homoscedasticity', 'passes_indepen
 # Keeps the RMSE ratio defined for perfect fits (RMSE = 0).
 RMSE_FLOOR = 1e-9
 
+# Ridge combination (equilibrium's second criterion).
+RIDGE_ALPHAS = [0.001, 0.05, 0.1, 0.2, 1, 5, 10, 100, 1000]
+RIDGE_MAX_FOLDS = 5
+RIDGE_MIN_FOLDS = 2  # GridSearchCV needs at least two folds
+RIDGE_DEFAULT_ALPHA = 1.0  # sklearn's default, used when the sample is too small to cross-validate
+
 
 class AdsorptionModelComparison:
     def __init__(self):
@@ -104,9 +110,12 @@ class AdsorptionModelComparison:
 
     @classmethod
     def _best_alpha(cls, X_scaled, y):
-        ridge = Ridge()
-        param_grid = {'alpha': [0.001, 0.1, 0.05, 0.2, 1, 5, 10, 100, 1000]}
-        grid_search = GridSearchCV(estimator=ridge, param_grid=param_grid, scoring='neg_mean_squared_error', cv=5)
+        folds = min(RIDGE_MAX_FOLDS, len(y))
+        if folds < RIDGE_MIN_FOLDS:
+            return RIDGE_DEFAULT_ALPHA
+        param_grid = {'alpha': RIDGE_ALPHAS}
+        grid_search = GridSearchCV(estimator=Ridge(positive=True), param_grid=param_grid,
+                                   scoring='neg_mean_squared_error', cv=folds)
         grid_search.fit(X_scaled, y)
         return grid_search.best_params_['alpha']
 
@@ -137,14 +146,13 @@ class AdsorptionModelComparison:
         X_scaled = scaler.fit_transform(X)
         X_extended_scaler = scaler.transform(X_extended)
 
-        # elijo best alpha
-        alpha = cls._best_alpha(X, y)
+        # alpha is searched on the same scaled curves the final fit uses (ABE-002).
+        alpha = cls._best_alpha(X_scaled, y)
 
-        # regresion
-        ridge = Ridge(alpha=alpha)
+        # Non-negative weights: a model the combination subtracts can never be "the best" (ABE-002).
+        ridge = Ridge(alpha=alpha, positive=True)
         ridge.fit(X_scaled, y)
-        #To abs for comparison
-        ridge_coefs = [ abs(coef)for coef in ridge.coef_]
+        ridge_coefs = [float(coef) for coef in ridge.coef_]
 
         qe_pred_ridge = ridge.predict(X_scaled)
 
@@ -161,7 +169,7 @@ class AdsorptionModelComparison:
             "statistics": statistics_ridge,
             "residuals": {
                 "values": residuals_ridge.tolist(),
-                "analysis": Statistics.check_residuals(residuals_ridge)
+                "analysis": Statistics.check_residuals(residuals_ridge, qe_pred_ridge)
             }
         }
 

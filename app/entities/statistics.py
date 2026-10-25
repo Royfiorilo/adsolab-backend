@@ -7,6 +7,9 @@ from statsmodels.stats.stattools import durbin_watson
 from utils import round_significant
 
 ROUND_DIGIT = 4
+SIGNIFICANCE_LEVEL = 0.05
+# Below this the rank correlation has almost no power, so the check reports "not evaluated" (None).
+HOMOSCEDASTICITY_MIN_POINTS = 5
 
 
 class Statistics():
@@ -155,15 +158,26 @@ class Statistics():
         return stats
 
     @classmethod
-    def check_residuals(self, residuals):
+    def homoscedasticity_pvalue(cls, residuals, fitted):
+        """Spearman test of |residual| against the fitted value; None when it cannot be evaluated."""
+        abs_residuals = np.abs(np.asarray(residuals, dtype=float))
+        fitted = np.asarray(fitted, dtype=float)
+        if abs_residuals.size < HOMOSCEDASTICITY_MIN_POINTS or np.ptp(fitted) == 0 or np.ptp(abs_residuals) == 0:
+            return None
+        p_value = stats.spearmanr(abs_residuals, fitted).pvalue
+        return float(p_value) if np.isfinite(p_value) else None
+
+    @classmethod
+    def check_residuals(self, residuals, fitted):
         '''
         Evalúa los residuos del modelo para comprobar tres supuestos importantes:
         normalidad, homocedasticidad y autocorrelación.
         - Normalidad: Medido con la prueba de Shapiro-Wilk.
-        - Homocedasticidad: Medido con la prueba de Levene.
+        - Homocedasticidad: correlación de Spearman entre |residuo| y valor ajustado.
         - Autocorrelación: Medido con la estadística de Durbin-Watson.
 
         :param residuals: Residuos del modelo.
+        :param fitted: Valores ajustados por el modelo, en el mismo orden que los residuos.
         :return: Diccionario con los valores p de las pruebas y los resultados binarios de cada prueba.
         '''
 
@@ -171,9 +185,8 @@ class Statistics():
         # Si el valor p es menor o igual a 0.05, los residuos no son normales.
         _, normality_p = stats.shapiro(residuals)
 
-        # Homocedasticidad (Levene): Evaluamos si los residuos tienen varianzas constantes.
-        # Si el valor p es menor o igual a 0.05, los residuos no tienen varianzas constantes (heterocedasticidad).
-        _, homo_p = stats.levene(residuals, np.ones_like(residuals))
+        # A spread that grows or shrinks along the fit shows up as a rank correlation of |residual| with it.
+        homo_p = self.homoscedasticity_pvalue(residuals, fitted)
 
         # Autocorrelación (Durbin-Watson): Evaluamos si los residuos están autocorrelacionados.
         # Si el valor de Durbin-Watson está entre 1.5 y 2.5, no hay autocorrelación significativa.
@@ -183,10 +196,8 @@ class Statistics():
             'normality_pvalue': round_significant(normality_p),
             'homoscedasticity_pvalue': round_significant(homo_p),
             'durbin_watson': round_significant(dw_stat),
-            'passes_normality': True if normality_p > 0.05 else False,
-            # Si el valor p de la homocedasticidad es mayor a 0.05, se acepta homocedasticidad (0).
-            # Si el valor p es menor o igual a 0.05, se rechaza homocedasticidad (1).
-            'passes_homoscedasticity': True if homo_p > 0.05 else False,
+            'passes_normality': True if normality_p > SIGNIFICANCE_LEVEL else False,
+            'passes_homoscedasticity': None if homo_p is None else homo_p > SIGNIFICANCE_LEVEL,
             # Si el valor de Durbin-Watson está fuera del rango (1.5, 2.5), no hay autocorrelación (1).
             # cuanto mas cecano a 2 mejor
             'passes_independence':  True if 1.5 <= dw_stat <= 2.5 else False,

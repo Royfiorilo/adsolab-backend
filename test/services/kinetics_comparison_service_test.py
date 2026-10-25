@@ -48,7 +48,7 @@ def residuals():
     }
 
 
-def fitted_model(model_id, qt_pred, extended_pred, stats=None, best=True):
+def fitted_model(model_id, qt_pred, extended_pred, stats=None, best=True, loo_rmse=0.1):
     method = MagicMock()
     method.statistics = stats or statistics(0.99, 0.05, -20.0)
     method.residuals = residuals()
@@ -56,6 +56,7 @@ def fitted_model(model_id, qt_pred, extended_pred, stats=None, best=True):
 
     model = MagicMock()
     model.get_best_method.return_value = method if best else None
+    model.loo_prediction_rmse.return_value = loo_rmse
     return model, model_id
 
 
@@ -106,10 +107,9 @@ class TestGetKineticComparison(unittest.TestCase):
 
         self.assertIn("best_model", result["heuristic"])
         self.assertEqual(len(result["heuristic"]["results"]), 2)
+        self.assertEqual(result["ml"]["criterion"], "loo_cv")
         self.assertIn("best_model", result["ml"])
-        self.assertIn("statistics", result["ml"])
-        self.assertIn("residuals", result["ml"])
-        self.assertIn("transformed", result["ml"])
+        self.assertEqual(len(result["ml"]["results"]), 2)
 
 
 class TestDetermineKineticHeuristicScores(unittest.TestCase):
@@ -126,59 +126,48 @@ class TestDetermineKineticHeuristicScores(unittest.TestCase):
 
 
 class TestGetKineticMlComparison(unittest.TestCase):
+    """Selection rules of the leave-one-out criterion; the refits themselves are in kinetics_loo_comparison_test."""
+
     def best_methods(self, *models):
-        return [{"model_id": model_id, "best": model.get_best_method()} for model, model_id in models]
+        return [{"model_id": model_id, "best": model.get_best_method(), "model": model} for model, model_id in models]
 
-    def test_should_return_one_coefficient_per_model(self):
+    def test_should_return_one_cross_validation_error_per_model(self):
         best_methods = self.best_methods(
-            fitted_model(3, *pfo_predictions()),
-            fitted_model(2, *pso_predictions()),
+            fitted_model(3, *pfo_predictions(), loo_rmse=0.2),
+            fitted_model(2, *pso_predictions(), loo_rmse=0.4),
         )
 
         result = get_kinetic_ml_comparison(best_methods, sample())
 
-        self.assertEqual([r["model"] for r in result["results"]], [3, 2])
-        self.assertTrue(all("coef" in r for r in result["results"]))
+        self.assertEqual(result["criterion"], "loo_cv")
+        self.assertEqual(result["results"], [{"model": 3, "cv_rmse": 0.2}, {"model": 2, "cv_rmse": 0.4}])
 
-    def test_should_pick_the_model_with_the_highest_coefficient_as_best(self):
-        # La muestra es PFO, así que PFO gana; va segundo a propósito para que el
-        # test distinga "el de mayor coeficiente" de "el primero de la lista".
+    def test_should_pick_the_model_with_the_lowest_cross_validation_error(self):
+        # The winner goes second on purpose, so "lowest error" is not confused with "first in the list".
         best_methods = self.best_methods(
-            fitted_model(2, *pso_predictions()),
-            fitted_model(3, *pfo_predictions()),
+            fitted_model(2, *pso_predictions(), loo_rmse=0.4),
+            fitted_model(3, *pfo_predictions(), loo_rmse=0.2),
         )
 
         result = get_kinetic_ml_comparison(best_methods, sample())
 
-        coefficients = {r["model"]: r["coef"] for r in result["results"]}
-        self.assertGreater(coefficients[3], coefficients[2])
         self.assertEqual(result["best_model"], 3)
-        self.assertNotEqual(result["results"][0]["model"], result["best_model"])
 
-    def test_should_compute_statistics_and_residuals_for_the_combined_model(self):
-        best_methods = self.best_methods(fitted_model(3, *pfo_predictions()))
-
-        result = get_kinetic_ml_comparison(best_methods, sample())
-
-        self.assertIn("r_squared", result["statistics"])
-        self.assertIn("RMSE", result["statistics"])
-        self.assertEqual(len(result["residuals"]["values"]), len(TIMES))
-        self.assertIn("durbin_watson", result["residuals"]["analysis"])
-
-    def test_should_start_the_combined_curve_at_zero(self):
-        best_methods = self.best_methods(fitted_model(3, *pfo_predictions()))
+    def test_should_leave_out_a_model_that_cannot_be_cross_validated(self):
+        best_methods = self.best_methods(
+            fitted_model(3, *pfo_predictions(), loo_rmse=None),
+            fitted_model(2, *pso_predictions(), loo_rmse=0.4),
+        )
 
         result = get_kinetic_ml_comparison(best_methods, sample())
 
-        self.assertEqual(result["transformed"]["y"][0], 0)
+        self.assertEqual([r["model"] for r in result["results"]], [2])
+        self.assertEqual(result["best_model"], 2)
 
-    def test_should_not_return_negative_points_in_the_combined_curve(self):
-        best_methods = self.best_methods(fitted_model(3, *pfo_predictions()))
+    def test_should_return_no_ml_block_when_no_model_can_be_cross_validated(self):
+        best_methods = self.best_methods(fitted_model(3, *pfo_predictions(), loo_rmse=None))
 
-        result = get_kinetic_ml_comparison(best_methods, sample())
-
-        self.assertTrue(all(y >= 0 for y in result["transformed"]["y"]))
-        self.assertEqual(len(result["transformed"]["x"]), len(result["transformed"]["y"]))
+        self.assertIsNone(get_kinetic_ml_comparison(best_methods, sample()))
 
     def test_should_work_with_a_single_fitted_model(self):
         best_methods = self.best_methods(fitted_model(2, *pso_predictions()))

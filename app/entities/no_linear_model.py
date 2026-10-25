@@ -237,7 +237,7 @@ class NoLinearModel(Model):
                                                           float(fit_result.raw_result.aic),
                                                        float(fit_result.raw_result.bic))
 
-        fit_result.residuals =  {"values": residuals.tolist(), "analysis": Statistics.check_residuals(residuals)}
+        fit_result.residuals =  {"values": residuals.tolist(), "analysis": Statistics.check_residuals(residuals, qe_pred)}
         fit_result.transformed = transformed_data
 
         return fit_result

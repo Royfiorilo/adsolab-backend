@@ -36,9 +36,11 @@ from utils import round_list_numbers, round_significant
 # Global methods reach the same minimum on these 2-parameter models at ~20x the CPU: only a fallback.
 KINETIC_FIT_METHODS = ('leastsq', 'nelder', 'cobyla')
 KINETIC_FALLBACK_METHODS = ('ampgo', 'basinhopping')
-# The Ridge comparison cross-validates with 5 folds, so it needs at least 5 points; it also keeps
-# n - n_params - 1 positive for the adjusted R2 of the 2-parameter models.
+# Keeps n - n_params - 1 positive for the adjusted R2 of the 2-parameter models, and leaves the
+# leave-one-out comparison at least 4 points per refit.
 MIN_FIT_POINTS = 5
+# The leave-one-out refits start at the best parameters, so one fast local method is enough.
+LOO_METHOD = 'leastsq'
 
 
 def calculate_kinetic_seeds(sample: KineticsSampleEntity, model_data: Dict[str, Any]) -> List[Dict]:
@@ -253,7 +255,7 @@ class KineticNoLinearModel:
         )
         fit_result.residuals = {
             "values": residuals.tolist(),
-            "analysis": Statistics.check_residuals(residuals),
+            "analysis": Statistics.check_residuals(residuals, qt_pred),
         }
         fit_result.transformed = {
             "x": extended_time.tolist(),
@@ -282,6 +284,30 @@ class KineticNoLinearModel:
 
     def get_best_method_name(self) -> Optional[str]:
         return self.best_method.method_name if self.best_method else None
+
+    def loo_prediction_rmse(self, sample: KineticsSampleEntity) -> Optional[float]:
+        """Leave-one-out RMSE: refits without each point and predicts it, so the model is judged on unseen data.
+
+        None when there is no best method or a refit fails.
+        """
+        if self.best_method is None or self.best_method.raw_result is None:
+            return None
+        x = np.array(sample.time, dtype=float)
+        y = np.array(sample.qt, dtype=float)
+        start = self.best_method.raw_result.params.valuesdict()
+        errors = []
+        for i in range(x.size):
+            keep = np.arange(x.size) != i
+            try:
+                refit = self.fit_strategy.fit(
+                    KineticFitParameters(x[keep], y[keep], start, None, DEFAULT_ITERATIONS, LOO_METHOD))
+                predicted = float(np.atleast_1d(refit.raw_result.eval(time=x[i:i + 1]))[0])
+            except (ValueError, ArithmeticError):
+                return None
+            if not refit.success or not np.isfinite(predicted):
+                return None
+            errors.append(y[i] - predicted)
+        return float(np.sqrt(np.mean(np.square(errors))))
 
 
 def get_kinetic_optimization_methods() -> Tuple[Dict[str, str], Dict[str, str]]:
